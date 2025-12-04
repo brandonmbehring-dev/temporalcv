@@ -220,6 +220,14 @@ def gate_shuffled_target(
     """
     X = np.asarray(X)
     y = np.asarray(y)
+
+    # Validate shapes
+    if X.shape[0] != len(y):
+        raise ValueError(
+            f"X and y must have same number of samples. "
+            f"Got X.shape[0]={X.shape[0]}, len(y)={len(y)}"
+        )
+
     rng = np.random.default_rng(random_state)
 
     # Fit and evaluate on real target

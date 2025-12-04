@@ -86,7 +86,7 @@ class SplitInfo:
             )
 
 
-class WalkForwardCV(BaseCrossValidator):
+class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
     """
     Walk-forward cross-validation with gap enforcement.
 
@@ -187,7 +187,7 @@ class WalkForwardCV(BaseCrossValidator):
         """Get number of samples from array-like."""
         if hasattr(X, "shape"):
             return int(X.shape[0])
-        return len(X)  # type: ignore[arg-type]
+        return len(X)
 
     def _calculate_splits(
         self, n_samples: int

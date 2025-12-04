@@ -40,17 +40,17 @@ from temporalcv import run_gates, WalkForwardCV
 from temporalcv.gates import gate_shuffled_target, gate_suspicious_improvement
 
 # Validate your model doesn't have leakage
-report = run_gates(
-    model=my_model,
-    X=X, y=y,
-    gates=[
-        gate_shuffled_target(n_shuffles=5),
-        gate_suspicious_improvement(threshold=0.20),
-    ]
-)
+# Step 1: Compute gate results
+gate_results = [
+    gate_shuffled_target(my_model, X, y, n_shuffles=5),
+    gate_suspicious_improvement(model_mae, persistence_mae, threshold=0.20),
+]
+
+# Step 2: Aggregate into report
+report = run_gates(gate_results)
 
 if report.status == "HALT":
-    raise ValueError(f"Leakage detected: {report.failures}")
+    raise ValueError(f"Leakage detected: {report.summary()}")
 
 # Walk-forward CV with proper gap enforcement
 cv = WalkForwardCV(
@@ -94,7 +94,26 @@ for train_idx, test_idx in cv.split(X, y):
 
 ## Documentation
 
-- [API Reference](docs/api/)
+### Getting Started
+- [**Quickstart Guide**](docs/quickstart.md) - Get started in 5 minutes
+
+### Tutorials
+- [Leakage Detection](docs/tutorials/leakage_detection.md) - Catch data leakage with validation gates
+- [Walk-Forward CV](docs/tutorials/walk_forward_cv.md) - Proper temporal cross-validation
+- [High-Persistence Metrics](docs/tutorials/high_persistence.md) - Metrics for sticky series
+- [Uncertainty Quantification](docs/tutorials/uncertainty.md) - Prediction intervals with coverage guarantees
+
+### API Reference
+- [Validation Gates](docs/api/gates.md) - HALT/PASS/WARN framework
+- [Walk-Forward CV](docs/api/cv.md) - sklearn-compatible temporal CV
+- [Statistical Tests](docs/api/statistical_tests.md) - DM test, PT test, HAC variance
+- [High-Persistence Metrics](docs/api/persistence.md) - MC-SS, move-conditional MAE
+- [Regime Classification](docs/api/regimes.md) - Volatility and direction regimes
+- [Conformal Prediction](docs/api/conformal.md) - Distribution-free intervals
+- [Bagging](docs/api/bagging.md) - Time-series-aware bagging
+- [Event Metrics](docs/api/metrics.md) - Brier score, PR-AUC
+
+### Internal
 - [Planning Documentation](docs/plans/INDEX.md)
 - [Ecosystem Gap Analysis](docs/plans/reference/ecosystem_gaps.md)
 

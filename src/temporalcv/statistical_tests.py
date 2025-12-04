@@ -289,8 +289,11 @@ def dm_test(
 
     n = len(errors_1)
 
-    if n < 10:
-        raise ValueError(f"Insufficient samples for DM test. Need >= 10, got {n}")
+    if n < 30:
+        raise ValueError(
+            f"Insufficient samples for reliable DM test. Need >= 30, got {n}. "
+            f"For n < 30, consider bootstrap-based tests or qualitative comparison."
+        )
 
     if h < 1:
         raise ValueError(f"Horizon h must be >= 1, got {h}")
@@ -311,7 +314,8 @@ def dm_test(
     d_bar = float(np.mean(d))
 
     # HAC variance with h-1 bandwidth for h-step forecasts
-    bandwidth = max(1, h - 1)
+    # For h=1, bandwidth=0 (no autocorrelation in 1-step errors)
+    bandwidth = max(0, h - 1)
     var_d = compute_hac_variance(d, bandwidth=bandwidth)
 
     # Handle degenerate case
@@ -407,6 +411,18 @@ def pt_test(
 
     The test accounts for marginal probabilities of directions in both
     actual and predicted series, providing a proper baseline comparison.
+
+    Warning
+    -------
+    For h > 1 step forecasts, forecast errors are autocorrelated (MA(h-1)).
+    The current variance formula does NOT apply HAC correction, so p-values
+    for h > 1 may be overly optimistic. For rigorous multi-step testing,
+    consider the DM test which includes proper HAC adjustment.
+
+    The 3-class mode (using move_threshold) employs an ad-hoc variance
+    formula that has not been validated against published extensions of
+    Pesaran-Timmermann (1992). Use 2-class mode for rigorous hypothesis
+    testing. The 3-class mode is suitable for exploratory analysis only.
 
     Example
     -------

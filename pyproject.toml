@@ -48,8 +48,25 @@ dev = [
     "pip-audit>=2.0",
 ]
 pandas = ["pandas>=1.3"]
+
+# Benchmark dataset loaders
+fred = ["fredapi>=0.5"]
+gluonts = ["gluonts>=0.13"]
+monash = ["datasetsforecast>=0.0.8"]
+
+# Model comparison
+compare = ["statsforecast>=1.5"]
+
+# Combined extras
+benchmarks = [
+    "temporalcv[fred]",
+    "temporalcv[monash]",
+]
 all = [
     "temporalcv[pandas]",
+    "temporalcv[benchmarks]",
+    "temporalcv[gluonts]",
+    "temporalcv[compare]",
 ]
 
 [project.urls]
@@ -92,7 +109,16 @@ show_error_codes = true
 files = ["src/temporalcv"]
 
 [[tool.mypy.overrides]]
-module = ["scipy.*", "numpy.*", "sklearn.*"]
+module = [
+    "scipy.*",
+    "numpy.*",
+    "sklearn.*",
+    "fredapi.*",
+    "gluonts.*",
+    "datasetsforecast.*",
+    "statsforecast.*",
+    "pandas.*",
+]
 ignore_missing_imports = true
 
 [tool.ruff]
