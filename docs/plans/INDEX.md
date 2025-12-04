@@ -8,7 +8,8 @@
 ## Current Work
 
 → Phase 1: Complete ✓
-→ Next: Phase 2 (Walk-forward CV infrastructure)
+→ Phase 2: Complete ✓
+→ Next: Phase 3 (High-persistence handling)
 
 ## Quick Navigation
 
@@ -25,7 +26,7 @@
 
 - [x] **Phase 0**: Repository setup (pyproject.toml, CI, CLAUDE.md)
 - [x] **Phase 1**: Core gates + statistical tests (64 tests, 97% coverage)
-- [ ] **Phase 2**: Walk-forward CV infrastructure (Weeks 5-8)
+- [x] **Phase 2**: Walk-forward CV infrastructure (104 tests, 96% coverage)
 - [ ] **Phase 3**: High-persistence handling (Weeks 9-12)
 - [ ] **Phase 4**: Uncertainty + ensemble (Weeks 13-16)
 - [ ] **Phase 5**: Benchmark suite + event metrics (Weeks 17-20)
