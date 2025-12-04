@@ -35,6 +35,7 @@ classifiers = [
 dependencies = [
     "numpy>=1.21",
     "scipy>=1.7",
+    "scikit-learn>=1.0",
 ]
 
 [project.optional-dependencies]
@@ -47,9 +48,8 @@ dev = [
     "pip-audit>=2.0",
 ]
 pandas = ["pandas>=1.3"]
-sklearn = ["scikit-learn>=1.0"]
 all = [
-    "temporalcv[pandas,sklearn]",
+    "temporalcv[pandas]",
 ]
 
 [project.urls]
@@ -87,12 +87,12 @@ disallow_incomplete_defs = true
 check_untyped_defs = true
 strict_optional = true
 warn_redundant_casts = true
-warn_unused_ignores = true
+warn_unused_ignores = false
 show_error_codes = true
 files = ["src/temporalcv"]
 
 [[tool.mypy.overrides]]
-module = ["scipy.*", "numpy.*"]
+module = ["scipy.*", "numpy.*", "sklearn.*"]
 ignore_missing_imports = true
 
 [tool.ruff]

@@ -48,6 +48,12 @@ from temporalcv.statistical_tests import (
     compute_hac_variance,
 )
 
+# Cross-validation exports
+from temporalcv.cv import (
+    SplitInfo,
+    WalkForwardCV,
+)
+
 __all__ = [
     "__version__",
     # Gates
@@ -65,4 +71,7 @@ __all__ = [
     "dm_test",
     "pt_test",
     "compute_hac_variance",
+    # Cross-validation
+    "SplitInfo",
+    "WalkForwardCV",
 ]
