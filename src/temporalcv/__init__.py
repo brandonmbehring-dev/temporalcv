@@ -26,10 +26,43 @@ Example
 from __future__ import annotations
 
 __version__ = "0.1.0"
+
+# Gates module exports
+from temporalcv.gates import (
+    GateStatus,
+    GateResult,
+    ValidationReport,
+    gate_shuffled_target,
+    gate_synthetic_ar1,
+    gate_suspicious_improvement,
+    gate_temporal_boundary,
+    run_gates,
+)
+
+# Statistical tests exports
+from temporalcv.statistical_tests import (
+    DMTestResult,
+    PTTestResult,
+    dm_test,
+    pt_test,
+    compute_hac_variance,
+)
+
 __all__ = [
     "__version__",
-    # Core exports will be added as modules are implemented:
-    # "run_gates",
-    # "ValidationReport",
-    # "WalkForwardCV",
+    # Gates
+    "GateStatus",
+    "GateResult",
+    "ValidationReport",
+    "gate_shuffled_target",
+    "gate_synthetic_ar1",
+    "gate_suspicious_improvement",
+    "gate_temporal_boundary",
+    "run_gates",
+    # Statistical tests
+    "DMTestResult",
+    "PTTestResult",
+    "dm_test",
+    "pt_test",
+    "compute_hac_variance",
 ]
