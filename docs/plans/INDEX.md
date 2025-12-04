@@ -9,7 +9,9 @@
 
 → Phase 1: Complete ✓
 → Phase 2: Complete ✓
-→ Next: Phase 3 (High-persistence handling)
+→ Phase 3: Complete ✓
+→ Phase 4: Complete ✓
+→ Next: Phase 5 (Benchmark suite + event metrics)
 
 ## Quick Navigation
 
@@ -27,8 +29,8 @@
 - [x] **Phase 0**: Repository setup (pyproject.toml, CI, CLAUDE.md)
 - [x] **Phase 1**: Core gates + statistical tests (64 tests, 97% coverage)
 - [x] **Phase 2**: Walk-forward CV infrastructure (104 tests, 96% coverage)
-- [ ] **Phase 3**: High-persistence handling (Weeks 9-12)
-- [ ] **Phase 4**: Uncertainty + ensemble (Weeks 13-16)
+- [x] **Phase 3**: High-persistence handling (162 tests, 95% coverage)
+- [x] **Phase 4**: Uncertainty + ensemble (251 tests, 96% coverage)
 - [ ] **Phase 5**: Benchmark suite + event metrics (Weeks 17-20)
 - [ ] **Phase 6**: Julia port (Weeks 21-28)
 
