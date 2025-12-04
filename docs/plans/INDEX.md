@@ -7,7 +7,8 @@
 
 ## Current Work
 
-→ Phase 1: Core validation gates + statistical tests
+→ Phase 1: Complete ✓
+→ Next: Phase 2 (Walk-forward CV infrastructure)
 
 ## Quick Navigation
 
@@ -23,7 +24,7 @@
 ## Phase Checklist
 
 - [x] **Phase 0**: Repository setup (pyproject.toml, CI, CLAUDE.md)
-- [ ] **Phase 1**: Core gates + statistical tests (Weeks 1-4)
+- [x] **Phase 1**: Core gates + statistical tests (64 tests, 97% coverage)
 - [ ] **Phase 2**: Walk-forward CV infrastructure (Weeks 5-8)
 - [ ] **Phase 3**: High-persistence handling (Weeks 9-12)
 - [ ] **Phase 4**: Uncertainty + ensemble (Weeks 13-16)

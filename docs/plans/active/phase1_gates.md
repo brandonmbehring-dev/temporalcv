@@ -1,7 +1,7 @@
 # Phase 1: Core Validation Gates + Statistical Tests
 
 **Timeline**: Weeks 1-4
-**Status**: Ready to start
+**Status**: ✓ COMPLETE (2025-12-04)
 
 ---
 
@@ -164,11 +164,12 @@ def pt_test(
 
 ## Exit Criteria
 
-- [ ] `gate_shuffled_target()` implemented with tests
-- [ ] `gate_synthetic_ar1()` implemented with tests
-- [ ] `gate_suspicious_improvement()` implemented with tests
-- [ ] `dm_test()` with HAC variance, Harvey correction
-- [ ] `pt_test()` with 3-class support
-- [ ] `run_gates()` orchestrator function
-- [ ] All tests pass, mypy clean
-- [ ] 80%+ coverage on gates module
+- [x] `gate_shuffled_target()` implemented with tests
+- [x] `gate_synthetic_ar1()` implemented with tests
+- [x] `gate_suspicious_improvement()` implemented with tests
+- [x] `gate_temporal_boundary()` implemented with tests (bonus)
+- [x] `dm_test()` with HAC variance, Harvey correction
+- [x] `pt_test()` with 3-class support
+- [x] `run_gates()` orchestrator function
+- [x] All tests pass (64 tests), mypy strict passes
+- [x] 97% coverage (exceeds 80% target)
