@@ -206,6 +206,12 @@ def compute_hac_variance(
     -----
     For h-step forecasts, errors are MA(h-1), so bandwidth = h-1 is appropriate.
     The automatic bandwidth is a general-purpose choice when h is unknown.
+
+    Complexity: O(n × bandwidth)
+
+    See Also
+    --------
+    dm_test : Primary consumer of HAC variance estimation.
     """
     n = len(d)
     d_demeaned = d - np.mean(d)
@@ -291,6 +297,12 @@ def dm_test(
     >>> result = dm_test(model_errors, persistence_errors, h=2, alternative="less")
     >>> if result.significant_at_05:
     ...     print("Model significantly better than baseline")
+
+    See Also
+    --------
+    pt_test : Complementary test for directional accuracy.
+    compute_hac_variance : HAC variance estimator used internally.
+    compute_dm_influence : Identify high-influence observations in DM test.
     """
     errors_1 = np.asarray(errors_1, dtype=np.float64)
     errors_2 = np.asarray(errors_2, dtype=np.float64)
@@ -455,6 +467,11 @@ def pt_test(
     >>> # Test with 3-class (UP/DOWN/FLAT)
     >>> result = pt_test(actual_changes, pred_changes, move_threshold=0.01)
     >>> print(f"Accuracy: {result.accuracy:.1%}, Skill: {result.skill:.1%}")
+
+    See Also
+    --------
+    dm_test : Complementary test for predictive accuracy (magnitude).
+    compute_direction_accuracy : Simpler direction accuracy metric.
     """
     actual = np.asarray(actual, dtype=np.float64)
     predicted = np.asarray(predicted, dtype=np.float64)

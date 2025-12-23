@@ -185,6 +185,12 @@ class TimeSeriesBagger:
     ----------
     - Bergmeir, Hyndman & Benitez (2016). "Bagging exponential smoothing"
     - Kunsch (1989). "The Jackknife and Bootstrap for General Stationary"
+
+    See Also
+    --------
+    create_block_bagger : Factory function for block bootstrap.
+    create_stationary_bagger : Factory function for stationary bootstrap.
+    BootstrapUncertainty : Alternative uncertainty quantification.
     """
 
     def __init__(

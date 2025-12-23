@@ -47,6 +47,7 @@ from typing import Generator, Iterator, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
+from sklearn.base import clone
 from sklearn.model_selection import BaseCrossValidator
 
 
@@ -159,7 +160,9 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
 
     See Also
     --------
+    CrossFitCV : Forward-only cross-fitting for debiased predictions.
     sklearn.model_selection.TimeSeriesSplit : sklearn's built-in temporal splitter.
+    gate_temporal_boundary : Verify gap enforcement meets requirements.
     """
 
     def __init__(
@@ -410,10 +413,292 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
 
 
 # =============================================================================
+# CrossFitCV - Temporal Cross-Fitting for Debiased Metrics
+# =============================================================================
+
+
+class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
+    """
+    Temporal cross-fitting for debiased out-of-sample predictions.
+
+    For each fold k:
+    - Train model on ALL data before fold k (forward-only)
+    - Predict on fold k (out-of-sample)
+
+    This eliminates regularization bias by ensuring predictions are NEVER
+    made on training data. Unlike standard Double ML (random KFold), this
+    enforces strict temporal ordering.
+
+    Knowledge Tier: [T1] - Cross-fitting debiasing is established
+    (Chernozhukov et al. 2018). [T2] - Temporal adaptation with gap enforcement.
+
+    Parameters
+    ----------
+    n_splits : int, default=5
+        Number of temporal folds. Data is divided into n_splits consecutive
+        chunks of approximately equal size.
+    gap : int, default=0
+        Number of samples to exclude between training and test for each fold.
+        Prevents lookahead bias in h-step forecasting.
+    test_size : int, optional
+        Size of each test fold. If None, computed automatically as
+        n_samples // n_splits.
+
+    Attributes
+    ----------
+    n_splits : int
+        Number of splits
+    gap : int
+        Gap between train and test
+    test_size : int or None
+        Test fold size
+
+    Notes
+    -----
+    **Forward-only semantics**:
+    - Fold 0: No training data → predictions are NaN
+    - Fold 1: Train on fold 0, predict on fold 1
+    - Fold k: Train on folds 0..k-1, predict on fold k
+
+    This is stricter than bidirectional cross-fitting but guarantees
+    temporal safety. The first fold cannot receive predictions since
+    there's no historical data to train on.
+
+    **vs WalkForwardCV**:
+    - WalkForwardCV: Each split is a train/test pair for evaluation
+    - CrossFitCV: Each observation gets ONE out-of-sample prediction
+
+    Example
+    -------
+    >>> cv = CrossFitCV(n_splits=5, gap=2)
+    >>> for train_idx, test_idx in cv.split(X):
+    ...     print(f"Train: 0-{train_idx[-1]}, Test: {test_idx[0]}-{test_idx[-1]}")
+
+    References
+    ----------
+    Chernozhukov, V., et al. (2018). Double/debiased machine learning for
+    treatment and structural parameters. The Econometrics Journal, 21(1), C1-C68.
+
+    See Also
+    --------
+    WalkForwardCV : Standard walk-forward CV for model evaluation.
+    dm_test : Uses cross-fitted predictions for forecast comparison.
+    """
+
+    def __init__(
+        self,
+        n_splits: int = 5,
+        gap: int = 0,
+        test_size: Optional[int] = None,
+    ) -> None:
+        """Initialize CrossFitCV."""
+        if n_splits < 2:
+            raise ValueError(f"n_splits must be >= 2, got {n_splits}")
+
+        if gap < 0:
+            raise ValueError(f"gap must be >= 0, got {gap}")
+
+        if test_size is not None and test_size < 1:
+            raise ValueError(f"test_size must be >= 1, got {test_size}")
+
+        self.n_splits = n_splits
+        self.gap = gap
+        self.test_size = test_size
+
+    def _calculate_fold_indices(
+        self, n_samples: int
+    ) -> List[Tuple[int, int]]:
+        """
+        Calculate (start, end) indices for each fold.
+
+        Returns list of (start, end) tuples where end is exclusive.
+        """
+        if self.test_size is not None:
+            fold_size = self.test_size
+        else:
+            fold_size = n_samples // self.n_splits
+
+        if fold_size < 1:
+            raise ValueError(
+                f"Not enough samples ({n_samples}) for {self.n_splits} splits"
+            )
+
+        folds: List[Tuple[int, int]] = []
+        for k in range(self.n_splits):
+            start = k * fold_size
+            if k == self.n_splits - 1:
+                # Last fold takes remaining samples
+                end = n_samples
+            else:
+                end = (k + 1) * fold_size
+
+            if start < n_samples:
+                folds.append((start, end))
+
+        return folds
+
+    def split(
+        self,
+        X: ArrayLike,
+        y: Optional[ArrayLike] = None,
+        groups: Optional[ArrayLike] = None,
+    ) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+        """
+        Generate indices to split data into training and test sets.
+
+        For fold k (k >= 1):
+        - Train indices: all samples from folds 0 to k-1 (minus gap)
+        - Test indices: samples in fold k
+
+        Fold 0 is skipped since there's no training data.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Training data
+        y : array-like of shape (n_samples,), optional
+            Target (not used, for API compatibility)
+        groups : array-like of shape (n_samples,), optional
+            Group labels (not used, for API compatibility)
+
+        Yields
+        ------
+        train : np.ndarray
+            Training set indices
+        test : np.ndarray
+            Test set indices
+        """
+        n_samples = len(X) if not hasattr(X, "shape") else X.shape[0]
+        folds = self._calculate_fold_indices(n_samples)
+
+        # Skip fold 0 - no training data available
+        for k in range(1, len(folds)):
+            test_start, test_end = folds[k]
+
+            # Train on all previous folds, respecting gap
+            train_end = test_start - self.gap
+
+            if train_end <= 0:
+                continue
+
+            train_indices = np.arange(0, train_end, dtype=np.intp)
+            test_indices = np.arange(test_start, test_end, dtype=np.intp)
+
+            yield train_indices, test_indices
+
+    def get_n_splits(
+        self,
+        X: Optional[ArrayLike] = None,
+        y: Optional[ArrayLike] = None,
+        groups: Optional[ArrayLike] = None,
+    ) -> int:
+        """Return number of splitting iterations."""
+        if X is not None:
+            return sum(1 for _ in self.split(X))
+        return self.n_splits - 1
+
+    def fit_predict(
+        self,
+        model,
+        X: ArrayLike,
+        y: ArrayLike,
+    ) -> np.ndarray:
+        """
+        Return out-of-sample predictions for all observations.
+
+        Each observation (except fold 0) appears in exactly one test fold.
+        Predictions for fold 0 are NaN since there's no training data.
+
+        Parameters
+        ----------
+        model : sklearn estimator
+            Model with fit(X, y) and predict(X) methods.
+        X : ArrayLike
+            Features array of shape (n_samples, n_features)
+        y : ArrayLike
+            Target array of shape (n_samples,)
+
+        Returns
+        -------
+        np.ndarray
+            Out-of-sample predictions, shape (n_samples,).
+            First fold values are NaN.
+        """
+        X = np.asarray(X)
+        y = np.asarray(y)
+        n_samples = len(y)
+
+        predictions = np.full(n_samples, np.nan)
+
+        for train_idx, test_idx in self.split(X):
+            try:
+                model_clone = clone(model)
+            except TypeError:
+                model_clone = model
+
+            model_clone.fit(X[train_idx], y[train_idx])
+            predictions[test_idx] = model_clone.predict(X[test_idx])
+
+        return predictions
+
+    def fit_predict_residuals(
+        self,
+        model,
+        X: ArrayLike,
+        y: ArrayLike,
+    ) -> np.ndarray:
+        """
+        Return out-of-sample residuals (y - y_hat).
+
+        Parameters
+        ----------
+        model : sklearn estimator
+            Model with fit/predict interface
+        X : ArrayLike
+            Features
+        y : ArrayLike
+            Target
+
+        Returns
+        -------
+        np.ndarray
+            Out-of-sample residuals, shape (n_samples,)
+        """
+        predictions = self.fit_predict(model, X, y)
+        return np.asarray(y) - predictions
+
+    def get_fold_indices(self, X: ArrayLike) -> List[Tuple[int, int]]:
+        """
+        Return (start, end) indices for each fold.
+
+        Parameters
+        ----------
+        X : array-like
+            Data array
+
+        Returns
+        -------
+        List[Tuple[int, int]]
+            List of (start, end) for each fold
+        """
+        n_samples = len(X) if not hasattr(X, "shape") else X.shape[0]
+        return self._calculate_fold_indices(n_samples)
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return (
+            f"CrossFitCV(n_splits={self.n_splits}, "
+            f"gap={self.gap}, "
+            f"test_size={self.test_size})"
+        )
+
+
+# =============================================================================
 # Public API
 # =============================================================================
 
 __all__ = [
     "SplitInfo",
     "WalkForwardCV",
+    "CrossFitCV",
 ]

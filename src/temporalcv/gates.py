@@ -245,6 +245,14 @@ def gate_shuffled_target(
 
     Uses WalkForwardCV internally to compute out-of-sample MAE, avoiding
     the bias of in-sample evaluation that could mask or exaggerate leakage.
+
+    Complexity: O(n_shuffles × n_cv_splits × model_fit_time)
+
+    See Also
+    --------
+    gate_synthetic_ar1 : Test against theoretical AR(1) bounds.
+    gate_suspicious_improvement : Check for implausible improvement ratios.
+    WalkForwardCV : The CV strategy used internally.
     """
     X = np.asarray(X)
     y = np.asarray(y)
@@ -383,6 +391,13 @@ def gate_synthetic_ar1(
 
     Uses WalkForwardCV internally to compute out-of-sample MAE, avoiding
     in-sample evaluation bias.
+
+    Complexity: O(n_cv_splits × model_fit_time)
+
+    See Also
+    --------
+    gate_shuffled_target : Definitive leakage test via permutation.
+    gate_theoretical_bounds : Test against estimated AR(1) from real data.
     """
     # Validate phi for stationarity
     if not (-1 < phi < 1):
@@ -511,6 +526,11 @@ def gate_suspicious_improvement(
     Experience shows that genuine forecasting improvements are modest.
     If your model shows 40%+ improvement over persistence, verify with
     shuffled target test before trusting the results.
+
+    See Also
+    --------
+    gate_shuffled_target : Definitive test if improvement seems too good.
+    gate_theoretical_bounds : Check against AR(1) theoretical minimum.
     """
     if baseline_metric <= 0:
         return GateResult(
@@ -594,6 +614,10 @@ def gate_temporal_boundary(
     at least h periods before the first test observation to prevent leakage.
 
     Required: test_start_idx >= train_end_idx + horizon + gap
+
+    See Also
+    --------
+    WalkForwardCV : CV class that enforces gap automatically.
     """
     required_gap = horizon + gap
     actual_gap = test_start_idx - train_end_idx - 1
@@ -774,6 +798,11 @@ def gate_residual_diagnostics(
     >>> result = gate_residual_diagnostics(residuals, max_lag=10)
     >>> if result.status == GateStatus.WARN:
     ...     print("Check:", result.details["failing_tests"])
+
+    See Also
+    --------
+    gate_shuffled_target : Run before residual diagnostics for leakage check.
+    dm_test : Uses similar autocorrelation concepts via HAC variance.
     """
     from scipy import stats
 
@@ -896,6 +925,168 @@ def gate_residual_diagnostics(
 
 
 # =============================================================================
+# Theoretical Bounds Gate
+# =============================================================================
+
+
+def gate_theoretical_bounds(
+    model_mae: float,
+    y_train: ArrayLike,
+    tolerance: float = 0.10,
+) -> GateResult:
+    """
+    Check if model MAE violates theoretical minimum for estimated AR(1).
+
+    This gate estimates the AR(1) autocorrelation from training data and
+    computes the theoretical minimum MAE achievable by any predictor. If
+    the model's out-of-sample MAE is suspiciously below this minimum, it
+    indicates potential data leakage or evaluation error.
+
+    Knowledge Tier: [T1] - Based on standard AR(1) theory and E[|Z|] = σ√(2/π)
+    for Z ~ N(0, σ²).
+
+    Parameters
+    ----------
+    model_mae : float
+        Model's out-of-sample MAE (must be computed on held-out data)
+    y_train : ArrayLike
+        Training target series used for estimating AR(1) parameters.
+        Requires n >= 30 samples for reliable estimation.
+    tolerance : float, default=0.10
+        How much below theoretical minimum triggers HALT.
+        0.10 means HALT if model_mae < 0.90 * theoretical_mae.
+
+    Returns
+    -------
+    GateResult
+        - PASS: model_mae >= theoretical_mae * (1 - tolerance)
+        - HALT: model_mae < theoretical_mae * (1 - tolerance)
+        - SKIP: insufficient data (n < 30)
+
+        Check details["ar1_assumption_warning"] if True - indicates
+        AR(1) residuals show autocorrelation (higher-order dynamics).
+
+    Notes
+    -----
+    Theory:
+    1. Estimate φ = ACF(1) of y_train
+    2. Compute AR(1) residuals: ε_t = y_t - φ * y_{t-1}
+    3. σ_innovation = std(ε_t)
+    4. theoretical_mae = σ_innovation * √(2/π) ≈ 0.7979 * σ_innovation
+
+    This is the expected absolute error for optimal prediction under AR(1).
+
+    References
+    ----------
+    [T1] For Z ~ N(0, σ²): E[|Z|] = σ * √(2/π) ≈ 0.7979 * σ
+
+    Example
+    -------
+    >>> # After computing out-of-sample MAE
+    >>> result = gate_theoretical_bounds(model_mae=0.15, y_train=y_train)
+    >>> if result.status == GateStatus.HALT:
+    ...     print("Model MAE beats theoretical minimum - investigate!")
+
+    See Also
+    --------
+    gate_synthetic_ar1 : Test on synthetic AR(1) with known parameters.
+    gate_suspicious_improvement : Complementary improvement check.
+    """
+    y = np.asarray(y_train, dtype=np.float64)
+    n = len(y)
+
+    # Minimum sample size for reliable ACF estimation
+    if n < 30:
+        return GateResult(
+            name="theoretical_bounds",
+            status=GateStatus.SKIP,
+            message=f"Insufficient data for AR(1) estimation (n={n}, need 30)",
+            metric_value=model_mae,
+            threshold=np.nan,
+            details={"n_samples": n, "min_required": 30},
+            recommendation="Collect more training data for theoretical bounds check.",
+        )
+
+    # Estimate phi from ACF(1)
+    acf = _compute_acf(y, max_lag=1)
+    phi = acf[0] if len(acf) > 0 else 0.0
+
+    # Compute AR(1) residuals (innovation terms)
+    y_lagged = y[:-1]
+    y_current = y[1:]
+    innovations = y_current - phi * y_lagged
+
+    # Innovation standard deviation
+    sigma_innovation = float(np.std(innovations, ddof=1))
+
+    # Theoretical minimum MAE: E[|N(0,σ²)|] = σ * sqrt(2/π)
+    theoretical_mae = sigma_innovation * np.sqrt(2.0 / np.pi)
+
+    # Threshold for HALT
+    threshold = theoretical_mae * (1.0 - tolerance)
+
+    # Check AR(1) assumption via Ljung-Box on residuals
+    ar1_warning = False
+    ar1_warning_message = None
+    if len(innovations) >= 30:
+        max_lag_for_test = min(10, len(innovations) // 3)
+        if max_lag_for_test >= 1:
+            _, lb_pvalue = _ljung_box_test(innovations, max_lag=max_lag_for_test)
+            if lb_pvalue < 0.05:
+                ar1_warning = True
+                ar1_warning_message = (
+                    f"AR(1) residuals show autocorrelation (Ljung-Box p={lb_pvalue:.4f}). "
+                    "Series may have higher-order dynamics; theoretical bound may not apply."
+                )
+
+    details = {
+        "phi_estimate": float(phi),
+        "sigma_innovation": sigma_innovation,
+        "theoretical_mae": theoretical_mae,
+        "threshold": threshold,
+        "tolerance": tolerance,
+        "n_samples": n,
+        "ar1_assumption_warning": ar1_warning,
+    }
+    if ar1_warning_message:
+        details["ar1_assumption_message"] = ar1_warning_message
+
+    # Check if model beats theoretical minimum
+    if model_mae < threshold:
+        return GateResult(
+            name="theoretical_bounds",
+            status=GateStatus.HALT,
+            message=(
+                f"Model MAE ({model_mae:.4f}) beats theoretical minimum "
+                f"({theoretical_mae:.4f}) by more than {tolerance:.0%} tolerance"
+            ),
+            metric_value=model_mae,
+            threshold=threshold,
+            details=details,
+            recommendation=(
+                "Model appears to beat impossible AR(1) bounds. Investigate for: "
+                "(1) Data leakage in features, (2) In-sample evaluation error, "
+                "(3) Target encoding issues. Re-verify train/test split."
+            ),
+        )
+
+    # PASS - model MAE is plausible
+    status_msg = "Model MAE is within theoretical bounds"
+    if ar1_warning:
+        status_msg += " (note: AR(1) assumption may not hold)"
+
+    return GateResult(
+        name="theoretical_bounds",
+        status=GateStatus.PASS,
+        message=status_msg,
+        metric_value=model_mae,
+        threshold=threshold,
+        details=details,
+        recommendation=None,
+    )
+
+
+# =============================================================================
 # Gate Runner
 # =============================================================================
 
@@ -933,6 +1124,274 @@ def run_gates(
 
 
 # =============================================================================
+# Regime-Stratified Validation
+# =============================================================================
+
+
+@dataclass
+class StratifiedValidationReport:
+    """
+    Validation report with regime stratification.
+
+    Provides both overall gate results and per-regime breakdowns,
+    exposing issues that aggregate metrics might hide.
+
+    Attributes
+    ----------
+    overall : ValidationReport
+        Gate results on full dataset
+    by_regime : Dict[str, ValidationReport]
+        Gate results per regime
+    regime_counts : Dict[str, int]
+        Sample counts per regime
+    masked_regimes : List[str]
+        Regimes with n < min_n (excluded from stratification)
+
+    Knowledge Tier: [T2] - Regime-conditional evaluation from myga-forecasting-v4
+
+    Notes
+    -----
+    Only numeric gates (gate_suspicious_improvement, gate_theoretical_bounds)
+    are run per-regime. Gates requiring model fitting (shuffled_target,
+    synthetic_ar1) are only run overall.
+    """
+
+    overall: ValidationReport
+    by_regime: dict[str, ValidationReport]
+    regime_counts: dict[str, int]
+    masked_regimes: List[str]
+
+    @property
+    def status(self) -> str:
+        """
+        Overall status: HALT if any HALT, WARN if any WARN, else PASS.
+
+        Checks both overall and per-regime results.
+        """
+        # Check overall
+        if self.overall.status == "HALT":
+            return "HALT"
+
+        # Check per-regime
+        for report in self.by_regime.values():
+            if any(g.status == GateStatus.HALT for g in report.gates):
+                return "HALT"
+
+        # Check for warnings
+        if self.overall.status == "WARN":
+            return "WARN"
+        for report in self.by_regime.values():
+            if any(g.status == GateStatus.WARN for g in report.gates):
+                return "WARN"
+
+        return "PASS"
+
+    def summary(self) -> str:
+        """Return human-readable summary with regime breakdown."""
+        lines = [
+            "=" * 60,
+            "STRATIFIED VALIDATION REPORT",
+            "=" * 60,
+            "",
+            "OVERALL RESULTS:",
+        ]
+
+        for gate in self.overall.gates:
+            lines.append(f"  {gate}")
+
+        if self.by_regime:
+            lines.append("")
+            lines.append("-" * 60)
+            lines.append("PER-REGIME RESULTS:")
+
+            for regime, report in sorted(self.by_regime.items()):
+                n = self.regime_counts.get(regime, 0)
+                lines.append(f"  [{regime}] (n={n}):")
+                for gate in report.gates:
+                    lines.append(f"    {gate}")
+
+        if self.masked_regimes:
+            lines.append("")
+            lines.append(f"MASKED REGIMES (insufficient data): {self.masked_regimes}")
+
+        lines.extend([
+            "",
+            "=" * 60,
+            f"OVERALL STATUS: {self.status}",
+            "=" * 60,
+        ])
+
+        return "\n".join(lines)
+
+
+def run_gates_stratified(
+    overall_gates: List[GateResult],
+    actuals: ArrayLike,
+    predictions: ArrayLike,
+    regimes: Optional[Union[np.ndarray, Literal["auto"]]] = None,
+    min_n_per_regime: int = 10,
+    volatility_window: int = 13,
+    improvement_threshold: float = 0.20,
+    warning_threshold: float = 0.10,
+) -> StratifiedValidationReport:
+    """
+    Run validation gates overall + stratified by regime.
+
+    Provides regime-conditional validation to expose issues hidden
+    by aggregate metrics. Only numeric gates (suspicious_improvement,
+    theoretical_bounds) are run per-regime.
+
+    Knowledge Tier: [T2] - Regime-conditional evaluation from myga-forecasting-v4
+
+    Parameters
+    ----------
+    overall_gates : List[GateResult]
+        Pre-computed gate results for overall dataset
+    actuals : ArrayLike
+        Actual values (for regime classification and per-regime metrics)
+    predictions : ArrayLike
+        Model predictions (for per-regime metrics)
+    regimes : array | "auto" | None, default=None
+        Regime labels:
+        - None: No stratification (returns overall only)
+        - "auto": Auto-classify volatility regimes from actuals
+        - array: Use provided regime labels
+    min_n_per_regime : int, default=10
+        Minimum samples per regime. Below this, regime is masked.
+    volatility_window : int, default=13
+        Window for auto volatility classification (13 weeks ~ 1 quarter)
+    improvement_threshold : float, default=0.20
+        Threshold for gate_suspicious_improvement HALT
+    warning_threshold : float, default=0.10
+        Threshold for gate_suspicious_improvement WARN
+
+    Returns
+    -------
+    StratifiedValidationReport
+        Overall + per-regime gate results
+
+    Notes
+    -----
+    Regime stratification exposes issues that aggregate metrics hide:
+    - Model may pass overall but fail in HIGH volatility regime
+    - FLAT direction regime may have artificially good metrics
+    - Per-regime sample sizes affect reliability
+
+    Example
+    -------
+    >>> overall = [
+    ...     gate_shuffled_target(model, X, y),
+    ...     gate_suspicious_improvement(model_mae, persistence_mae),
+    ... ]
+    >>> report = run_gates_stratified(
+    ...     overall, actuals, predictions, regimes="auto"
+    ... )
+    >>> if report.status == "HALT":
+    ...     print(report.summary())
+    """
+    from temporalcv.regimes import (
+        classify_volatility_regime,
+        get_regime_counts,
+        mask_low_n_regimes,
+    )
+
+    actuals = np.asarray(actuals)
+    predictions = np.asarray(predictions)
+
+    # Create overall report
+    overall_report = ValidationReport(gates=overall_gates)
+
+    # If no stratification, return overall only
+    if regimes is None:
+        return StratifiedValidationReport(
+            overall=overall_report,
+            by_regime={},
+            regime_counts={},
+            masked_regimes=[],
+        )
+
+    # Get regime labels
+    if isinstance(regimes, str) and regimes == "auto":
+        regime_labels = classify_volatility_regime(
+            actuals, window=volatility_window, basis="changes"
+        )
+    else:
+        regime_labels = np.asarray(regimes)
+
+    # Get counts and mask low-n regimes
+    regime_counts = get_regime_counts(regime_labels)
+    masked_labels = mask_low_n_regimes(
+        regime_labels, min_n=min_n_per_regime, mask_value="MASKED"
+    )
+
+    # Identify masked regimes
+    masked_regimes = [r for r, c in regime_counts.items() if c < min_n_per_regime]
+
+    # Run numeric gates per-regime
+    by_regime: dict[str, ValidationReport] = {}
+    unique_regimes = [r for r in np.unique(masked_labels) if r != "MASKED"]
+
+    for regime in unique_regimes:
+        regime_mask = masked_labels == regime
+        regime_actuals = actuals[regime_mask]
+        regime_preds = predictions[regime_mask]
+
+        # Compute per-regime metrics
+        regime_model_mae = float(np.mean(np.abs(regime_actuals - regime_preds)))
+        regime_persistence_mae = float(np.mean(np.abs(np.diff(regime_actuals))))
+
+        # Run numeric gates
+        regime_gates: List[GateResult] = []
+
+        # gate_suspicious_improvement
+        if regime_persistence_mae > 0:
+            improvement_result = gate_suspicious_improvement(
+                model_metric=regime_model_mae,
+                baseline_metric=regime_persistence_mae,
+                threshold=improvement_threshold,
+                warn_threshold=warning_threshold,
+            )
+            # Add regime context to message
+            improvement_result = GateResult(
+                name=improvement_result.name,
+                status=improvement_result.status,
+                message=f"[{regime}] {improvement_result.message}",
+                metric_value=improvement_result.metric_value,
+                threshold=improvement_result.threshold,
+                details={**improvement_result.details, "regime": regime},
+                recommendation=improvement_result.recommendation,
+            )
+            regime_gates.append(improvement_result)
+
+        # gate_theoretical_bounds (if enough data)
+        if len(regime_actuals) >= 30:
+            theoretical_result = gate_theoretical_bounds(
+                model_mae=regime_model_mae,
+                y_train=regime_actuals,
+                tolerance=0.10,
+            )
+            theoretical_result = GateResult(
+                name=theoretical_result.name,
+                status=theoretical_result.status,
+                message=f"[{regime}] {theoretical_result.message}",
+                metric_value=theoretical_result.metric_value,
+                threshold=theoretical_result.threshold,
+                details={**theoretical_result.details, "regime": regime},
+                recommendation=theoretical_result.recommendation,
+            )
+            regime_gates.append(theoretical_result)
+
+        by_regime[regime] = ValidationReport(gates=regime_gates)
+
+    return StratifiedValidationReport(
+        overall=overall_report,
+        by_regime=by_regime,
+        regime_counts=regime_counts,
+        masked_regimes=masked_regimes,
+    )
+
+
+# =============================================================================
 # Public API
 # =============================================================================
 
@@ -941,12 +1400,17 @@ __all__ = [
     "GateStatus",
     "GateResult",
     "ValidationReport",
+    "StratifiedValidationReport",
     # Gate functions
     "gate_shuffled_target",
     "gate_synthetic_ar1",
     "gate_suspicious_improvement",
     "gate_temporal_boundary",
     "gate_residual_diagnostics",
-    # Runner
+    "gate_theoretical_bounds",
+    # Runners
     "run_gates",
+    "run_gates_stratified",
+    # Internal helpers (exposed for testing)
+    "_ljung_box_test",
 ]

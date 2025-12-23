@@ -9,6 +9,17 @@ Key concepts:
 - **MC-SS**: Move-Conditional Skill Score relative to persistence
 - **3-class direction**: UP/DOWN/FLAT makes persistence a fair baseline
 
+Knowledge Tiers
+---------------
+[T1] Persistence baseline = predict no change (standard in forecasting literature)
+[T1] Skill score formula: SS = 1 - (model_error / baseline_error) (Murphy 1988)
+[T1] Directional accuracy testing framework (Pesaran & Timmermann 1992)
+[T2] MC-SS = skill score computed on moves only (myga-forecasting-v2 Phase 11)
+[T2] 70th percentile threshold defines "significant" moves (v2 empirical finding)
+[T2] Threshold MUST come from training data only (BUG-003 fix in v2)
+[T3] 10 samples per direction for reliability (rule of thumb, not validated)
+[T3] Scale-aware epsilon for numerical stability (implementation choice)
+
 Example
 -------
 >>> from temporalcv.persistence import (
@@ -26,8 +37,15 @@ Example
 
 References
 ----------
-- Tashman (2000). Out-of-sample tests of forecasting accuracy.
-- Pesaran & Timmermann (1992). Directional accuracy test.
+[T1] Tashman, L.J. (2000). Out-of-sample tests of forecasting accuracy:
+     An analysis and review. International Journal of Forecasting, 16(4), 437-450.
+[T1] Pesaran, M.H. & Timmermann, A. (1992). A simple nonparametric test of
+     predictive performance. Journal of Business & Economic Statistics, 10(4), 461-465.
+[T1] Murphy, A.H. (1988). Skill scores based on the mean square error and their
+     relationships to the correlation coefficient. Monthly Weather Review, 116, 2417-2424.
+[T2] Move-conditional evaluation: myga-forecasting-v2 Phase 11 analysis.
+     Rationale: Overall MAE is dominated by FLAT periods where persistence trivially wins.
+     Conditioning on moves isolates genuine forecasting skill.
 """
 
 from __future__ import annotations
@@ -169,6 +187,11 @@ def compute_move_threshold(
     >>> train_actuals = np.array([-0.1, -0.05, 0.0, 0.02, 0.05, 0.1])
     >>> threshold = compute_move_threshold(train_actuals, percentile=70)
     >>> print(f"Threshold: {threshold:.4f}")
+
+    See Also
+    --------
+    compute_move_conditional_metrics : Main MC-SS computation using threshold.
+    classify_moves : Classify values into UP/DOWN/FLAT using threshold.
     """
     actuals = np.asarray(actuals)
 
@@ -448,6 +471,11 @@ def compute_direction_accuracy(
     >>> # 3-class (with threshold)
     >>> threshold = compute_move_threshold(train_actuals)
     >>> acc = compute_direction_accuracy(preds, actuals, move_threshold=threshold)
+
+    See Also
+    --------
+    pt_test : Statistical test for directional accuracy significance.
+    compute_move_conditional_metrics : Full move-conditional evaluation.
     """
     predictions = np.asarray(predictions)
     actuals = np.asarray(actuals)

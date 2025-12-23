@@ -455,6 +455,11 @@ def compute_pr_auc(
     >>> actuals = np.array([1, 1, 0, 0, 1])
     >>> result = compute_pr_auc(probs, actuals)
     >>> print(f"PR-AUC: {result.pr_auc:.3f} (baseline: {result.baseline:.3f})")
+
+    See Also
+    --------
+    compute_direction_brier : Brier score for probabilistic forecasts.
+    compute_move_conditional_metrics : MC-SS for high-persistence series.
     """
     pred_probs = np.asarray(pred_probs, dtype=np.float64)
     actual_binary = np.asarray(actual_binary)

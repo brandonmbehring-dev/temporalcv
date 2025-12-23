@@ -1,0 +1,54 @@
+name: Nightly Tests
+
+on:
+  schedule:
+    # Run at 3:00 UTC daily
+    - cron: '0 3 * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  monte-carlo-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run Monte Carlo tests
+        run: |
+          python -m pytest tests/monte_carlo/ -v -m "monte_carlo" --tb=short 2>&1 | tee mc-results.txt
+
+      - name: Run slow tests
+        run: |
+          python -m pytest tests/ -v -m "slow" --tb=short 2>&1 | tee slow-results.txt
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: |
+            mc-results.txt
+            slow-results.txt
+          retention-days: 30
+
+      - name: Check for failures
+        run: |
+          if grep -q "FAILED" mc-results.txt slow-results.txt; then
+            echo "::error::Some tests failed. Check artifacts for details."
+            exit 1
+          fi

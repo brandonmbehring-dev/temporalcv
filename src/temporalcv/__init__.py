@@ -48,12 +48,15 @@ from temporalcv.gates import (
     GateStatus,
     GateResult,
     ValidationReport,
+    StratifiedValidationReport,
     gate_shuffled_target,
     gate_synthetic_ar1,
     gate_suspicious_improvement,
     gate_temporal_boundary,
     gate_residual_diagnostics,
+    gate_theoretical_bounds,
     run_gates,
+    run_gates_stratified,
 )
 
 # Statistical tests exports
@@ -69,6 +72,7 @@ from temporalcv.statistical_tests import (
 from temporalcv.cv import (
     SplitInfo,
     WalkForwardCV,
+    CrossFitCV,
 )
 
 # Regime classification exports
@@ -114,18 +118,35 @@ from temporalcv.bagging import (
     create_feature_bagger,
 )
 
+# Diagnostics exports
+from temporalcv.diagnostics import (
+    InfluenceDiagnostic,
+    compute_dm_influence,
+    GapSensitivityResult,
+    gap_sensitivity_analysis,
+)
+
+# Inference exports
+from temporalcv.inference import (
+    WildBootstrapResult,
+    wild_cluster_bootstrap,
+)
+
 __all__ = [
     "__version__",
     # Gates
     "GateStatus",
     "GateResult",
     "ValidationReport",
+    "StratifiedValidationReport",
     "gate_shuffled_target",
     "gate_synthetic_ar1",
     "gate_suspicious_improvement",
     "gate_temporal_boundary",
     "gate_residual_diagnostics",
+    "gate_theoretical_bounds",
     "run_gates",
+    "run_gates_stratified",
     # Statistical tests
     "DMTestResult",
     "PTTestResult",
@@ -135,6 +156,7 @@ __all__ = [
     # Cross-validation
     "SplitInfo",
     "WalkForwardCV",
+    "CrossFitCV",
     # Regime classification
     "classify_volatility_regime",
     "classify_direction_regime",
@@ -166,4 +188,12 @@ __all__ = [
     "create_block_bagger",
     "create_stationary_bagger",
     "create_feature_bagger",
+    # Diagnostics
+    "InfluenceDiagnostic",
+    "compute_dm_influence",
+    "GapSensitivityResult",
+    "gap_sensitivity_analysis",
+    # Inference
+    "WildBootstrapResult",
+    "wild_cluster_bootstrap",
 ]

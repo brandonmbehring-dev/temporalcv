@@ -8,6 +8,17 @@ Using levels mislabels steady drifts as "volatile" because:
 - A series drifting steadily from 3.0 to 4.0 has high std of LEVELS
 - But it has ZERO volatility of changes (constant increments)
 
+Knowledge Tiers
+---------------
+[T1] Regime-switching theory provides framework (Hamilton 1989, 1994)
+[T1] Rolling volatility as regime indicator (standard in finance literature)
+[T1] Percentile-based thresholds for regime classification (non-parametric approach)
+[T2] Volatility of CHANGES not levels (BUG-005 fix in myga-forecasting-v2)
+[T2] 3-class direction (UP/DOWN/FLAT) enables fair persistence comparison (v2)
+[T3] 13-week window assumes quarterly seasonality pattern
+[T3] 33rd/67th percentiles for regime boundaries (symmetric terciles, not validated)
+[T3] Minimum n=10 per regime for reliability (rule of thumb)
+
 Example
 -------
 >>> from temporalcv.regimes import classify_volatility_regime, classify_direction_regime
@@ -21,8 +32,15 @@ Example
 
 References
 ----------
-- Hamilton (1994), Chapter 22: Regime-switching models
-- Stock & Watson (2001): Structural instability pervasive
+[T1] Hamilton, J.D. (1989). A new approach to the economic analysis of
+     nonstationary time series and the business cycle. Econometrica, 57(2), 357-384.
+[T1] Hamilton, J.D. (1994). Time Series Analysis. Princeton University Press.
+     Chapter 22: Regime-switching models.
+[T1] Stock, J.H. & Watson, M.W. (2001). Forecasting output and inflation:
+     The role of asset prices. Journal of Economic Literature, 41(3), 788-829.
+[T2] Volatility basis='changes' correction: myga-forecasting-v2 BUG-005.
+     Root cause: Using levels led to mislabeling steady drifts as volatile.
+     Symptom: "HIGH volatility" regime had lowest prediction error.
 """
 
 from __future__ import annotations
@@ -84,6 +102,11 @@ def classify_volatility_regime(
     >>> values = np.cumsum(np.random.randn(200) * 0.01) + 3.0
     >>> regimes = classify_volatility_regime(values, window=13, basis='changes')
     >>> print(np.unique(regimes, return_counts=True))
+
+    See Also
+    --------
+    classify_direction_regime : Classify by direction (UP/DOWN/FLAT).
+    run_gates_stratified : Run validation gates per-regime.
     """
     values = np.asarray(values)
 
@@ -186,6 +209,11 @@ def classify_direction_regime(
     >>> actuals = np.array([0.1, -0.1, 0.02, -0.02, 0.0])
     >>> directions = classify_direction_regime(actuals, threshold=0.05)
     >>> print(directions)  # ['UP', 'DOWN', 'FLAT', 'FLAT', 'FLAT']
+
+    See Also
+    --------
+    classify_volatility_regime : Classify by volatility level.
+    compute_move_threshold : Compute threshold from training data.
     """
     values = np.asarray(values)
 

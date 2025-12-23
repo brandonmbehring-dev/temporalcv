@@ -82,6 +82,12 @@ def create_block_bagger(
     >>> from sklearn.linear_model import Ridge
     >>> bagger = create_block_bagger(Ridge(), n_estimators=50)
     >>> bagger.fit(X_train, y_train)
+
+    See Also
+    --------
+    create_stationary_bagger : Alternative with geometric block lengths.
+    create_feature_bagger : Feature subspace method instead of row bootstrap.
+    MovingBlockBootstrap : The underlying bootstrap strategy.
     """
     strategy = MovingBlockBootstrap(block_length=block_length)
     return TimeSeriesBagger(
@@ -125,6 +131,11 @@ def create_stationary_bagger(
     --------
     >>> from sklearn.linear_model import ElasticNet
     >>> bagger = create_stationary_bagger(ElasticNet(), n_estimators=50)
+
+    See Also
+    --------
+    create_block_bagger : Fixed block lengths (simpler).
+    StationaryBootstrap : The underlying bootstrap strategy.
     """
     strategy = StationaryBootstrap(expected_block_length=expected_block_length)
     return TimeSeriesBagger(
@@ -168,6 +179,11 @@ def create_feature_bagger(
     --------
     >>> from sklearn.linear_model import Ridge
     >>> bagger = create_feature_bagger(Ridge(), max_features=0.6)
+
+    See Also
+    --------
+    create_block_bagger : Bootstrap rows instead of features.
+    FeatureBagging : The underlying bootstrap strategy.
     """
     strategy = FeatureBagging(max_features=max_features)
     return TimeSeriesBagger(

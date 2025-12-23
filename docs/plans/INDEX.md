@@ -1,17 +1,18 @@
 # temporalcv Planning Index
 
 **Package**: temporalcv - Temporal CV with leakage protection
-**Status**: Phase 0 Complete, Phase 1 Ready
+**Status**: Phase 5 Complete, v1.0 Preparation
 
 ---
 
 ## Current Work
 
-→ Phase 1: Complete ✓
-→ Phase 2: Complete ✓
-→ Phase 3: Complete ✓
-→ Phase 4: Complete ✓
-→ Next: Phase 5 (Benchmark suite + event metrics)
+→ Phase 1: Complete ✓ (97% coverage, 64 tests)
+→ Phase 2: Complete ✓ (96% coverage, 104 tests)
+→ Phase 3: Complete ✓ (95% coverage, 162 tests)
+→ Phase 4: Complete ✓ (96% coverage, 251 tests)
+→ Phase 5: Complete ✓ (85% coverage, 366 tests) - 2025-12-23
+→ Next: v1.0 Preparation (documentation, patterns, release)
 
 ## Quick Navigation
 
@@ -31,8 +32,8 @@
 - [x] **Phase 2**: Walk-forward CV infrastructure (104 tests, 96% coverage)
 - [x] **Phase 3**: High-persistence handling (162 tests, 95% coverage)
 - [x] **Phase 4**: Uncertainty + ensemble (251 tests, 96% coverage)
-- [ ] **Phase 5**: Benchmark suite + event metrics (Weeks 17-20)
-- [ ] **Phase 6**: Julia port (Weeks 21-28)
+- [x] **Phase 5**: Benchmark suite + event metrics (366 tests, 85% coverage) ✓ 2025-12-23
+- [ ] **Phase 6**: Julia port (Deferred until v1.0 stable)
 
 ## Key Decisions
 

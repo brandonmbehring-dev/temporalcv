@@ -160,6 +160,12 @@ class SplitConformalPredictor:
     References
     ----------
     Romano, Sesia, Candes (2019). "Conformalized Quantile Regression"
+
+    See Also
+    --------
+    AdaptiveConformalPredictor : Dynamic adaptation for distribution shift.
+    BootstrapUncertainty : Alternative bootstrap-based intervals.
+    walk_forward_conformal : Convenience function for walk-forward results.
     """
 
     def __init__(self, alpha: float = 0.05):
@@ -334,6 +340,11 @@ class AdaptiveConformalPredictor:
     References
     ----------
     Gibbs, Candes (2021). "Adaptive Conformal Inference Under Distribution Shift"
+
+    See Also
+    --------
+    SplitConformalPredictor : Static conformal for i.i.d. data.
+    BootstrapUncertainty : Alternative bootstrap-based intervals.
     """
 
     def __init__(
@@ -508,6 +519,13 @@ class BootstrapUncertainty:
     >>> boot = BootstrapUncertainty(n_bootstrap=100, alpha=0.10)
     >>> boot.fit(cal_preds, cal_actuals)
     >>> intervals = boot.predict_interval(test_preds)
+
+    Complexity: O(n_bootstrap × n_predictions)
+
+    See Also
+    --------
+    SplitConformalPredictor : Conformal method with coverage guarantees.
+    wild_cluster_bootstrap : Wild bootstrap for CV fold inference.
     """
 
     def __init__(
@@ -648,6 +666,11 @@ def evaluate_interval_quality(
     >>> quality = evaluate_interval_quality(intervals, actuals)
     >>> print(f"Coverage: {quality['coverage']:.1%}")
     >>> print(f"Gap: {quality['coverage_gap']:+.1%}")
+
+    See Also
+    --------
+    PredictionInterval.coverage : Simple coverage computation.
+    walk_forward_conformal : Integrated calibration and evaluation.
     """
     actuals = np.asarray(actuals)
 
@@ -759,6 +782,12 @@ def walk_forward_conformal(
     >>> intervals, quality = walk_forward_conformal(predictions, actuals)
     >>> print(f"Coverage (holdout only): {quality['coverage']:.1%}")
     >>> print(f"Calibration size: {quality['calibration_size']}")
+
+    See Also
+    --------
+    SplitConformalPredictor : Underlying conformal predictor used.
+    evaluate_interval_quality : Quality metrics computed on holdout.
+    WalkForwardCV : CV strategy that produces the input predictions.
     """
     predictions = np.asarray(predictions)
     actuals = np.asarray(actuals)

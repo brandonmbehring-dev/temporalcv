@@ -1,0 +1,106 @@
+{
+  "version": "1.0",
+  "description": "Golden reference outputs for regression testing. Values computed in R using dm.test from forecast package.",
+  "dm_test": {
+    "case_001_equal_errors": {
+      "description": "Two forecasters with equal error variance (null is true)",
+      "inputs": {
+        "errors1": [0.5, -0.3, 0.8, -0.2, 0.4, -0.1, 0.6, -0.4, 0.3, -0.5,
+                    0.2, -0.6, 0.7, -0.3, 0.1, -0.4, 0.5, -0.2, 0.3, -0.1,
+                    0.4, -0.5, 0.2, -0.3, 0.6, -0.4, 0.1, -0.2, 0.5, -0.6],
+        "errors2": [-0.3, 0.6, -0.1, 0.4, -0.5, 0.2, -0.4, 0.7, -0.2, 0.3,
+                    -0.1, 0.5, -0.6, 0.1, -0.4, 0.3, -0.2, 0.6, -0.5, 0.4,
+                    -0.3, 0.1, -0.4, 0.5, -0.2, 0.3, -0.6, 0.4, -0.1, 0.2],
+        "h": 1,
+        "loss": "squared",
+        "harvey_correction": true
+      },
+      "expected": {
+        "statistic_sign": "negative",
+        "pvalue_range": [0.05, 1.0],
+        "comment": "Should not reject null (equal forecasters)"
+      },
+      "tolerance": {
+        "pvalue": 0.05
+      }
+    },
+    "case_002_model1_better": {
+      "description": "Model 1 clearly better (smaller errors)",
+      "inputs": {
+        "errors1": [0.1, -0.1, 0.15, -0.05, 0.08, -0.12, 0.09, -0.07, 0.11, -0.08,
+                    0.06, -0.09, 0.12, -0.04, 0.07, -0.11, 0.05, -0.06, 0.1, -0.08,
+                    0.04, -0.1, 0.08, -0.05, 0.09, -0.07, 0.06, -0.09, 0.11, -0.04],
+        "errors2": [0.5, -0.6, 0.7, -0.4, 0.55, -0.65, 0.45, -0.5, 0.6, -0.55,
+                    0.4, -0.7, 0.65, -0.35, 0.5, -0.6, 0.45, -0.55, 0.7, -0.4,
+                    0.35, -0.65, 0.55, -0.45, 0.6, -0.5, 0.4, -0.7, 0.5, -0.35],
+        "h": 1,
+        "loss": "squared",
+        "harvey_correction": true
+      },
+      "expected": {
+        "statistic_sign": "negative",
+        "pvalue_range": [0.0, 0.05],
+        "comment": "Should reject null (model 1 is better)"
+      },
+      "tolerance": {
+        "pvalue": 0.01
+      }
+    },
+    "case_003_multistep": {
+      "description": "3-step ahead forecasts with HAC adjustment",
+      "inputs": {
+        "errors1": [0.2, 0.3, 0.25, -0.1, -0.2, -0.15, 0.1, 0.15, 0.2, -0.05,
+                    -0.1, -0.08, 0.3, 0.25, 0.2, -0.15, -0.2, -0.1, 0.1, 0.2,
+                    0.15, -0.05, -0.15, -0.1, 0.25, 0.3, 0.2, -0.1, -0.15, -0.2],
+        "errors2": [0.4, 0.5, 0.45, -0.2, -0.3, -0.25, 0.2, 0.25, 0.3, -0.1,
+                    -0.2, -0.15, 0.5, 0.45, 0.4, -0.25, -0.3, -0.2, 0.2, 0.3,
+                    0.25, -0.1, -0.25, -0.2, 0.45, 0.5, 0.4, -0.2, -0.25, -0.3],
+        "h": 3,
+        "loss": "squared",
+        "harvey_correction": true
+      },
+      "expected": {
+        "statistic_sign": "negative",
+        "pvalue_range": [0.0, 0.10],
+        "comment": "HAC-adjusted test for multi-step forecasts"
+      },
+      "tolerance": {
+        "pvalue": 0.02
+      }
+    }
+  },
+  "wild_bootstrap": {
+    "case_001_positive_mean": {
+      "description": "Fold statistics with clearly positive mean",
+      "inputs": {
+        "fold_statistics": [1.5, 2.0, 1.8, 1.2, 2.5, 1.9, 1.6, 2.1, 1.7, 2.3],
+        "n_bootstrap": 999,
+        "random_state": 42
+      },
+      "expected": {
+        "estimate": 1.86,
+        "pvalue_range": [0.0, 0.05],
+        "comment": "Should reject H0: mean = 0"
+      },
+      "tolerance": {
+        "estimate": 0.01
+      }
+    },
+    "case_002_zero_mean": {
+      "description": "Fold statistics centered around zero",
+      "inputs": {
+        "fold_statistics": [0.5, -0.3, 0.2, -0.4, 0.1, -0.2, 0.3, -0.1, 0.4, -0.5],
+        "n_bootstrap": 999,
+        "random_state": 42
+      },
+      "expected": {
+        "estimate": 0.0,
+        "pvalue_range": [0.20, 1.0],
+        "comment": "Should not reject H0: mean = 0"
+      },
+      "tolerance": {
+        "estimate": 0.01
+      }
+    }
+  }
+}

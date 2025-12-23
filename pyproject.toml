@@ -42,6 +42,7 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "hypothesis>=6.0",
     "mypy>=1.0",
     "ruff>=0.1.0",
     "pre-commit>=3.0",
@@ -57,6 +58,15 @@ monash = ["datasetsforecast>=0.0.8"]
 # Model comparison
 compare = ["statsforecast>=1.5"]
 
+# Documentation
+docs = [
+    "sphinx>=7.2",
+    "sphinx-rtd-theme>=2.0",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx-autodoc-typehints>=1.25",
+    "myst-parser>=2.0.0",
+]
+
 # Combined extras
 benchmarks = [
     "temporalcv[fred]",
@@ -70,10 +80,10 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/bbehring/temporalcv"
-Documentation = "https://github.com/bbehring/temporalcv#readme"
-Repository = "https://github.com/bbehring/temporalcv"
-Issues = "https://github.com/bbehring/temporalcv/issues"
+Homepage = "https://github.com/brandonmbehring-dev/temporalcv"
+Documentation = "https://github.com/brandonmbehring-dev/temporalcv#readme"
+Repository = "https://github.com/brandonmbehring-dev/temporalcv"
+Issues = "https://github.com/brandonmbehring-dev/temporalcv/issues"
 
 [build-system]
 requires = ["hatchling"]
