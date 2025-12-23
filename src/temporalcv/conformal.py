@@ -8,6 +8,16 @@ Key concepts:
 - **Adaptive Conformal**: Dynamic adjustment for distribution shift
 - **Coverage guarantee**: P(Y ∈ interval) ≥ 1 - α
 
+Knowledge Tiers
+---------------
+[T1] Split conformal prediction (Romano, Patterson & Candès 2019)
+[T1] Finite-sample coverage guarantee: P(Y ∈ Ĉ) ≥ 1 - α (Vovk et al. 2005)
+[T1] Adaptive conformal inference for distribution shift (Gibbs & Candès 2021)
+[T1] Quantile formula: q = ceil((n+1)(1-α))/n (standard conformal result)
+[T2] Bootstrap uncertainty as complementary approach (empirical)
+[T3] Default gamma=0.1 for adaptive conformal (recommended in paper, may need tuning)
+[T3] Calibration fraction=0.3 as default split (implementation choice)
+
 Example
 -------
 >>> from temporalcv.conformal import (
@@ -25,9 +35,12 @@ Example
 
 References
 ----------
-- Romano, Sesia, Candes (2019). "Conformalized Quantile Regression"
-- Gibbs, Candes (2021). "Adaptive Conformal Inference Under Distribution Shift"
-- Vovk, Gammerman, Shafer (2005). "Algorithmic Learning in a Random World"
+[T1] Romano, Y., Patterson, E. & Candès, E.J. (2019). Conformalized quantile
+     regression. NeurIPS.
+[T1] Gibbs, I. & Candès, E.J. (2021). Adaptive conformal inference under
+     distribution shift. NeurIPS.
+[T1] Vovk, V., Gammerman, A., & Shafer, G. (2005). Algorithmic Learning in
+     a Random World. Springer.
 """
 
 from __future__ import annotations
@@ -235,11 +248,12 @@ class SplitConformalPredictor:
 
         # Quantile for coverage guarantee
         # Use ceiling((n+1)(1-alpha))/n quantile for finite-sample validity
+        # method="higher" ensures conservative coverage (ceiling interpolation)
         n = len(scores)
         q = np.ceil((n + 1) * (1 - self.alpha)) / n
         q = min(q, 1.0)  # Cap at 1.0
 
-        self.quantile_ = float(np.quantile(scores, q))
+        self.quantile_ = float(np.quantile(scores, q, method="higher"))
 
         return self
 
@@ -381,10 +395,11 @@ class AdaptiveConformalPredictor:
         if n == 0:
             raise ValueError("Cannot initialize with empty data")
 
+        # method="higher" ensures conservative coverage (ceiling interpolation)
         q = np.ceil((n + 1) * (1 - self.alpha)) / n
         q = min(q, 1.0)
 
-        self._current_quantile = float(np.quantile(scores, q))
+        self._current_quantile = float(np.quantile(scores, q, method="higher"))
         self.quantile_history = [self._current_quantile]
 
         return self

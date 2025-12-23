@@ -7,6 +7,16 @@ Implements statistical tests for forecast evaluation:
 - **Pesaran-Timmermann test** (PT 1992): Test directional accuracy
 - **HAC variance** (Newey-West 1987): Correct for serial correlation in h>1 forecasts
 
+Knowledge Tiers
+---------------
+[T1] DM test core methodology (Diebold & Mariano 1995)
+[T1] Harvey small-sample adjustment (Harvey et al. 1997)
+[T1] HAC variance with Bartlett kernel (Newey & West 1987)
+[T1] PT test 2-class formulas (Pesaran & Timmermann 1992)
+[T1] Automatic bandwidth selection (Andrews 1991)
+[T2] Minimum sample size n >= 30 for DM, n >= 20 for PT (standard practice)
+[T3] PT 3-class mode is ad-hoc extension, not published (exploratory use only)
+
 Example
 -------
 >>> from temporalcv.statistical_tests import dm_test, pt_test
@@ -21,15 +31,19 @@ Example
 
 References
 ----------
-- Diebold, F.X. & Mariano, R.S. (1995). Comparing predictive accuracy.
-  Journal of Business & Economic Statistics, 13(3), 253-263.
-- Harvey, D., Leybourne, S., & Newbold, P. (1997). Testing the equality
-  of prediction mean squared errors. International Journal of Forecasting.
-- Pesaran, M.H. & Timmermann, A. (1992). A simple nonparametric test
-  of predictive performance. Journal of Business & Economic Statistics.
-- Newey, W.K. & West, K.D. (1987). A simple, positive semi-definite,
-  heteroskedasticity and autocorrelation consistent covariance matrix.
-  Econometrica, 55(3), 703-708.
+[T1] Diebold, F.X. & Mariano, R.S. (1995). Comparing predictive accuracy.
+     Journal of Business & Economic Statistics, 13(3), 253-263.
+[T1] Harvey, D., Leybourne, S., & Newbold, P. (1997). Testing the equality
+     of prediction mean squared errors. International Journal of Forecasting,
+     13(2), 281-291.
+[T1] Pesaran, M.H. & Timmermann, A. (1992). A simple nonparametric test
+     of predictive performance. Journal of Business & Economic Statistics,
+     10(4), 461-465.
+[T1] Newey, W.K. & West, K.D. (1987). A simple, positive semi-definite,
+     heteroskedasticity and autocorrelation consistent covariance matrix.
+     Econometrica, 55(3), 703-708.
+[T1] Andrews, D.W.K. (1991). Heteroskedasticity and autocorrelation consistent
+     covariance matrix estimation. Econometrica, 59(3), 817-858.
 """
 
 from __future__ import annotations
@@ -340,14 +354,26 @@ def dm_test(
         dm_stat = dm_stat * adjustment
 
     # Compute p-value
-    if alternative == "two-sided":
-        pvalue = 2 * (1 - stats.norm.cdf(abs(dm_stat)))
-    elif alternative == "less":
-        # H1: Model 1 better (lower loss) => d_bar < 0 => dm_stat < 0
-        pvalue = stats.norm.cdf(dm_stat)
-    else:  # greater
-        # H1: Model 2 better => d_bar > 0 => dm_stat > 0
-        pvalue = 1 - stats.norm.cdf(dm_stat)
+    # When harvey_correction=True, use t-distribution (Harvey et al. 1997)
+    # Otherwise use normal distribution (Diebold & Mariano 1995)
+    if harvey_correction:
+        # t-distribution with df = n - 1 for small-sample inference
+        if alternative == "two-sided":
+            pvalue = 2 * (1 - stats.t.cdf(abs(dm_stat), df=n - 1))
+        elif alternative == "less":
+            pvalue = stats.t.cdf(dm_stat, df=n - 1)
+        else:  # greater
+            pvalue = 1 - stats.t.cdf(dm_stat, df=n - 1)
+    else:
+        # Normal distribution for large-sample asymptotic inference
+        if alternative == "two-sided":
+            pvalue = 2 * (1 - stats.norm.cdf(abs(dm_stat)))
+        elif alternative == "less":
+            # H1: Model 1 better (lower loss) => d_bar < 0 => dm_stat < 0
+            pvalue = stats.norm.cdf(dm_stat)
+        else:  # greater
+            # H1: Model 2 better => d_bar > 0 => dm_stat > 0
+            pvalue = 1 - stats.norm.cdf(dm_stat)
 
     return DMTestResult(
         statistic=float(dm_stat),
@@ -441,8 +467,8 @@ def pt_test(
 
     n = len(actual)
 
-    if n < 20:
-        raise ValueError(f"Insufficient samples for PT test. Need >= 20, got {n}")
+    if n < 30:
+        raise ValueError(f"Insufficient samples for PT test. Need >= 30, got {n}")
 
     # Classify directions
     if move_threshold is not None:

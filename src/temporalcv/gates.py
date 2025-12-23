@@ -10,6 +10,17 @@ Three-stage validation framework with HALT/PASS/WARN/SKIP decisions:
 The key insight: if a model beats a shuffled target or significantly
 outperforms theoretical bounds, it's likely learning from leakage.
 
+Knowledge Tiers
+---------------
+[T1] Shuffled target test destroys temporal structure (permutation test principle)
+[T1] AR(1) optimal 1-step MAE = σ√(2/π) ≈ 0.798σ (standard statistics result)
+[T1] Walk-forward validation framework (Tashman 2000)
+[T2] Shuffled target as definitive leakage test (myga-forecasting-v2 validation)
+[T2] "External-first" validation ordering (synthetic → shuffled → internal)
+[T3] 20% improvement threshold = "too good to be true" heuristic (empirical)
+[T3] 5% p-value threshold for shuffled comparison (standard but arbitrary)
+[T3] Tolerance factor 1.5 for AR(1) bounds (allows for finite-sample variation)
+
 Example
 -------
 >>> from temporalcv.gates import run_gates, gate_shuffled_target
@@ -27,8 +38,16 @@ Example
 
 References
 ----------
-- Hewamalage et al. (2023). Forecast Evaluation for Data Scientists.
-- Tashman (2000). Out-of-sample tests of forecasting accuracy.
+[T1] Hewamalage, H., Bergmeir, C. & Bandara, K. (2023). Forecast evaluation
+     for data scientists: Common pitfalls and best practices.
+     International Journal of Forecasting, 39(3), 1238-1268.
+[T1] Tashman, L.J. (2000). Out-of-sample tests of forecasting accuracy:
+     An analysis and review. International Journal of Forecasting, 16(4), 437-450.
+[T1] Optimal MAE for N(0,σ) = σ√(2/π): Standard result from order statistics.
+     For AR(1) with innovation variance σ², the 1-step forecast error is σ·ε_t,
+     hence MAE = E[|σ·ε|] = σ·√(2/π) when ε ~ N(0,1).
+[T2] Three-stage validation: External validation first catches gross errors before
+     trusting internal metrics. Principle established in myga-forecasting-v2.
 """
 
 from __future__ import annotations
@@ -39,6 +58,8 @@ from typing import Any, Callable, List, Optional, Protocol, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
+
+from temporalcv.cv import WalkForwardCV
 
 
 class GateStatus(Enum):
@@ -181,6 +202,7 @@ def gate_shuffled_target(
     y: ArrayLike,
     n_shuffles: int = 5,
     threshold: float = 0.05,
+    n_cv_splits: int = 3,
     random_state: Optional[int] = None,
 ) -> GateResult:
     """
@@ -204,6 +226,9 @@ def gate_shuffled_target(
         Number of shuffled targets to average over
     threshold : float, default=0.05
         Maximum allowed improvement ratio over shuffled baseline
+    n_cv_splits : int, default=3
+        Number of walk-forward CV splits for out-of-sample evaluation.
+        Uses expanding window CV to ensure proper temporal evaluation.
     random_state : int, optional
         Random seed for reproducibility
 
@@ -217,6 +242,9 @@ def gate_shuffled_target(
     This is the definitive leakage test. If your model beats a shuffled
     target, something is wrong - either features leak future information
     or there's a bug in the evaluation pipeline.
+
+    Uses WalkForwardCV internally to compute out-of-sample MAE, avoiding
+    the bias of in-sample evaluation that could mask or exaggerate leakage.
     """
     X = np.asarray(X)
     y = np.asarray(y)
@@ -228,20 +256,35 @@ def gate_shuffled_target(
             f"Got X.shape[0]={X.shape[0]}, len(y)={len(y)}"
         )
 
+    n = len(y)
     rng = np.random.default_rng(random_state)
 
-    # Fit and evaluate on real target
-    model.fit(X, y)
-    preds_real = np.asarray(model.predict(X))
-    mae_real = float(np.mean(np.abs(y - preds_real)))
+    # Set up walk-forward CV for out-of-sample evaluation
+    cv = WalkForwardCV(
+        n_splits=n_cv_splits,
+        window_type="expanding",
+        gap=0,  # No gap needed for leakage detection
+        test_size=max(1, n // (n_cv_splits + 1)),  # Reasonable test size
+    )
 
-    # Fit and evaluate on shuffled targets
+    def compute_cv_mae(X_data: np.ndarray, y_data: np.ndarray) -> float:
+        """Compute out-of-sample MAE using walk-forward CV."""
+        all_errors: List[float] = []
+        for train_idx, test_idx in cv.split(X_data, y_data):
+            model.fit(X_data[train_idx], y_data[train_idx])
+            preds = np.asarray(model.predict(X_data[test_idx]))
+            errors = np.abs(y_data[test_idx] - preds)
+            all_errors.extend(errors.tolist())
+        return float(np.mean(all_errors)) if all_errors else 0.0
+
+    # Compute out-of-sample MAE on real target
+    mae_real = compute_cv_mae(X, y)
+
+    # Compute out-of-sample MAE on shuffled targets
     shuffled_maes: List[float] = []
     for _ in range(n_shuffles):
         y_shuffled = rng.permutation(y)
-        model.fit(X, y_shuffled)
-        preds_shuffled = np.asarray(model.predict(X))
-        mae_shuffled = float(np.mean(np.abs(y_shuffled - preds_shuffled)))
+        mae_shuffled = compute_cv_mae(X, y_shuffled)
         shuffled_maes.append(mae_shuffled)
 
     mae_shuffled_avg = float(np.mean(shuffled_maes))
@@ -257,6 +300,8 @@ def gate_shuffled_target(
         "mae_shuffled_avg": mae_shuffled_avg,
         "mae_shuffled_all": shuffled_maes,
         "n_shuffles": n_shuffles,
+        "n_cv_splits": n_cv_splits,
+        "evaluation_method": "walk_forward_cv",
     }
 
     if improvement_ratio > threshold:
@@ -287,6 +332,7 @@ def gate_synthetic_ar1(
     n_samples: int = 500,
     n_lags: int = 5,
     tolerance: float = 1.5,
+    n_cv_splits: int = 3,
     random_state: Optional[int] = None,
 ) -> GateResult:
     """
@@ -304,16 +350,19 @@ def gate_synthetic_ar1(
     model : FitPredictModel
         Model with fit(X, y) and predict(X) methods
     phi : float, default=0.95
-        AR(1) coefficient (persistence parameter)
+        AR(1) coefficient (persistence parameter). Must be in (-1, 1) for
+        stationarity.
     sigma : float, default=1.0
         Innovation standard deviation
     n_samples : int, default=500
-        Number of samples to generate
+        Number of samples to generate. Must be > n_lags.
     n_lags : int, default=5
         Number of lagged features to create
     tolerance : float, default=1.5
         How much better model can be than theoretical optimum.
         ratio < 1/tolerance triggers HALT.
+    n_cv_splits : int, default=3
+        Number of walk-forward CV splits for out-of-sample evaluation.
     random_state : int, optional
         Random seed for reproducibility
 
@@ -322,11 +371,33 @@ def gate_synthetic_ar1(
     GateResult
         HALT if model beats theoretical bound by too much
 
+    Raises
+    ------
+    ValueError
+        If phi is not in (-1, 1) (non-stationary) or n_samples <= n_lags.
+
     Notes
     -----
     If a model significantly beats the theoretical optimum on AR(1) data,
     it's likely exploiting lookahead bias or has implementation bugs.
+
+    Uses WalkForwardCV internally to compute out-of-sample MAE, avoiding
+    in-sample evaluation bias.
     """
+    # Validate phi for stationarity
+    if not (-1 < phi < 1):
+        raise ValueError(
+            f"phi must be in (-1, 1) for stationarity. Got phi={phi}. "
+            f"Values outside this range produce non-stationary or explosive series."
+        )
+
+    # Validate n_samples > n_lags
+    if n_samples <= n_lags:
+        raise ValueError(
+            f"n_samples must be > n_lags to have data for prediction. "
+            f"Got n_samples={n_samples}, n_lags={n_lags}."
+        )
+
     rng = np.random.default_rng(random_state)
 
     # Generate AR(1) process
@@ -340,10 +411,25 @@ def gate_synthetic_ar1(
     y = y_full[n_lags:]  # Target: y_t
     X = np.column_stack([y_full[n_lags - lag : -lag] for lag in range(1, n_lags + 1)])
 
-    # Fit model and get predictions
-    model.fit(X, y)
-    preds = np.asarray(model.predict(X))
-    model_mae = float(np.mean(np.abs(y - preds)))
+    n = len(y)
+
+    # Set up walk-forward CV for out-of-sample evaluation
+    cv = WalkForwardCV(
+        n_splits=n_cv_splits,
+        window_type="expanding",
+        gap=0,
+        test_size=max(1, n // (n_cv_splits + 1)),
+    )
+
+    # Compute out-of-sample MAE using walk-forward CV
+    all_errors: List[float] = []
+    for train_idx, test_idx in cv.split(X, y):
+        model.fit(X[train_idx], y[train_idx])
+        preds = np.asarray(model.predict(X[test_idx]))
+        errors = np.abs(y[test_idx] - preds)
+        all_errors.extend(errors.tolist())
+
+    model_mae = float(np.mean(all_errors)) if all_errors else 0.0
 
     # Theoretical optimal MAE for AR(1) 1-step forecast
     # Optimal predictor is phi * y_{t-1}, error is sigma * epsilon
@@ -359,6 +445,8 @@ def gate_synthetic_ar1(
         "sigma": sigma,
         "n_samples": n_samples,
         "n_lags": n_lags,
+        "n_cv_splits": n_cv_splits,
+        "evaluation_method": "walk_forward_cv",
     }
 
     if ratio < 1 / tolerance:
