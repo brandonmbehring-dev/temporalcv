@@ -4,6 +4,15 @@ Walk-Forward Cross-Validation Module.
 Provides sklearn-compatible temporal cross-validation with gap enforcement
 for h-step forecasting scenarios.
 
+Knowledge Tiers
+---------------
+[T1] Walk-forward validation is the standard for time-series (Tashman 2000)
+[T1] Gap >= horizon prevents information leakage for h-step forecasts
+[T1] Expanding window vs sliding window are both valid approaches (Tashman 2000)
+[T2] Gap enforcement: train[-1] + gap < test[0] prevents lookahead
+[T2] sklearn TimeSeriesSplit-compatible API for ecosystem integration
+[T3] Minimum window size and test size not rigorously validated
+
 Example
 -------
 >>> from temporalcv import WalkForwardCV
@@ -21,8 +30,14 @@ Example
 
 References
 ----------
-- Tashman (2000). Out-of-sample tests of forecasting accuracy.
-- sklearn TimeSeriesSplit documentation.
+[T1] Tashman, L.J. (2000). Out-of-sample tests of forecasting accuracy:
+     An analysis and review. International Journal of Forecasting, 16(4), 437-450.
+     Key insight: "Rolling origin" validation respects temporal ordering.
+[T1] Bergmeir, C. & Benitez, J.M. (2012). On the use of cross-validation for
+     time series predictor evaluation. Information Sciences, 191, 192-213.
+     Compares blocking, h-blocking, and modified CV approaches.
+[T2] sklearn TimeSeriesSplit: Extended with gap parameter and sliding window.
+     See: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html
 """
 
 from __future__ import annotations
@@ -35,7 +50,7 @@ from numpy.typing import ArrayLike
 from sklearn.model_selection import BaseCrossValidator
 
 
-@dataclass
+@dataclass(frozen=True)
 class SplitInfo:
     """
     Metadata for a single CV split.

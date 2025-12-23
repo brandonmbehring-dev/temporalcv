@@ -52,6 +52,7 @@ from temporalcv.gates import (
     gate_synthetic_ar1,
     gate_suspicious_improvement,
     gate_temporal_boundary,
+    gate_residual_diagnostics,
     run_gates,
 )
 
@@ -123,6 +124,7 @@ __all__ = [
     "gate_synthetic_ar1",
     "gate_suspicious_improvement",
     "gate_temporal_boundary",
+    "gate_residual_diagnostics",
     "run_gates",
     # Statistical tests
     "DMTestResult",

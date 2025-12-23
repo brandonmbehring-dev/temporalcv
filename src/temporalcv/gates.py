@@ -629,6 +629,273 @@ def gate_temporal_boundary(
 
 
 # =============================================================================
+# Residual Diagnostics Gate
+# =============================================================================
+
+
+def _compute_acf(x: np.ndarray, max_lag: int) -> np.ndarray:
+    """
+    Compute sample autocorrelation function (ACF) for lags 1 to max_lag.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Time series (residuals), assumed to be centered
+    max_lag : int
+        Maximum lag to compute
+
+    Returns
+    -------
+    np.ndarray
+        ACF values for lags 1, 2, ..., max_lag
+
+    Knowledge Tier: [T1] Standard ACF formula (Box-Jenkins)
+    """
+    n = len(x)
+    x = x - np.mean(x)  # Center the series
+    gamma_0 = np.sum(x**2) / n  # Variance (lag 0 autocovariance)
+
+    if gamma_0 == 0:
+        # Constant residuals → no autocorrelation
+        return np.zeros(max_lag)
+
+    acf_values = np.zeros(max_lag)
+    for k in range(1, max_lag + 1):
+        gamma_k = np.sum(x[k:] * x[:-k]) / n
+        acf_values[k - 1] = gamma_k / gamma_0
+
+    return acf_values
+
+
+def _ljung_box_test(residuals: np.ndarray, max_lag: int) -> tuple[float, float]:
+    """
+    Ljung-Box test for autocorrelation in residuals.
+
+    Implements the Ljung-Box Q statistic [T1]:
+        Q = n(n+2) Σ_{k=1}^{m} ρ_k² / (n-k)
+
+    Under H₀ (no autocorrelation), Q ~ χ²(m).
+
+    Parameters
+    ----------
+    residuals : np.ndarray
+        Model residuals
+    max_lag : int
+        Number of lags to test
+
+    Returns
+    -------
+    tuple[float, float]
+        (Q statistic, p-value)
+
+    Knowledge Tier: [T1] Ljung & Box (1978). Biometrika 65(2), 297-303.
+    """
+    from scipy import stats
+
+    n = len(residuals)
+    if n <= max_lag:
+        # Not enough data for test
+        return 0.0, 1.0
+
+    acf = _compute_acf(residuals, max_lag)
+
+    # Ljung-Box Q statistic
+    # Q = n(n+2) Σ ρ_k² / (n-k) for k=1 to max_lag
+    Q = 0.0
+    for k in range(1, max_lag + 1):
+        Q += (acf[k - 1] ** 2) / (n - k)
+    Q *= n * (n + 2)
+
+    # P-value from chi-squared distribution with max_lag degrees of freedom
+    p_value = 1.0 - stats.chi2.cdf(Q, df=max_lag)
+
+    return float(Q), float(p_value)
+
+
+def gate_residual_diagnostics(
+    residuals: ArrayLike,
+    max_lag: int = 10,
+    significance: float = 0.05,
+    halt_on_autocorr: bool = False,
+    halt_on_normality: bool = False,
+) -> GateResult:
+    """
+    Check residual quality via diagnostic tests.
+
+    This gate runs three diagnostic tests on model residuals:
+
+    1. **Ljung-Box test** [T1]: Detects residual autocorrelation
+       - H₀: Residuals are white noise
+       - Significant autocorrelation suggests model misspecification
+       - Custom implementation to avoid statsmodels dependency
+
+    2. **Jarque-Bera test** [T1]: Detects non-normality
+       - H₀: Residuals are normally distributed
+       - Non-normality may affect confidence intervals
+       - Uses scipy.stats.jarque_bera
+
+    3. **Mean-zero t-test** [T1]: Detects systematic bias
+       - H₀: Mean(residuals) = 0
+       - Non-zero mean indicates biased predictions
+       - Uses scipy.stats.ttest_1samp
+
+    Parameters
+    ----------
+    residuals : array-like
+        Model residuals (actuals - predictions)
+    max_lag : int, default=10
+        Maximum lag for Ljung-Box test. Higher values test more lags
+        but reduce power.
+    significance : float, default=0.05
+        Significance level for all tests [T3]
+    halt_on_autocorr : bool, default=False
+        If True, HALT on significant autocorrelation; otherwise WARN
+    halt_on_normality : bool, default=False
+        If True, HALT on non-normality; otherwise WARN
+
+    Returns
+    -------
+    GateResult
+        - PASS: All tests pass
+        - WARN: Some tests fail but not configured to HALT
+        - HALT: Tests fail and configured to HALT
+        - SKIP: Insufficient data (n < 30)
+
+    Knowledge Tiers
+    ---------------
+    [T1] Ljung-Box: Ljung & Box (1978). Biometrika 65(2), 297-303.
+    [T1] Jarque-Bera: Jarque & Bera (1987). International Statistical Review 55(2).
+    [T1] t-test: Standard hypothesis testing
+    [T3] significance=0.05 default is conventional but arbitrary
+
+    Example
+    -------
+    >>> residuals = y_actual - y_predicted
+    >>> result = gate_residual_diagnostics(residuals, max_lag=10)
+    >>> if result.status == GateStatus.WARN:
+    ...     print("Check:", result.details["failing_tests"])
+    """
+    from scipy import stats
+
+    residuals = np.asarray(residuals)
+    n = len(residuals)
+
+    # Minimum sample size for reliable tests
+    MIN_SAMPLES = 30
+
+    if n < MIN_SAMPLES:
+        return GateResult(
+            name="residual_diagnostics",
+            status=GateStatus.SKIP,
+            message=f"Insufficient data: n={n} < {MIN_SAMPLES} required for residual tests",
+            details={"n_samples": n, "min_required": MIN_SAMPLES},
+            recommendation="Collect more data before running residual diagnostics",
+        )
+
+    # Ensure max_lag is reasonable
+    max_lag = min(max_lag, n // 3)  # Rule of thumb: don't test more than n/3 lags
+    if max_lag < 1:
+        max_lag = 1
+
+    # === Run diagnostic tests ===
+    test_results: dict[str, dict[str, Any]] = {}
+    failing_tests: list[str] = []
+
+    # 1. Ljung-Box test for autocorrelation
+    lb_stat, lb_pval = _ljung_box_test(residuals, max_lag)
+    test_results["ljung_box"] = {
+        "statistic": lb_stat,
+        "p_value": lb_pval,
+        "max_lag": max_lag,
+        "significant": lb_pval < significance,
+    }
+    if lb_pval < significance:
+        failing_tests.append("ljung_box")
+
+    # 2. Jarque-Bera test for normality
+    jb_stat, jb_pval = stats.jarque_bera(residuals)
+    test_results["jarque_bera"] = {
+        "statistic": float(jb_stat),
+        "p_value": float(jb_pval),
+        "skewness": float(stats.skew(residuals)),
+        "kurtosis": float(stats.kurtosis(residuals)),
+        "significant": jb_pval < significance,
+    }
+    if jb_pval < significance:
+        failing_tests.append("jarque_bera")
+
+    # 3. Mean-zero t-test
+    ttest_stat, ttest_pval = stats.ttest_1samp(residuals, 0)
+    test_results["mean_zero"] = {
+        "statistic": float(ttest_stat),
+        "p_value": float(ttest_pval),
+        "mean": float(np.mean(residuals)),
+        "std": float(np.std(residuals, ddof=1)),
+        "significant": ttest_pval < significance,
+    }
+    if ttest_pval < significance:
+        failing_tests.append("mean_zero")
+
+    # === Determine gate status ===
+    details = {
+        "n_samples": n,
+        "significance": significance,
+        "tests": test_results,
+        "failing_tests": failing_tests,
+    }
+
+    if not failing_tests:
+        return GateResult(
+            name="residual_diagnostics",
+            status=GateStatus.PASS,
+            message="All residual diagnostics passed",
+            metric_value=0.0,
+            threshold=significance,
+            details=details,
+        )
+
+    # Check which failures warrant HALT vs WARN
+    halt_reasons = []
+    if "ljung_box" in failing_tests and halt_on_autocorr:
+        halt_reasons.append("autocorrelation")
+    if "jarque_bera" in failing_tests and halt_on_normality:
+        halt_reasons.append("non-normality")
+    if "mean_zero" in failing_tests:
+        # Mean-zero always warrants attention (biased predictions)
+        halt_reasons.append("bias")
+
+    if halt_reasons:
+        return GateResult(
+            name="residual_diagnostics",
+            status=GateStatus.HALT,
+            message=f"Residual diagnostics failed: {', '.join(halt_reasons)}",
+            metric_value=float(len(failing_tests)),
+            threshold=significance,
+            details=details,
+            recommendation=(
+                "Investigate model specification. "
+                + ("Autocorrelation suggests missing temporal structure. " if "autocorrelation" in halt_reasons else "")
+                + ("Bias suggests systematic prediction error. " if "bias" in halt_reasons else "")
+                + ("Non-normality may affect confidence intervals." if "non-normality" in halt_reasons else "")
+            ),
+        )
+
+    # WARN for failures without halt flags
+    return GateResult(
+        name="residual_diagnostics",
+        status=GateStatus.WARN,
+        message=f"Residual diagnostics: {len(failing_tests)} test(s) failed",
+        metric_value=float(len(failing_tests)),
+        threshold=significance,
+        details=details,
+        recommendation=(
+            f"Review failing tests: {', '.join(failing_tests)}. "
+            "These may not be critical but warrant investigation."
+        ),
+    )
+
+
+# =============================================================================
 # Gate Runner
 # =============================================================================
 
@@ -679,6 +946,7 @@ __all__ = [
     "gate_synthetic_ar1",
     "gate_suspicious_improvement",
     "gate_temporal_boundary",
+    "gate_residual_diagnostics",
     # Runner
     "run_gates",
 ]

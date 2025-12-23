@@ -123,6 +123,23 @@ class TestSplitInfo:
                 test_end=110,
             )
 
+    def test_frozen_immutability(self) -> None:
+        """SplitInfo should be immutable (frozen dataclass)."""
+        from dataclasses import FrozenInstanceError
+
+        info = SplitInfo(
+            split_idx=0,
+            train_start=0,
+            train_end=99,
+            test_start=100,
+            test_end=109,
+        )
+        # Attempting to modify any field should raise FrozenInstanceError
+        with pytest.raises(FrozenInstanceError):
+            info.split_idx = 1  # type: ignore[misc]
+        with pytest.raises(FrozenInstanceError):
+            info.train_end = 50  # type: ignore[misc]
+
 
 # =============================================================================
 # WalkForwardCV Basic Tests
