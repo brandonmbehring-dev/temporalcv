@@ -61,16 +61,21 @@ from temporalcv.gates import (
 from temporalcv.statistical_tests import (
     DMTestResult,
     PTTestResult,
+    MultiModelComparisonResult,
     dm_test,
     pt_test,
+    compare_multiple_models,
     compute_hac_variance,
 )
 
 # Cross-validation exports
 from temporalcv.cv import (
     SplitInfo,
+    SplitResult,
+    WalkForwardResults,
     WalkForwardCV,
     CrossFitCV,
+    walk_forward_evaluate,
 )
 
 # Regime classification exports
@@ -80,6 +85,8 @@ from temporalcv.regimes import (
     get_combined_regimes,
     get_regime_counts,
     mask_low_n_regimes,
+    StratifiedMetricsResult,
+    compute_stratified_metrics,
 )
 
 # High-persistence metrics exports
@@ -92,6 +99,63 @@ from temporalcv.persistence import (
     compute_direction_accuracy,
     compute_move_only_mae,
     compute_persistence_mae,
+)
+
+# Core metrics exports
+from temporalcv.metrics import (
+    compute_mae,
+    compute_mse,
+    compute_rmse,
+    compute_mape,
+    compute_smape,
+    compute_bias,
+    compute_naive_error,
+    compute_mase,
+    compute_mrae,
+    compute_theils_u,
+    compute_forecast_correlation,
+    compute_r_squared,
+)
+
+# Quantile/interval metrics exports
+from temporalcv.metrics import (
+    compute_pinball_loss,
+    compute_crps,
+    compute_interval_score,
+    compute_quantile_coverage,
+    compute_winkler_score,
+)
+
+# Financial/trading metrics exports
+from temporalcv.metrics import (
+    compute_sharpe_ratio,
+    compute_max_drawdown,
+    compute_cumulative_return,
+    compute_information_ratio,
+    compute_hit_rate,
+    compute_profit_factor,
+    compute_calmar_ratio,
+)
+
+# Asymmetric loss exports
+from temporalcv.metrics import (
+    compute_linex_loss,
+    compute_asymmetric_mape,
+    compute_directional_loss,
+    compute_squared_log_error,
+    compute_huber_loss,
+)
+
+# Volatility-weighted metrics exports
+from temporalcv.metrics import (
+    VolatilityEstimator,
+    RollingVolatility,
+    EWMAVolatility,
+    compute_local_volatility,
+    compute_volatility_normalized_mae,
+    compute_volatility_weighted_mae,
+    VolatilityStratifiedResult,
+    compute_volatility_stratified_metrics,
 )
 
 # Conformal prediction exports
@@ -111,9 +175,11 @@ from temporalcv.bagging import (
     MovingBlockBootstrap,
     StationaryBootstrap,
     FeatureBagging,
+    ResidualBootstrap,
     create_block_bagger,
     create_stationary_bagger,
     create_feature_bagger,
+    create_residual_bagger,
 )
 
 # Diagnostics exports
@@ -128,6 +194,71 @@ from temporalcv.diagnostics import (
 from temporalcv.inference import (
     WildBootstrapResult,
     wild_cluster_bootstrap,
+)
+
+# Validators exports (theoretical bounds)
+from temporalcv.validators import (
+    theoretical_ar1_mse_bound,
+    theoretical_ar1_mae_bound,
+    theoretical_ar2_mse_bound,
+    check_against_ar1_bounds,
+    generate_ar1_series,
+    generate_ar2_series,
+)
+
+# Guardrails exports (unified validation)
+from temporalcv.guardrails import (
+    GuardrailResult,
+    check_suspicious_improvement,
+    check_minimum_sample_size,
+    check_stratified_sample_size,
+    check_forecast_horizon_consistency,
+    check_residual_autocorrelation,
+    run_all_guardrails,
+)
+
+# Stationarity tests exports
+from temporalcv.stationarity import (
+    StationarityTestResult,
+    StationarityConclusion,
+    JointStationarityResult,
+    adf_test,
+    kpss_test,
+    pp_test,
+    check_stationarity,
+    difference_until_stationary,
+)
+
+# Lag selection exports
+from temporalcv.lag_selection import (
+    LagSelectionResult,
+    select_lag_pacf,
+    select_lag_aic,
+    select_lag_bic,
+    auto_select_lag,
+    suggest_cv_gap,
+)
+
+# Changepoint detection exports
+from temporalcv.changepoint import (
+    Changepoint,
+    ChangepointResult,
+    detect_changepoints,
+    detect_changepoints_variance,
+    detect_changepoints_pelt,
+    classify_regimes_from_changepoints,
+    create_regime_indicators,
+    get_segment_boundaries,
+)
+
+# Financial CV exports
+from temporalcv.cv_financial import (
+    PurgedSplit,
+    PurgedKFold,
+    CombinatorialPurgedCV,
+    PurgedWalkForward,
+    compute_label_overlap,
+    estimate_purge_gap,
 )
 
 __all__ = [
@@ -151,16 +282,23 @@ __all__ = [
     "dm_test",
     "pt_test",
     "compute_hac_variance",
+    "MultiModelComparisonResult",
+    "compare_multiple_models",
     # Cross-validation
     "SplitInfo",
+    "SplitResult",
+    "WalkForwardResults",
     "WalkForwardCV",
     "CrossFitCV",
+    "walk_forward_evaluate",
     # Regime classification
     "classify_volatility_regime",
     "classify_direction_regime",
     "get_combined_regimes",
     "get_regime_counts",
     "mask_low_n_regimes",
+    "StratifiedMetricsResult",
+    "compute_stratified_metrics",
     # High-persistence metrics
     "MoveDirection",
     "MoveConditionalResult",
@@ -170,6 +308,48 @@ __all__ = [
     "compute_direction_accuracy",
     "compute_move_only_mae",
     "compute_persistence_mae",
+    # Core metrics
+    "compute_mae",
+    "compute_mse",
+    "compute_rmse",
+    "compute_mape",
+    "compute_smape",
+    "compute_bias",
+    "compute_naive_error",
+    "compute_mase",
+    "compute_mrae",
+    "compute_theils_u",
+    "compute_forecast_correlation",
+    "compute_r_squared",
+    # Quantile/interval metrics
+    "compute_pinball_loss",
+    "compute_crps",
+    "compute_interval_score",
+    "compute_quantile_coverage",
+    "compute_winkler_score",
+    # Financial/trading metrics
+    "compute_sharpe_ratio",
+    "compute_max_drawdown",
+    "compute_cumulative_return",
+    "compute_information_ratio",
+    "compute_hit_rate",
+    "compute_profit_factor",
+    "compute_calmar_ratio",
+    # Asymmetric loss functions
+    "compute_linex_loss",
+    "compute_asymmetric_mape",
+    "compute_directional_loss",
+    "compute_squared_log_error",
+    "compute_huber_loss",
+    # Volatility-weighted metrics
+    "VolatilityEstimator",
+    "RollingVolatility",
+    "EWMAVolatility",
+    "compute_local_volatility",
+    "compute_volatility_normalized_mae",
+    "compute_volatility_weighted_mae",
+    "VolatilityStratifiedResult",
+    "compute_volatility_stratified_metrics",
     # Conformal prediction
     "PredictionInterval",
     "SplitConformalPredictor",
@@ -183,9 +363,11 @@ __all__ = [
     "MovingBlockBootstrap",
     "StationaryBootstrap",
     "FeatureBagging",
+    "ResidualBootstrap",
     "create_block_bagger",
     "create_stationary_bagger",
     "create_feature_bagger",
+    "create_residual_bagger",
     # Diagnostics
     "InfluenceDiagnostic",
     "compute_dm_influence",
@@ -194,4 +376,51 @@ __all__ = [
     # Inference
     "WildBootstrapResult",
     "wild_cluster_bootstrap",
+    # Validators (theoretical bounds)
+    "theoretical_ar1_mse_bound",
+    "theoretical_ar1_mae_bound",
+    "theoretical_ar2_mse_bound",
+    "check_against_ar1_bounds",
+    "generate_ar1_series",
+    "generate_ar2_series",
+    # Guardrails (unified validation)
+    "GuardrailResult",
+    "check_suspicious_improvement",
+    "check_minimum_sample_size",
+    "check_stratified_sample_size",
+    "check_forecast_horizon_consistency",
+    "check_residual_autocorrelation",
+    "run_all_guardrails",
+    # Stationarity tests
+    "StationarityTestResult",
+    "StationarityConclusion",
+    "JointStationarityResult",
+    "adf_test",
+    "kpss_test",
+    "pp_test",
+    "check_stationarity",
+    "difference_until_stationary",
+    # Lag selection
+    "LagSelectionResult",
+    "select_lag_pacf",
+    "select_lag_aic",
+    "select_lag_bic",
+    "auto_select_lag",
+    "suggest_cv_gap",
+    # Changepoint detection
+    "Changepoint",
+    "ChangepointResult",
+    "detect_changepoints",
+    "detect_changepoints_variance",
+    "detect_changepoints_pelt",
+    "classify_regimes_from_changepoints",
+    "create_regime_indicators",
+    "get_segment_boundaries",
+    # Financial CV
+    "PurgedSplit",
+    "PurgedKFold",
+    "CombinatorialPurgedCV",
+    "PurgedWalkForward",
+    "compute_label_overlap",
+    "estimate_purge_gap",
 ]

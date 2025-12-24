@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
 
@@ -407,10 +407,10 @@ class NaiveAdapter(ForecastAdapter):
         if train_values.ndim > 1:
             # Multi-series: use last value per series
             last_values = train_values[:, -1]
-            return np.tile(last_values.reshape(-1, 1), (1, test_size))
+            return cast(np.ndarray, np.tile(last_values.reshape(-1, 1), (1, test_size)))
         else:
             last_value = train_values[-1]
-            return np.full(test_size, last_value)
+            return cast(np.ndarray, np.full(test_size, last_value))
 
 
 class SeasonalNaiveAdapter(ForecastAdapter):
@@ -471,7 +471,7 @@ class SeasonalNaiveAdapter(ForecastAdapter):
             predictions = np.zeros((n_series, test_size))
             for s in range(n_series):
                 predictions[s] = self._predict_single(train_values[s], test_size)
-            return predictions
+            return cast(np.ndarray, predictions)
 
         return self._predict_single(train_values, test_size)
 
@@ -487,7 +487,7 @@ class SeasonalNaiveAdapter(ForecastAdapter):
                 lag_idx = n_train - 1  # Fallback to last value
             predictions[i] = train[lag_idx]
 
-        return predictions
+        return cast(np.ndarray, predictions)
 
     def get_params(self) -> Dict[str, Any]:
         """Return model parameters."""

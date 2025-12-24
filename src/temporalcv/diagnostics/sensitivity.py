@@ -11,7 +11,7 @@ time series validation; theoretical guidance on "correct" gap is domain-specific
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Optional, Sequence
+from typing import Any, Literal, Optional, Sequence
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -69,7 +69,7 @@ class GapSensitivityResult:
 
 
 def gap_sensitivity_analysis(
-    model,  # sklearn-compatible with fit/predict
+    model: Any,  # sklearn-compatible with fit/predict
     X: ArrayLike,
     y: ArrayLike,
     gap_range: Sequence[int] = range(0, 10),

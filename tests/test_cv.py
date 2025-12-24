@@ -623,3 +623,308 @@ class TestHorizonValidation:
         for train, test in splits:
             # Gap is enforced
             assert train[-1] + cv.gap < test[0]
+
+
+# =============================================================================
+# SplitResult and WalkForwardResults Tests
+# =============================================================================
+
+
+class TestSplitResult:
+    """Tests for the SplitResult dataclass."""
+
+    def test_split_result_basic(self) -> None:
+        """SplitResult should compute basic metrics correctly."""
+        from temporalcv.cv import SplitResult
+
+        sr = SplitResult(
+            split_idx=0,
+            train_start=0,
+            train_end=99,
+            test_start=102,
+            test_end=111,
+            predictions=np.array([1.0, 1.1, 1.2]),
+            actuals=np.array([1.0, 1.0, 1.0]),
+        )
+
+        assert sr.split_idx == 0
+        assert sr.train_size == 100
+        assert sr.test_size == 10
+        assert sr.gap == 2
+        assert sr.mae == pytest.approx(0.1, rel=1e-6)
+        assert sr.bias == pytest.approx(0.1, rel=1e-6)
+
+    def test_split_result_errors(self) -> None:
+        """SplitResult should compute errors correctly."""
+        from temporalcv.cv import SplitResult
+
+        sr = SplitResult(
+            split_idx=0,
+            train_start=0,
+            train_end=99,
+            test_start=102,
+            test_end=104,
+            predictions=np.array([1.0, 2.0, 3.0]),
+            actuals=np.array([1.5, 2.5, 2.5]),
+        )
+
+        np.testing.assert_array_almost_equal(sr.errors, [-0.5, -0.5, 0.5])
+        np.testing.assert_array_almost_equal(sr.absolute_errors, [0.5, 0.5, 0.5])
+        assert sr.mae == 0.5
+        assert sr.rmse == 0.5
+        assert sr.bias == pytest.approx(-1 / 6, rel=1e-6)
+
+    def test_split_result_has_dates(self) -> None:
+        """SplitResult should report has_dates correctly."""
+        from temporalcv.cv import SplitResult
+
+        sr_no_dates = SplitResult(
+            split_idx=0,
+            train_start=0,
+            train_end=99,
+            test_start=102,
+            test_end=104,
+            predictions=np.array([1.0]),
+            actuals=np.array([1.0]),
+        )
+        assert sr_no_dates.has_dates is False
+
+        sr_with_dates = SplitResult(
+            split_idx=0,
+            train_start=0,
+            train_end=99,
+            test_start=102,
+            test_end=104,
+            predictions=np.array([1.0]),
+            actuals=np.array([1.0]),
+            train_start_date="2020-01-01",  # Can be any truthy value
+        )
+        assert sr_with_dates.has_dates is True
+
+    def test_split_result_to_split_info(self) -> None:
+        """SplitResult should convert to SplitInfo correctly."""
+        from temporalcv.cv import SplitResult, SplitInfo
+
+        sr = SplitResult(
+            split_idx=2,
+            train_start=0,
+            train_end=99,
+            test_start=102,
+            test_end=111,
+            predictions=np.array([1.0]),
+            actuals=np.array([1.0]),
+        )
+
+        info = sr.to_split_info()
+        assert isinstance(info, SplitInfo)
+        assert info.split_idx == 2
+        assert info.train_start == 0
+        assert info.train_end == 99
+        assert info.test_start == 102
+        assert info.test_end == 111
+
+
+class TestWalkForwardResults:
+    """Tests for the WalkForwardResults dataclass."""
+
+    def test_walk_forward_results_basic(self) -> None:
+        """WalkForwardResults should aggregate metrics correctly."""
+        from temporalcv.cv import SplitResult, WalkForwardResults
+
+        sr1 = SplitResult(
+            split_idx=0,
+            train_start=0,
+            train_end=99,
+            test_start=102,
+            test_end=104,
+            predictions=np.array([1.0, 1.0, 1.0]),
+            actuals=np.array([1.1, 1.1, 1.1]),
+        )
+        sr2 = SplitResult(
+            split_idx=1,
+            train_start=10,
+            train_end=109,
+            test_start=112,
+            test_end=114,
+            predictions=np.array([2.0, 2.0, 2.0]),
+            actuals=np.array([2.2, 2.2, 2.2]),
+        )
+
+        results = WalkForwardResults(splits=[sr1, sr2])
+
+        assert results.n_splits == 2
+        assert results.total_samples == 6
+        assert len(results.predictions) == 6
+        assert len(results.actuals) == 6
+        assert results.mae == pytest.approx(0.15, rel=1e-6)
+
+    def test_walk_forward_results_empty_raises(self) -> None:
+        """WalkForwardResults should raise for empty splits."""
+        from temporalcv.cv import WalkForwardResults
+
+        with pytest.raises(ValueError, match="at least one split"):
+            WalkForwardResults(splits=[])
+
+    def test_walk_forward_results_per_split_metrics(self) -> None:
+        """WalkForwardResults should return per-split metrics."""
+        from temporalcv.cv import SplitResult, WalkForwardResults
+
+        sr = SplitResult(
+            split_idx=0,
+            train_start=0,
+            train_end=99,
+            test_start=102,
+            test_end=104,
+            predictions=np.array([1.0, 1.0, 1.0]),
+            actuals=np.array([1.1, 1.1, 1.1]),
+        )
+
+        results = WalkForwardResults(splits=[sr])
+        metrics = results.per_split_metrics()
+
+        assert len(metrics) == 1
+        assert metrics[0]["split_idx"] == 0
+        assert metrics[0]["mae"] == pytest.approx(0.1, rel=1e-6)
+        assert metrics[0]["n_samples"] == 3
+
+    def test_walk_forward_results_summary(self) -> None:
+        """WalkForwardResults should produce summary string."""
+        from temporalcv.cv import SplitResult, WalkForwardResults
+
+        sr = SplitResult(
+            split_idx=0,
+            train_start=0,
+            train_end=99,
+            test_start=102,
+            test_end=104,
+            predictions=np.array([1.0]),
+            actuals=np.array([1.0]),
+        )
+
+        results = WalkForwardResults(splits=[sr])
+        summary = results.summary()
+
+        assert "WalkForwardResults Summary" in summary
+        assert "MAE:" in summary
+        assert "RMSE:" in summary
+
+
+class TestWalkForwardEvaluate:
+    """Tests for the walk_forward_evaluate function."""
+
+    def test_walk_forward_evaluate_basic(self) -> None:
+        """walk_forward_evaluate should produce valid results."""
+        from sklearn.linear_model import Ridge
+        from temporalcv.cv import walk_forward_evaluate
+
+        np.random.seed(42)
+        X = np.random.randn(100, 3)
+        y = X[:, 0] * 0.5 + np.random.randn(100) * 0.1
+
+        results = walk_forward_evaluate(Ridge(), X, y, n_splits=3, gap=2, test_size=5)
+
+        assert results.n_splits == 3
+        assert results.total_samples == 15  # 3 * 5
+        assert results.mae > 0
+        assert results.rmse >= results.mae  # RMSE >= MAE always
+
+    def test_walk_forward_evaluate_with_cv(self) -> None:
+        """walk_forward_evaluate should accept pre-configured CV."""
+        from sklearn.linear_model import Ridge
+        from temporalcv.cv import walk_forward_evaluate, WalkForwardCV
+
+        np.random.seed(42)
+        X = np.random.randn(100, 3)
+        y = X[:, 0] * 0.5 + np.random.randn(100) * 0.1
+
+        cv = WalkForwardCV(n_splits=4, gap=1, test_size=3)
+        results = walk_forward_evaluate(Ridge(), X, y, cv=cv)
+
+        assert results.n_splits == 4
+        assert results.total_samples == 12
+        assert results.cv_config["n_splits"] == 4
+        assert results.cv_config["gap"] == 1
+
+    def test_walk_forward_evaluate_sliding_window(self) -> None:
+        """walk_forward_evaluate should work with sliding window."""
+        from sklearn.linear_model import Ridge
+        from temporalcv.cv import walk_forward_evaluate
+
+        np.random.seed(42)
+        X = np.random.randn(150, 3)
+        y = X[:, 0] * 0.5 + np.random.randn(150) * 0.1
+
+        results = walk_forward_evaluate(
+            Ridge(),
+            X,
+            y,
+            n_splits=3,
+            window_type="sliding",
+            window_size=50,
+            gap=2,
+            test_size=10,
+        )
+
+        assert results.n_splits == 3
+        assert results.cv_config["window_type"] == "sliding"
+        assert results.cv_config["window_size"] == 50
+
+    def test_walk_forward_evaluate_split_details(self) -> None:
+        """walk_forward_evaluate should provide split-level details."""
+        from sklearn.linear_model import Ridge
+        from temporalcv.cv import walk_forward_evaluate
+
+        np.random.seed(42)
+        X = np.random.randn(100, 3)
+        y = X[:, 0] * 0.5 + np.random.randn(100) * 0.1
+
+        results = walk_forward_evaluate(Ridge(), X, y, n_splits=3, gap=2, test_size=5)
+
+        for split in results.splits:
+            assert split.train_start >= 0
+            assert split.train_end < split.test_start
+            assert split.gap >= 2
+            assert len(split.predictions) == len(split.actuals)
+            assert split.mae >= 0
+
+
+class TestSplitInfoWithDates:
+    """Tests for SplitInfo with date fields."""
+
+    def test_split_info_has_dates(self) -> None:
+        """SplitInfo should report has_dates correctly."""
+        from temporalcv.cv import SplitInfo
+
+        info_no_dates = SplitInfo(
+            split_idx=0,
+            train_start=0,
+            train_end=99,
+            test_start=102,
+            test_end=111,
+        )
+        assert info_no_dates.has_dates is False
+
+        info_with_dates = SplitInfo(
+            split_idx=0,
+            train_start=0,
+            train_end=99,
+            test_start=102,
+            test_end=111,
+            train_start_date="2020-01-01",
+        )
+        assert info_with_dates.has_dates is True
+
+    def test_split_info_is_frozen(self) -> None:
+        """SplitInfo should be immutable."""
+        from temporalcv.cv import SplitInfo
+
+        info = SplitInfo(
+            split_idx=0,
+            train_start=0,
+            train_end=99,
+            test_start=102,
+            test_end=111,
+        )
+
+        with pytest.raises(AttributeError):
+            info.split_idx = 1  # type: ignore[misc]

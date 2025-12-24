@@ -46,6 +46,8 @@ from temporalcv.bagging.strategies import (
     MovingBlockBootstrap,
     StationaryBootstrap,
     FeatureBagging,
+    ResidualBootstrap,
+    create_residual_bagger,
 )
 
 
@@ -204,8 +206,10 @@ __all__ = [
     "MovingBlockBootstrap",
     "StationaryBootstrap",
     "FeatureBagging",
+    "ResidualBootstrap",
     # Factory functions
     "create_block_bagger",
     "create_stationary_bagger",
     "create_feature_bagger",
+    "create_residual_bagger",
 ]

@@ -16,8 +16,10 @@ import pytest
 from temporalcv.statistical_tests import (
     DMTestResult,
     PTTestResult,
+    MultiModelComparisonResult,
     dm_test,
     pt_test,
+    compare_multiple_models,
     compute_hac_variance,
 )
 
@@ -621,3 +623,258 @@ class TestPTTestVarianceRegression:
         # Also verify that the test produces a reasonable result
         assert 0 < result.pvalue < 1, f"P-value should be in (0,1), got {result.pvalue}"
         assert result.n == n_eff, f"Expected n={n_eff}, got {result.n}"
+
+
+# =============================================================================
+# Multi-Model Comparison Tests
+# =============================================================================
+
+
+class TestMultiModelComparisonResult:
+    """Tests for MultiModelComparisonResult dataclass."""
+
+    def test_basic_attributes(self) -> None:
+        """Should have correct basic attributes."""
+        result = MultiModelComparisonResult(
+            pairwise_results={},
+            best_model="A",
+            bonferroni_alpha=0.025,
+            original_alpha=0.05,
+            model_rankings=[("A", 0.1), ("B", 0.2)],
+            significant_pairs=[("A", "B")],
+        )
+
+        assert result.best_model == "A"
+        assert result.bonferroni_alpha == 0.025
+        assert result.original_alpha == 0.05
+        assert result.n_significant == 1
+        assert result.n_comparisons == 0  # No pairwise_results in this test
+
+    def test_summary_contains_key_info(self) -> None:
+        """Summary should include rankings and significant pairs."""
+        dm_result = DMTestResult(
+            statistic=-2.5,
+            pvalue=0.01,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
+        )
+
+        result = MultiModelComparisonResult(
+            pairwise_results={("A", "B"): dm_result},
+            best_model="A",
+            bonferroni_alpha=0.0167,
+            original_alpha=0.05,
+            model_rankings=[("A", 0.1), ("B", 0.2), ("C", 0.3)],
+            significant_pairs=[("A", "B")],
+        )
+
+        summary = result.summary()
+
+        assert "A" in summary
+        assert "best" in summary.lower()
+        assert "0.0167" in summary or "Bonferroni" in summary
+        assert "Significant" in summary
+
+    def test_get_pairwise_order_independent(self) -> None:
+        """get_pairwise should work regardless of order."""
+        dm_result = DMTestResult(
+            statistic=-2.0,
+            pvalue=0.02,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.3,
+        )
+
+        result = MultiModelComparisonResult(
+            pairwise_results={("A", "B"): dm_result},
+            best_model="A",
+            bonferroni_alpha=0.05,
+            original_alpha=0.05,
+            model_rankings=[("A", 0.1), ("B", 0.2)],
+            significant_pairs=[],
+        )
+
+        # Should find regardless of order
+        assert result.get_pairwise("A", "B") == dm_result
+        assert result.get_pairwise("B", "A") == dm_result
+        assert result.get_pairwise("A", "C") is None
+
+
+class TestCompareMultipleModels:
+    """Tests for compare_multiple_models function."""
+
+    def test_basic_comparison(self) -> None:
+        """Should compare multiple models and rank them."""
+        rng = np.random.default_rng(42)
+        n = 100
+
+        errors = {
+            "Good": rng.normal(0, 0.5, n),
+            "Medium": rng.normal(0, 1.0, n),
+            "Bad": rng.normal(0, 1.5, n),
+        }
+
+        result = compare_multiple_models(errors)
+
+        # Best model should have lowest MSE
+        assert result.best_model == "Good"
+        assert len(result.model_rankings) == 3
+        assert result.model_rankings[0][0] == "Good"
+
+        # Should have 3 comparisons
+        assert result.n_comparisons == 3
+
+    def test_bonferroni_correction(self) -> None:
+        """Bonferroni alpha should be original_alpha / n_comparisons."""
+        rng = np.random.default_rng(42)
+        n = 50
+
+        errors = {
+            "A": rng.normal(0, 1, n),
+            "B": rng.normal(0, 1, n),
+            "C": rng.normal(0, 1, n),
+        }
+
+        result = compare_multiple_models(errors, alpha=0.10)
+
+        # 3 models = 3 pairwise comparisons
+        assert result.original_alpha == 0.10
+        assert result.bonferroni_alpha == pytest.approx(0.10 / 3)
+
+    def test_detects_significant_difference(self) -> None:
+        """Should detect significant difference between very different models."""
+        rng = np.random.default_rng(42)
+        n = 100
+
+        errors = {
+            "Best": rng.normal(0, 0.3, n),  # Very small errors
+            "Worst": rng.normal(0, 2.0, n),  # Very large errors
+        }
+
+        result = compare_multiple_models(errors, alpha=0.05)
+
+        # Should find significant difference
+        assert len(result.significant_pairs) > 0
+        assert ("Best", "Worst") in result.significant_pairs
+
+    def test_no_significance_for_similar_models(self) -> None:
+        """Should not find significance for similar models."""
+        rng = np.random.default_rng(42)
+        n = 50
+
+        errors = {
+            "A": rng.normal(0, 1.0, n),
+            "B": rng.normal(0, 1.0, n),
+        }
+
+        result = compare_multiple_models(errors, alpha=0.05)
+
+        # Similar models should not be significantly different
+        # (with small n and same distribution)
+        assert len(result.significant_pairs) == 0
+
+    def test_respects_loss_function(self) -> None:
+        """Should use specified loss function."""
+        rng = np.random.default_rng(42)
+        n = 100
+
+        errors = {
+            "A": rng.normal(0, 1, n),
+            "B": rng.normal(0, 1.5, n),
+        }
+
+        result_se = compare_multiple_models(errors, loss="squared")
+        result_ae = compare_multiple_models(errors, loss="absolute")
+
+        # Rankings might differ based on loss function
+        # At minimum, both should complete
+        assert result_se.best_model is not None
+        assert result_ae.best_model is not None
+
+    def test_custom_horizon(self) -> None:
+        """Should pass horizon to DM tests."""
+        rng = np.random.default_rng(42)
+        n = 100
+
+        errors = {
+            "A": rng.normal(0, 1, n),
+            "B": rng.normal(0, 1.5, n),
+        }
+
+        result = compare_multiple_models(errors, h=4)
+
+        # Check that h was passed through
+        for dm_result in result.pairwise_results.values():
+            assert dm_result.h == 4
+
+    def test_raises_on_single_model(self) -> None:
+        """Should raise error with fewer than 2 models."""
+        with pytest.raises(ValueError, match="at least 2 models"):
+            compare_multiple_models({"A": np.array([1, 2, 3])})
+
+    def test_raises_on_mismatched_lengths(self) -> None:
+        """Should raise error if error arrays have different lengths."""
+        with pytest.raises(ValueError, match="same length"):
+            compare_multiple_models({
+                "A": np.random.randn(50),
+                "B": np.random.randn(60),
+            })
+
+    def test_four_models_has_six_comparisons(self) -> None:
+        """4 models should result in 4*3/2 = 6 pairwise comparisons."""
+        rng = np.random.default_rng(42)
+        n = 50
+
+        errors = {
+            "A": rng.normal(0, 1, n),
+            "B": rng.normal(0, 1, n),
+            "C": rng.normal(0, 1, n),
+            "D": rng.normal(0, 1, n),
+        }
+
+        result = compare_multiple_models(errors)
+
+        assert result.n_comparisons == 6
+        assert result.bonferroni_alpha == pytest.approx(0.05 / 6)
+
+    def test_pairwise_ordering(self) -> None:
+        """Pairwise results should be ordered with better model first."""
+        rng = np.random.default_rng(42)
+        n = 100
+
+        errors = {
+            "Good": rng.normal(0, 0.5, n),
+            "Bad": rng.normal(0, 1.5, n),
+        }
+
+        result = compare_multiple_models(errors)
+
+        # The tuple should be (Good, Bad) not (Bad, Good)
+        # because Good has lower loss
+        assert ("Good", "Bad") in result.pairwise_results
+        assert ("Bad", "Good") not in result.pairwise_results
+
+    def test_integration_with_dm_test(self) -> None:
+        """Pairwise results should be valid DMTestResult objects."""
+        rng = np.random.default_rng(42)
+        n = 100
+
+        errors = {
+            "A": rng.normal(0, 1, n),
+            "B": rng.normal(0, 1.5, n),
+        }
+
+        result = compare_multiple_models(errors)
+
+        for dm_result in result.pairwise_results.values():
+            assert isinstance(dm_result, DMTestResult)
+            assert 0 <= dm_result.pvalue <= 1
+            assert dm_result.n == n
+            assert dm_result.alternative == "less"  # Tests if first is better

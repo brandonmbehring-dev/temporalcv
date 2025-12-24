@@ -37,7 +37,7 @@ Example
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Optional
+from typing import Literal, Optional, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -104,7 +104,7 @@ def _rademacher_weights(n: int, rng: np.random.Generator) -> np.ndarray:
     np.ndarray
         Array of {-1, +1} values
     """
-    return rng.choice([-1, 1], size=n).astype(np.float64)
+    return cast(np.ndarray, rng.choice([-1, 1], size=n).astype(np.float64))
 
 
 def _webb_weights(n: int, rng: np.random.Generator) -> np.ndarray:
@@ -133,7 +133,7 @@ def _webb_weights(n: int, rng: np.random.Generator) -> np.ndarray:
     clustered errors. Canadian Journal of Economics, 56(3), 839-867.
     """
     webb_values = np.array([-1.5, -1.0, -0.5, 0.5, 1.0, 1.5])
-    return rng.choice(webb_values, size=n)
+    return cast(np.ndarray, rng.choice(webb_values, size=n))
 
 
 def wild_cluster_bootstrap(

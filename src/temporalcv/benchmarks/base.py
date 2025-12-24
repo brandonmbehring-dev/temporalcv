@@ -291,7 +291,7 @@ class TimeSeriesDataset:
         """Number of observations."""
         if self.values.ndim == 1:
             return len(self.values)
-        return self.values.shape[1]
+        return int(self.values.shape[1])
 
 
 def validate_dataset(dataset: Dataset) -> None:

@@ -7,74 +7,127 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+No unreleased changes.
+
+## [0.2.0] - 2025-12-24
+
+Major metrics expansion release with comprehensive evaluation toolkit.
+
 ### Added
 
-#### Phase E: Testing Infrastructure
-- 6-tier test architecture: known-answer, Monte Carlo, golden reference, adversarial
-- 72 new tests (total: 628)
-- Nightly CI workflow for Monte Carlo validation (`.github/workflows/nightly-tests.yml`)
-- Golden reference JSON with R-validated DM test cases (`tests/fixtures/golden_reference.json`)
-- Monte Carlo calibration tests for DM, wild bootstrap, conformal coverage
-- Adversarial edge case tests for numerical stability
+#### Core Metrics
+- `compute_mae()` - mean absolute error
+- `compute_mse()` - mean squared error
+- `compute_rmse()` - root mean squared error
+- `compute_mape()` - mean absolute percentage error
+- `compute_smape()` - symmetric MAPE (bounded 0-200%)
+- `compute_bias()` - mean error (systematic bias detection)
+- `compute_naive_error()` - naive forecast MAE for MASE denominator
+- `compute_mase()` - mean absolute scaled error (Hyndman & Koehler 2006)
+- `compute_mrae()` - mean relative absolute error
+- `compute_theils_u()` - Theil's U statistic (Theil 1966)
+- `compute_forecast_correlation()` - Pearson/Spearman correlation
+- `compute_r_squared()` - coefficient of determination
 
-#### Phase D: Documentation
-- Sphinx infrastructure with napoleon, autodoc, intersphinx (`docs/conf.py`)
-- 12 API reference stubs in `docs/api_reference/`
-- Knowledge Tier glossary (T1/T2/T3) in `docs/glossary.rst`
-- ReadTheDocs deployment configuration (`.readthedocs.yaml`)
+#### Event & Direction Metrics
+- `compute_calibrated_direction_brier()` - Brier score with calibration adjustment
+- `convert_predictions_to_direction_probs()` - point predictions to direction probabilities
 
-#### Phase C: Larger Features
-- Wild cluster bootstrap for few-fold inference (`inference/wild_bootstrap.py`)
-  - Auto weight selection: Webb <13 folds, Rademacher ≥13
-  - `WildBootstrapResult` dataclass with p-value and CI
-- `CrossFitCV` for debiased out-of-sample predictions
-  - Forward-only temporal semantics
-  - `fit_predict()` and `fit_predict_residuals()` methods
-- `run_gates_stratified()` for regime-conditional validation
-  - `StratifiedValidationReport` with per-regime gate results
+#### Quantile & Interval Metrics
+- `compute_pinball_loss()` - quantile regression loss (Koenker & Bassett 1978)
+- `compute_crps()` - Continuous Ranked Probability Score with scipy auto-detect (Gneiting & Raftery 2007)
+- `compute_interval_score()` - proper scoring rule for intervals (Gneiting & Raftery 2007)
+- `compute_quantile_coverage()` - empirical coverage of prediction intervals
+- `compute_winkler_score()` - alias for interval score (Winkler 1972)
 
-#### Phase B: Diagnostics
+#### Financial & Trading Metrics
+- `compute_sharpe_ratio()` - annualized risk-adjusted return (Sharpe 1966)
+- `compute_max_drawdown()` - peak-to-trough decline
+- `compute_cumulative_return()` - geometric/arithmetic total return
+- `compute_information_ratio()` - active return vs tracking error (Goodwin 1998)
+- `compute_hit_rate()` - directional accuracy (sign matching)
+- `compute_profit_factor()` - gross profit / gross loss
+- `compute_calmar_ratio()` - return / max drawdown
+
+#### Asymmetric Loss Functions
+- `compute_linex_loss()` - linear-exponential asymmetric loss (Varian 1975, Zellner 1986)
+- `compute_asymmetric_mape()` - weighted over/under MAPE
+- `compute_directional_loss()` - custom UP miss vs DOWN miss penalties
+- `compute_squared_log_error()` - mean squared log error (MSLE)
+- `compute_huber_loss()` - robust quadratic/linear loss
+
+#### Volatility-Weighted Metrics
+- `VolatilityEstimator` Protocol - extensibility interface for custom estimators
+- `RollingVolatility` class - rolling standard deviation estimator
+- `EWMAVolatility` class - exponentially weighted estimator (RiskMetrics 1996)
+- `compute_local_volatility()` - unified estimation with rolling_std/ewm/garch methods
+- `compute_volatility_normalized_mae()` - scale-invariant MAE across regimes
+- `compute_volatility_weighted_mae()` - inverse/importance weighting schemes
+- `VolatilityStratifiedResult` dataclass - tercile breakdown with interpretation
+- `compute_volatility_stratified_metrics()` - MAE/RMSE by volatility regime
+
+#### Multi-Model Comparison
+- `MultiModelComparisonResult` dataclass - pairwise comparison results
+- `compare_multiple_models()` - Bonferroni-corrected pairwise DM tests
+
+#### Regime-Stratified Analysis
+- `StratifiedMetricsResult` dataclass - per-regime breakdown
+- `compute_stratified_metrics()` - MAE/RMSE by custom regimes
+
+#### Cross-Validation
+- `SplitResult` dataclass - single split results with predictions/actuals
+- `WalkForwardResults` dataclass - aggregated CV results with lazy metrics
+- `walk_forward_evaluate()` - unified evaluation function with date support
+
+#### Guardrails & Validation
+- `GuardrailResult` dataclass - unified check results
+- `check_suspicious_improvement()` - >20% improvement trigger
+- `check_minimum_sample_size()` - statistical power validation
+- `check_stratified_sample_size()` - per-regime minimum n
+- `check_forecast_horizon_consistency()` - horizon alignment check
+- `check_residual_autocorrelation()` - Ljung-Box based check
+- `run_all_guardrails()` - unified validation suite
+
+#### Theoretical Bounds
+- `theoretical_ar1_mse_bound()` - minimum MSE for AR(1) process
+- `theoretical_ar1_mae_bound()` - minimum MAE for AR(1) process
+- `theoretical_ar2_mse_bound()` - minimum MSE for AR(2) process
+- `check_against_ar1_bounds()` - leakage detection via bounds
+- `generate_ar1_series()` - synthetic AR(1) for testing
+- `generate_ar2_series()` - synthetic AR(2) for testing
+
+#### Diagnostics & Inference
+- `gate_residual_diagnostics()` - autocorrelation, normality, bias checks
 - `gate_theoretical_bounds()` - AR(1) theoretical minimum validation
-  - Estimates phi from ACF(1), computes innovation variance
-  - AR(1) assumption check via Ljung-Box on residuals
-- `compute_dm_influence()` - Observation and block influence diagnostics
-  - HAC-adjusted observation-level influence
-  - Block jackknife for theoretically-justified decisions
-- `gap_sensitivity_analysis()` - Gap parameter sensitivity
-  - Configurable degradation threshold (default 10%)
-  - Returns break-even gap and sensitivity score
+- `compute_dm_influence()` - observation and block influence diagnostics
+- `gap_sensitivity_analysis()` - gap parameter sensitivity analysis
+- `wild_cluster_bootstrap()` - few-fold inference with auto weight selection
 
-#### Phase A: Quick Wins
-- Frozen `SplitInfo` dataclass (immutable)
-- `gate_residual_diagnostics()` - residual quality checks
-  - Custom Ljung-Box test for autocorrelation
-  - Jarque-Bera test for normality
-  - Mean-zero t-test
+#### Testing Infrastructure
+- 6-tier test architecture: known-answer, Monte Carlo, golden reference, adversarial
+- Nightly CI workflow for Monte Carlo validation
+- Golden reference JSON with R-validated DM test cases
+- Monte Carlo calibration tests for DM, wild bootstrap, conformal coverage
+- 1042 tests total (1041 passing, 1 skipped)
 
-#### Other Additions
-- SPECIFICATION.md with frozen parameters and mathematical definitions
-- Knowledge tier system documentation ([T1]/[T2]/[T3])
-- Leakage audit trail documenting 10 bug categories
-- Episode documentation for common leakage patterns
-- Expanded CLAUDE.md with decision flowchart and gate references
+#### Documentation
+- Sphinx infrastructure with napoleon, autodoc, intersphinx
+- Comprehensive metrics API reference (`docs/api/metrics.md`)
+- Knowledge Tier glossary (T1/T2/T3)
+- ReadTheDocs deployment configuration
 
 ### Changed
-- Updated phase status to reflect Phase 5 completion
 - Enhanced Suspicious Results Protocol with concrete thresholds
-- Updated Reference Patterns to include myga-forecasting-v4
+- `SplitInfo` dataclass now frozen (immutable)
+- Expanded `__init__.py` exports (70+ public symbols)
 
 ### Fixed
-
-#### Phase 0: Correctness Fixes
 - DM test uses t-distribution when `harvey_correction=True` (was normal)
 - Gates use WalkForwardCV internally for out-of-sample evaluation (was in-sample)
 - Conformal quantile uses `method="higher"` for conservative coverage
 - PT test minimum samples increased to 30 (was 20)
 - phi validation (-1 < phi < 1) added to `gate_synthetic_ar1`
-- SPECIFICATION.md synced with code (n_shuffles=5, block_len=n^(1/3), DM min=30)
-
-#### Other Fixes
-- GitHub URL consistency (unified to brandonmbehring-dev)
+- SPECIFICATION.md synced with code parameters
 
 ## [0.1.0-alpha] - 2025-12-23
 
@@ -148,14 +201,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History
 
-| Version | Date | Phase | Highlights |
-|---------|------|-------|------------|
-| 0.1.0-alpha | 2025-12-23 | 5 | Complete feature set |
-| 0.0.5-dev | 2025-12-XX | 4 | Uncertainty + ensemble |
-| 0.0.4-dev | 2025-12-XX | 3 | High-persistence |
-| 0.0.3-dev | 2025-12-XX | 2 | Walk-forward CV |
-| 0.0.2-dev | 2025-12-XX | 1 | Gates + tests |
-| 0.0.1-dev | 2025-12-XX | 0 | Repository setup |
+| Version | Date | Highlights |
+|---------|------|------------|
+| 0.2.0 | 2025-12-24 | Major metrics expansion (40+ new functions) |
+| 0.1.0-alpha | 2025-12-23 | Complete feature set (gates, CV, conformal, bagging) |
 
 ---
 

@@ -361,6 +361,209 @@ def mask_low_n_regimes(
 
 
 # =============================================================================
+# Stratified Metrics
+# =============================================================================
+
+
+from dataclasses import dataclass, field
+from typing import Optional
+
+
+@dataclass
+class StratifiedMetricsResult:
+    """
+    Metrics stratified by regime.
+
+    Provides overall metrics and per-regime breakdown for MAE, RMSE, and sample counts.
+
+    Attributes
+    ----------
+    overall_mae : float
+        Mean Absolute Error across all samples.
+    overall_rmse : float
+        Root Mean Squared Error across all samples.
+    n_total : int
+        Total number of samples.
+    by_regime : Dict[str, Dict[str, float]]
+        Per-regime metrics. Each key is a regime label, value is dict with:
+        - 'mae': Mean Absolute Error for regime
+        - 'rmse': Root Mean Squared Error for regime
+        - 'n': Sample count for regime
+        - 'pct': Percentage of total samples
+    masked_regimes : List[str]
+        Regimes with n < min_n that were excluded from analysis.
+
+    Examples
+    --------
+    >>> result = compute_stratified_metrics(preds, actuals, regimes)
+    >>> print(f"Overall MAE: {result.overall_mae:.4f}")
+    >>> for regime, metrics in result.by_regime.items():
+    ...     print(f"{regime}: MAE={metrics['mae']:.4f}, n={metrics['n']}")
+    """
+
+    overall_mae: float
+    overall_rmse: float
+    n_total: int
+    by_regime: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    masked_regimes: List[str] = field(default_factory=list)
+
+    def summary(self) -> str:
+        """Generate human-readable summary of stratified metrics."""
+        lines = [
+            f"Overall: MAE={self.overall_mae:.4f}, RMSE={self.overall_rmse:.4f}, n={self.n_total}",
+            "",
+            "By Regime:",
+        ]
+
+        # Sort by n descending
+        sorted_regimes = sorted(
+            self.by_regime.items(), key=lambda x: x[1]["n"], reverse=True
+        )
+
+        for regime, metrics in sorted_regimes:
+            lines.append(
+                f"  {regime}: MAE={metrics['mae']:.4f}, "
+                f"RMSE={metrics['rmse']:.4f}, n={metrics['n']} ({metrics['pct']:.1f}%)"
+            )
+
+        if self.masked_regimes:
+            lines.append("")
+            lines.append(f"Masked (n < min_n): {', '.join(self.masked_regimes)}")
+
+        return "\n".join(lines)
+
+
+def compute_stratified_metrics(
+    predictions: np.ndarray,
+    actuals: np.ndarray,
+    regimes: np.ndarray,
+    min_n: int = 10,
+) -> StratifiedMetricsResult:
+    """
+    Compute MAE and RMSE stratified by regime.
+
+    Provides automatic per-regime breakdown of prediction errors, essential for
+    understanding model performance across different market conditions.
+
+    Parameters
+    ----------
+    predictions : np.ndarray
+        Model predictions.
+    actuals : np.ndarray
+        Actual values.
+    regimes : np.ndarray
+        Regime labels for each point (e.g., 'LOW', 'MED', 'HIGH' or 'UP', 'DOWN', 'FLAT').
+        Must have same length as predictions and actuals.
+    min_n : int, default=10
+        Minimum samples required per regime. Regimes with fewer samples are
+        masked and reported in `masked_regimes`.
+
+    Returns
+    -------
+    StratifiedMetricsResult
+        Dataclass with overall metrics, per-regime breakdown, and masked regimes.
+
+    Raises
+    ------
+    ValueError
+        If array lengths don't match or if predictions/actuals are empty.
+
+    Notes
+    -----
+    This function is designed for post-hoc analysis of walk-forward results.
+    For regime-conditional validation during training, use `run_gates_stratified()`.
+
+    The `min_n` threshold helps avoid drawing conclusions from statistically
+    unreliable subsets. Default of 10 is a conservative rule of thumb.
+
+    Examples
+    --------
+    >>> # Classify regimes
+    >>> vol_regimes = classify_volatility_regime(actuals, window=13, basis='changes')
+    >>>
+    >>> # Compute stratified metrics
+    >>> result = compute_stratified_metrics(predictions, actuals, vol_regimes)
+    >>> print(result.summary())
+    Overall: MAE=0.0234, RMSE=0.0312, n=200
+    By Regime:
+      LOW: MAE=0.0156, RMSE=0.0201, n=67 (33.5%)
+      MED: MAE=0.0245, RMSE=0.0298, n=66 (33.0%)
+      HIGH: MAE=0.0301, RMSE=0.0437, n=67 (33.5%)
+
+    See Also
+    --------
+    classify_volatility_regime : Classify by volatility level.
+    classify_direction_regime : Classify by direction.
+    mask_low_n_regimes : Mask regimes with insufficient samples.
+    """
+    predictions = np.asarray(predictions)
+    actuals = np.asarray(actuals)
+    regimes = np.asarray(regimes)
+
+    # Validation
+    if len(predictions) == 0 or len(actuals) == 0:
+        raise ValueError("predictions and actuals cannot be empty")
+
+    if len(predictions) != len(actuals):
+        raise ValueError(
+            f"predictions and actuals must have same length. "
+            f"Got {len(predictions)} and {len(actuals)}"
+        )
+
+    if len(predictions) != len(regimes):
+        raise ValueError(
+            f"regimes must have same length as predictions. "
+            f"Got {len(regimes)} regimes for {len(predictions)} predictions"
+        )
+
+    # Compute overall metrics
+    errors = predictions - actuals
+    overall_mae = float(np.mean(np.abs(errors)))
+    overall_rmse = float(np.sqrt(np.mean(errors**2)))
+    n_total = len(predictions)
+
+    # Get unique regimes and counts
+    unique_regimes = np.unique(regimes)
+    regime_counts = get_regime_counts(regimes)
+
+    # Identify masked regimes
+    masked_regimes = [r for r, c in regime_counts.items() if c < min_n]
+
+    # Compute per-regime metrics
+    by_regime: Dict[str, Dict[str, float]] = {}
+
+    for regime in unique_regimes:
+        regime_str = str(regime)
+        n_regime = regime_counts[regime_str]
+
+        if n_regime < min_n:
+            # Skip masked regimes
+            continue
+
+        mask = regimes == regime
+        regime_errors = errors[mask]
+
+        mae = float(np.mean(np.abs(regime_errors)))
+        rmse = float(np.sqrt(np.mean(regime_errors**2)))
+        pct = 100.0 * n_regime / n_total
+
+        by_regime[regime_str] = {
+            "mae": mae,
+            "rmse": rmse,
+            "n": n_regime,
+            "pct": pct,
+        }
+
+    return StratifiedMetricsResult(
+        overall_mae=overall_mae,
+        overall_rmse=overall_rmse,
+        n_total=n_total,
+        by_regime=by_regime,
+        masked_regimes=masked_regimes,
+    )
+
+
+# =============================================================================
 # Public API
 # =============================================================================
 
@@ -370,4 +573,6 @@ __all__ = [
     "get_combined_regimes",
     "get_regime_counts",
     "mask_low_n_regimes",
+    "StratifiedMetricsResult",
+    "compute_stratified_metrics",
 ]

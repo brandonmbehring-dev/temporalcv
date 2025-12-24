@@ -36,6 +36,7 @@ dependencies = [
     "numpy>=1.21",
     "scipy>=1.7",
     "scikit-learn>=1.0",
+    "statsmodels>=0.13",
 ]
 
 [project.optional-dependencies]
@@ -57,6 +58,9 @@ monash = ["datasetsforecast>=0.0.8"]
 
 # Model comparison
 compare = ["statsforecast>=1.5"]
+
+# Changepoint detection (PELT algorithm)
+changepoint = ["ruptures>=1.1"]
 
 # Documentation
 docs = [
@@ -127,6 +131,8 @@ module = [
     "gluonts.*",
     "datasetsforecast.*",
     "statsforecast.*",
+    "statsmodels.*",
+    "ruptures.*",
     "pandas.*",
 ]
 ignore_missing_imports = true

@@ -43,7 +43,7 @@ References
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Generator, Iterator, List, Literal, Optional, Tuple, Union
+from typing import Any, Generator, Iterator, List, Literal, Optional, Tuple, Union, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -57,6 +57,7 @@ class SplitInfo:
     Metadata for a single CV split.
 
     Useful for debugging and visualizing the split structure.
+    Supports optional datetime fields when data has DatetimeIndex.
 
     Attributes
     ----------
@@ -70,6 +71,23 @@ class SplitInfo:
         First test index (inclusive)
     test_end : int
         Last test index (inclusive)
+    train_start_date : datetime, optional
+        Training period start date (if DatetimeIndex available)
+    train_end_date : datetime, optional
+        Training period end date
+    test_start_date : datetime, optional
+        Test period start date
+    test_end_date : datetime, optional
+        Test period end date
+
+    Example
+    -------
+    >>> info = SplitInfo(
+    ...     split_idx=0,
+    ...     train_start=0, train_end=99,
+    ...     test_start=102, test_end=111,
+    ... )
+    >>> print(f"Gap: {info.gap}, Train size: {info.train_size}")
     """
 
     split_idx: int
@@ -77,6 +95,11 @@ class SplitInfo:
     train_end: int
     test_start: int
     test_end: int
+    # Optional datetime fields (populated when data has DatetimeIndex)
+    train_start_date: Optional[Any] = None  # datetime
+    train_end_date: Optional[Any] = None
+    test_start_date: Optional[Any] = None
+    test_end_date: Optional[Any] = None
 
     @property
     def train_size(self) -> int:
@@ -93,6 +116,11 @@ class SplitInfo:
         """Actual gap between train end and test start."""
         return self.test_start - self.train_end - 1
 
+    @property
+    def has_dates(self) -> bool:
+        """Check if datetime information is available."""
+        return self.train_start_date is not None
+
     def __post_init__(self) -> None:
         """Validate temporal ordering."""
         if self.train_end >= self.test_start:
@@ -100,6 +128,299 @@ class SplitInfo:
                 f"Temporal leakage: train_end ({self.train_end}) >= "
                 f"test_start ({self.test_start})"
             )
+
+
+@dataclass
+class SplitResult:
+    """
+    Result from a single walk-forward split.
+
+    Contains predictions, actuals, and metadata for one CV split.
+    Used as building block for WalkForwardResults.
+
+    Attributes
+    ----------
+    split_idx : int
+        Zero-based split index
+    train_start : int
+        First training index (inclusive)
+    train_end : int
+        Last training index (inclusive)
+    test_start : int
+        First test index (inclusive)
+    test_end : int
+        Last test index (inclusive)
+    predictions : np.ndarray
+        Model predictions for this split's test set
+    actuals : np.ndarray
+        Actual values for this split's test set
+    train_start_date : datetime, optional
+        Training period start date (if DatetimeIndex available)
+    train_end_date : datetime, optional
+        Training period end date
+    test_start_date : datetime, optional
+        Test period start date
+    test_end_date : datetime, optional
+        Test period end date
+
+    Example
+    -------
+    >>> result = SplitResult(
+    ...     split_idx=0,
+    ...     train_start=0, train_end=99,
+    ...     test_start=102, test_end=111,
+    ...     predictions=np.array([1.0, 1.1, ...]),
+    ...     actuals=np.array([1.05, 1.08, ...]),
+    ... )
+    >>> print(f"Split {result.split_idx}: MAE={result.mae:.4f}")
+    """
+
+    split_idx: int
+    train_start: int
+    train_end: int
+    test_start: int
+    test_end: int
+    predictions: np.ndarray
+    actuals: np.ndarray
+    # Optional datetime fields (populated when X has DatetimeIndex)
+    train_start_date: Optional[Any] = None  # datetime
+    train_end_date: Optional[Any] = None
+    test_start_date: Optional[Any] = None
+    test_end_date: Optional[Any] = None
+
+    @property
+    def train_size(self) -> int:
+        """Number of training samples."""
+        return self.train_end - self.train_start + 1
+
+    @property
+    def test_size(self) -> int:
+        """Number of test samples."""
+        return self.test_end - self.test_start + 1
+
+    @property
+    def gap(self) -> int:
+        """Actual gap between train end and test start."""
+        return self.test_start - self.train_end - 1
+
+    @property
+    def has_dates(self) -> bool:
+        """Check if datetime information is available."""
+        return self.train_start_date is not None
+
+    @property
+    def errors(self) -> np.ndarray:
+        """Prediction errors (predictions - actuals)."""
+        return cast(np.ndarray, self.predictions - self.actuals)
+
+    @property
+    def absolute_errors(self) -> np.ndarray:
+        """Absolute prediction errors."""
+        return cast(np.ndarray, np.abs(self.errors))
+
+    @property
+    def mae(self) -> float:
+        """Mean Absolute Error for this split."""
+        return float(np.mean(self.absolute_errors))
+
+    @property
+    def rmse(self) -> float:
+        """Root Mean Squared Error for this split."""
+        return float(np.sqrt(np.mean(self.errors**2)))
+
+    @property
+    def bias(self) -> float:
+        """Mean signed error (positive = over-prediction)."""
+        return float(np.mean(self.errors))
+
+    def to_split_info(self) -> SplitInfo:
+        """Convert to SplitInfo (metadata without predictions/actuals)."""
+        return SplitInfo(
+            split_idx=self.split_idx,
+            train_start=self.train_start,
+            train_end=self.train_end,
+            test_start=self.test_start,
+            test_end=self.test_end,
+            train_start_date=self.train_start_date,
+            train_end_date=self.train_end_date,
+            test_start_date=self.test_start_date,
+            test_end_date=self.test_end_date,
+        )
+
+
+@dataclass
+class WalkForwardResults:
+    """
+    Aggregated walk-forward cross-validation results.
+
+    Collects results from all splits and provides lazy-computed
+    aggregate metrics. Designed for the common workflow of running
+    CV and then analyzing overall performance.
+
+    Attributes
+    ----------
+    splits : List[SplitResult]
+        Results from each CV split
+    cv_config : dict, optional
+        Configuration of the CV (n_splits, gap, window_type, etc.)
+
+    Properties (lazy-computed)
+    --------------------------
+    mae : float
+        Overall Mean Absolute Error across all splits
+    rmse : float
+        Overall Root Mean Squared Error
+    bias : float
+        Overall mean signed error
+    predictions : np.ndarray
+        All predictions concatenated
+    actuals : np.ndarray
+        All actuals concatenated
+
+    Example
+    -------
+    >>> from temporalcv import walk_forward_evaluate
+    >>> results = walk_forward_evaluate(model, X, y, n_splits=5)
+    >>> print(f"Overall MAE: {results.mae:.4f}")
+    >>> print(f"Overall RMSE: {results.rmse:.4f}")
+    >>> for split in results.splits:
+    ...     print(f"  Split {split.split_idx}: MAE={split.mae:.4f}")
+    """
+
+    splits: List["SplitResult"]
+    cv_config: Optional[dict[str, Any]] = None
+
+    def __post_init__(self) -> None:
+        """Validate splits list."""
+        if not self.splits:
+            raise ValueError("WalkForwardResults requires at least one split")
+
+    @property
+    def n_splits(self) -> int:
+        """Number of CV splits."""
+        return len(self.splits)
+
+    @property
+    def predictions(self) -> np.ndarray:
+        """All predictions concatenated across splits."""
+        return cast(np.ndarray, np.concatenate([s.predictions for s in self.splits]))
+
+    @property
+    def actuals(self) -> np.ndarray:
+        """All actuals concatenated across splits."""
+        return cast(np.ndarray, np.concatenate([s.actuals for s in self.splits]))
+
+    @property
+    def errors(self) -> np.ndarray:
+        """All errors concatenated across splits."""
+        return cast(np.ndarray, self.predictions - self.actuals)
+
+    @property
+    def absolute_errors(self) -> np.ndarray:
+        """All absolute errors concatenated."""
+        return cast(np.ndarray, np.abs(self.errors))
+
+    @property
+    def mae(self) -> float:
+        """Overall Mean Absolute Error."""
+        return float(np.mean(self.absolute_errors))
+
+    @property
+    def rmse(self) -> float:
+        """Overall Root Mean Squared Error."""
+        return float(np.sqrt(np.mean(self.errors**2)))
+
+    @property
+    def bias(self) -> float:
+        """Overall mean signed error (positive = over-prediction)."""
+        return float(np.mean(self.errors))
+
+    @property
+    def mse(self) -> float:
+        """Overall Mean Squared Error."""
+        return float(np.mean(self.errors**2))
+
+    @property
+    def total_samples(self) -> int:
+        """Total number of test samples across all splits."""
+        return sum(s.test_size for s in self.splits)
+
+    def per_split_metrics(self) -> List[dict[str, float]]:
+        """Return metrics for each split as list of dicts."""
+        return [
+            {
+                "split_idx": s.split_idx,
+                "mae": s.mae,
+                "rmse": s.rmse,
+                "bias": s.bias,
+                "n_samples": s.test_size,
+            }
+            for s in self.splits
+        ]
+
+    def to_dataframe(self) -> Any:
+        """
+        Export results to pandas DataFrame.
+
+        Returns DataFrame with one row per prediction, including
+        split index, prediction, actual, error, and dates if available.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with columns: split_idx, prediction, actual, error,
+            and optionally date columns
+
+        Raises
+        ------
+        ImportError
+            If pandas is not installed
+        """
+        try:
+            import pandas as pd
+        except ImportError as e:
+            raise ImportError(
+                "pandas required for to_dataframe(): pip install pandas"
+            ) from e
+
+        rows = []
+        for split in self.splits:
+            for i, (pred, actual) in enumerate(
+                zip(split.predictions, split.actuals)
+            ):
+                row = {
+                    "split_idx": split.split_idx,
+                    "prediction": pred,
+                    "actual": actual,
+                    "error": pred - actual,
+                    "abs_error": abs(pred - actual),
+                }
+                if split.has_dates and split.test_start_date is not None:
+                    # Add date if available (requires DatetimeIndex tracking)
+                    row["test_idx"] = split.test_start + i
+                rows.append(row)
+
+        return pd.DataFrame(rows)
+
+    def summary(self) -> str:
+        """Return formatted summary of results."""
+        lines = [
+            "WalkForwardResults Summary",
+            "=" * 40,
+            f"Splits: {self.n_splits}",
+            f"Total samples: {self.total_samples}",
+            "",
+            "Overall Metrics:",
+            f"  MAE:  {self.mae:.6f}",
+            f"  RMSE: {self.rmse:.6f}",
+            f"  Bias: {self.bias:+.6f}",
+            "",
+            "Per-Split MAE:",
+        ]
+        for s in self.splits:
+            lines.append(f"  Split {s.split_idx}: {s.mae:.6f} (n={s.test_size})")
+
+        return "\n".join(lines)
 
 
 class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
@@ -619,7 +940,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
     def fit_predict(
         self,
-        model,
+        model: Any,
         X: ArrayLike,
         y: ArrayLike,
     ) -> np.ndarray:
@@ -659,11 +980,11 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
             model_clone.fit(X[train_idx], y[train_idx])
             predictions[test_idx] = model_clone.predict(X[test_idx])
 
-        return predictions
+        return cast(np.ndarray, predictions)
 
     def fit_predict_residuals(
         self,
-        model,
+        model: Any,
         X: ArrayLike,
         y: ArrayLike,
     ) -> np.ndarray:
@@ -685,7 +1006,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
             Out-of-sample residuals, shape (n_samples,)
         """
         predictions = self.fit_predict(model, X, y)
-        return np.asarray(y) - predictions
+        return cast(np.ndarray, np.asarray(y) - predictions)
 
     def get_fold_indices(self, X: ArrayLike) -> List[Tuple[int, int]]:
         """
@@ -714,11 +1035,188 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
 
 # =============================================================================
+# walk_forward_evaluate Function
+# =============================================================================
+
+
+def walk_forward_evaluate(
+    model: Any,
+    X: ArrayLike,
+    y: ArrayLike,
+    cv: Optional[WalkForwardCV] = None,
+    n_splits: int = 5,
+    horizon: Optional[int] = None,
+    window_type: Literal["expanding", "sliding"] = "expanding",
+    window_size: Optional[int] = None,
+    gap: int = 0,
+    test_size: int = 1,
+    verbose: bool = False,
+) -> WalkForwardResults:
+    """
+    Evaluate model using walk-forward cross-validation.
+
+    Convenience function that runs walk-forward CV and returns structured
+    results with per-split and aggregate metrics. Follows sklearn patterns:
+    clones model for each split to ensure independence.
+
+    Parameters
+    ----------
+    model : sklearn-compatible estimator
+        Model with fit(X, y) and predict(X) methods. Will be cloned
+        for each split.
+    X : ArrayLike
+        Features array of shape (n_samples, n_features) or (n_samples,).
+        If pandas DataFrame/Series with DatetimeIndex, dates are captured.
+    y : ArrayLike
+        Target array of shape (n_samples,)
+    cv : WalkForwardCV, optional
+        Pre-configured CV splitter. If provided, other CV parameters
+        are ignored.
+    n_splits : int, default=5
+        Number of CV folds (ignored if cv is provided)
+    horizon : int, optional
+        Forecast horizon for gap validation (ignored if cv is provided)
+    window_type : {"expanding", "sliding"}, default="expanding"
+        Training window type (ignored if cv is provided)
+    window_size : int, optional
+        Window size for sliding window (ignored if cv is provided)
+    gap : int, default=0
+        Gap between train and test (ignored if cv is provided)
+    test_size : int, default=1
+        Number of test samples per fold (ignored if cv is provided)
+    verbose : bool, default=False
+        If True, print progress for each split
+
+    Returns
+    -------
+    WalkForwardResults
+        Aggregated results with per-split metrics and overall metrics.
+        Access via .mae, .rmse, .bias properties or iterate over .splits.
+
+    Example
+    -------
+    >>> from sklearn.linear_model import Ridge
+    >>> import numpy as np
+    >>>
+    >>> # Generate sample data
+    >>> np.random.seed(42)
+    >>> X = np.random.randn(200, 5)
+    >>> y = X[:, 0] * 0.5 + np.random.randn(200) * 0.1
+    >>>
+    >>> # Evaluate model
+    >>> results = walk_forward_evaluate(Ridge(), X, y, n_splits=5, gap=2)
+    >>> print(f"MAE: {results.mae:.4f}")
+    >>> print(f"RMSE: {results.rmse:.4f}")
+    >>>
+    >>> # Access per-split details
+    >>> for split in results.splits:
+    ...     print(f"Split {split.split_idx}: MAE={split.mae:.4f}")
+
+    Notes
+    -----
+    **Model cloning**: Each split gets a fresh clone of the model via
+    sklearn.base.clone(). If clone() fails (non-sklearn model), the
+    original model is reused (be aware this may cause state leakage).
+
+    **Date extraction**: If X is a pandas DataFrame/Series with DatetimeIndex,
+    the SplitResult objects will include train_start_date, train_end_date,
+    test_start_date, and test_end_date fields.
+
+    Knowledge Tier: [T2] - Convenience wrapper over established WalkForwardCV.
+    """
+    X_arr = np.asarray(X)
+    y_arr = np.asarray(y)
+
+    # Create CV splitter if not provided
+    if cv is None:
+        cv = WalkForwardCV(
+            n_splits=n_splits,
+            horizon=horizon,
+            window_type=window_type,
+            window_size=window_size,
+            gap=gap,
+            test_size=test_size,
+        )
+
+    # Attempt to extract dates from X if it's a pandas object
+    dates = None
+    try:
+        import pandas as pd
+
+        if hasattr(X, "index") and isinstance(X.index, pd.DatetimeIndex):  # type: ignore[union-attr]
+            dates = X.index  # type: ignore[union-attr]
+    except ImportError:
+        pass  # pandas not available
+
+    # Collect split results
+    split_results: List[SplitResult] = []
+
+    for split_idx, (train_idx, test_idx) in enumerate(cv.split(X_arr)):
+        if verbose:
+            print(f"Split {split_idx}: train[{train_idx[0]}:{train_idx[-1]}], "
+                  f"test[{test_idx[0]}:{test_idx[-1]}]")
+
+        # Clone model for this split
+        try:
+            model_clone = clone(model)
+        except TypeError:
+            # clone() failed (non-sklearn model), reuse original
+            model_clone = model
+
+        # Fit and predict
+        model_clone.fit(X_arr[train_idx], y_arr[train_idx])
+        predictions = model_clone.predict(X_arr[test_idx])
+        actuals = y_arr[test_idx]
+
+        # Build SplitResult
+        train_start_date = None
+        train_end_date = None
+        test_start_date = None
+        test_end_date = None
+
+        if dates is not None:
+            train_start_date = dates[train_idx[0]]
+            train_end_date = dates[train_idx[-1]]
+            test_start_date = dates[test_idx[0]]
+            test_end_date = dates[test_idx[-1]]
+
+        split_result = SplitResult(
+            split_idx=split_idx,
+            train_start=int(train_idx[0]),
+            train_end=int(train_idx[-1]),
+            test_start=int(test_idx[0]),
+            test_end=int(test_idx[-1]),
+            predictions=np.asarray(predictions),
+            actuals=np.asarray(actuals),
+            train_start_date=train_start_date,
+            train_end_date=train_end_date,
+            test_start_date=test_start_date,
+            test_end_date=test_end_date,
+        )
+        split_results.append(split_result)
+
+    # Build CV config for reference
+    cv_config = {
+        "n_splits": cv.n_splits,
+        "horizon": cv.horizon,
+        "window_type": cv.window_type,
+        "window_size": cv.window_size,
+        "gap": cv.gap,
+        "test_size": cv.test_size,
+    }
+
+    return WalkForwardResults(splits=split_results, cv_config=cv_config)
+
+
+# =============================================================================
 # Public API
 # =============================================================================
 
 __all__ = [
     "SplitInfo",
+    "SplitResult",
+    "WalkForwardResults",
     "WalkForwardCV",
     "CrossFitCV",
+    "walk_forward_evaluate",
 ]

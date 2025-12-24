@@ -11,9 +11,11 @@ import pytest
 from temporalcv.regimes import (
     classify_direction_regime,
     classify_volatility_regime,
+    compute_stratified_metrics,
     get_combined_regimes,
     get_regime_counts,
     mask_low_n_regimes,
+    StratifiedMetricsResult,
 )
 
 
@@ -383,3 +385,215 @@ class TestRegimeIntegration:
         # Filter out MED from early points with insufficient data
         # At least check we have all three regimes
         assert "LOW" in counts or "MED" in counts or "HIGH" in counts
+
+
+# =============================================================================
+# Stratified Metrics Tests
+# =============================================================================
+
+
+class TestStratifiedMetricsResult:
+    """Tests for StratifiedMetricsResult dataclass."""
+
+    def test_basic_attributes(self) -> None:
+        """Should have correct basic attributes."""
+        result = StratifiedMetricsResult(
+            overall_mae=0.1,
+            overall_rmse=0.15,
+            n_total=100,
+            by_regime={"A": {"mae": 0.08, "rmse": 0.12, "n": 50, "pct": 50.0}},
+            masked_regimes=["B"],
+        )
+
+        assert result.overall_mae == 0.1
+        assert result.overall_rmse == 0.15
+        assert result.n_total == 100
+        assert "A" in result.by_regime
+        assert result.masked_regimes == ["B"]
+
+    def test_summary_contains_metrics(self) -> None:
+        """Summary should include key metrics."""
+        result = StratifiedMetricsResult(
+            overall_mae=0.1234,
+            overall_rmse=0.1567,
+            n_total=100,
+            by_regime={
+                "HIGH": {"mae": 0.15, "rmse": 0.20, "n": 30, "pct": 30.0},
+                "LOW": {"mae": 0.08, "rmse": 0.10, "n": 70, "pct": 70.0},
+            },
+        )
+
+        summary = result.summary()
+
+        assert "0.1234" in summary  # Overall MAE
+        assert "0.1567" in summary  # Overall RMSE
+        assert "100" in summary  # n_total
+        assert "HIGH" in summary
+        assert "LOW" in summary
+
+    def test_summary_includes_masked(self) -> None:
+        """Summary should list masked regimes."""
+        result = StratifiedMetricsResult(
+            overall_mae=0.1,
+            overall_rmse=0.15,
+            n_total=100,
+            masked_regimes=["TINY", "SMALL"],
+        )
+
+        summary = result.summary()
+
+        assert "TINY" in summary
+        assert "SMALL" in summary
+        assert "Masked" in summary
+
+
+class TestComputeStratifiedMetrics:
+    """Tests for compute_stratified_metrics function."""
+
+    def test_basic_computation(self) -> None:
+        """Should compute overall and per-regime metrics."""
+        predictions = np.array([1.0, 2.0, 3.0, 4.0, 5.0] * 20)
+        actuals = np.array([1.1, 2.2, 2.8, 4.1, 4.9] * 20)
+        regimes = np.array(["A", "A", "B", "B", "B"] * 20)
+
+        result = compute_stratified_metrics(predictions, actuals, regimes, min_n=5)
+
+        assert result.n_total == 100
+        assert result.overall_mae > 0
+        assert result.overall_rmse > 0
+        assert "A" in result.by_regime
+        assert "B" in result.by_regime
+
+    def test_per_regime_metrics_correct(self) -> None:
+        """Per-regime metrics should be computed correctly."""
+        # Create data where regime A has lower error than regime B
+        predictions = np.array([1.0, 1.0, 1.0, 5.0, 5.0, 5.0] * 10)
+        actuals = np.array([1.1, 1.0, 0.9, 3.0, 4.0, 6.0] * 10)  # A: small error, B: large error
+        regimes = np.array(["A", "A", "A", "B", "B", "B"] * 10)
+
+        result = compute_stratified_metrics(predictions, actuals, regimes, min_n=5)
+
+        # Regime A should have lower MAE than regime B
+        assert result.by_regime["A"]["mae"] < result.by_regime["B"]["mae"]
+
+    def test_masks_low_n_regimes(self) -> None:
+        """Regimes with n < min_n should be masked."""
+        predictions = np.array([1.0] * 100 + [2.0] * 5)  # A: 100, B: 5
+        actuals = np.array([1.1] * 100 + [2.1] * 5)
+        regimes = np.array(["A"] * 100 + ["B"] * 5)
+
+        result = compute_stratified_metrics(predictions, actuals, regimes, min_n=10)
+
+        assert "A" in result.by_regime
+        assert "B" not in result.by_regime  # Masked
+        assert "B" in result.masked_regimes
+
+    def test_percentage_sums_correctly(self) -> None:
+        """Percentages should sum to ~100 for non-masked regimes."""
+        predictions = np.array([1.0] * 50 + [2.0] * 30 + [3.0] * 20)
+        actuals = np.array([1.1] * 50 + [2.1] * 30 + [3.1] * 20)
+        regimes = np.array(["A"] * 50 + ["B"] * 30 + ["C"] * 20)
+
+        result = compute_stratified_metrics(predictions, actuals, regimes, min_n=10)
+
+        total_pct = sum(r["pct"] for r in result.by_regime.values())
+        assert abs(total_pct - 100.0) < 0.1
+
+    def test_raises_on_empty_arrays(self) -> None:
+        """Should raise ValueError on empty arrays."""
+        with pytest.raises(ValueError, match="cannot be empty"):
+            compute_stratified_metrics(
+                np.array([]),
+                np.array([]),
+                np.array([]),
+            )
+
+    def test_raises_on_length_mismatch(self) -> None:
+        """Should raise ValueError on length mismatch."""
+        with pytest.raises(ValueError, match="same length"):
+            compute_stratified_metrics(
+                np.array([1.0, 2.0]),
+                np.array([1.1, 2.1, 3.1]),
+                np.array(["A", "B"]),
+            )
+
+        with pytest.raises(ValueError, match="same length"):
+            compute_stratified_metrics(
+                np.array([1.0, 2.0]),
+                np.array([1.1, 2.1]),
+                np.array(["A"]),
+            )
+
+    def test_rmse_greater_than_mae(self) -> None:
+        """RMSE should be >= MAE for non-uniform errors."""
+        rng = np.random.default_rng(42)
+        predictions = rng.normal(0, 1, 200)
+        actuals = predictions + rng.normal(0, 0.5, 200)  # Non-uniform errors
+        regimes = np.array(["A"] * 100 + ["B"] * 100)
+
+        result = compute_stratified_metrics(predictions, actuals, regimes, min_n=10)
+
+        # RMSE >= MAE by Cauchy-Schwarz
+        assert result.overall_rmse >= result.overall_mae
+        for regime_metrics in result.by_regime.values():
+            assert regime_metrics["rmse"] >= regime_metrics["mae"]
+
+    def test_works_with_volatility_regimes(self) -> None:
+        """Should work with volatility regime classification."""
+        rng = np.random.default_rng(42)
+        n = 200
+
+        # Create values with different volatility
+        values = np.concatenate(
+            [
+                3.5 + np.cumsum(rng.normal(0, 0.01, n // 2)),
+                3.5 + np.cumsum(rng.normal(0, 0.05, n // 2)),
+            ]
+        )
+
+        predictions = values + rng.normal(0, 0.02, n)
+        actuals = values
+
+        # Classify volatility
+        vol_regimes = classify_volatility_regime(values, window=13, basis="changes")
+
+        result = compute_stratified_metrics(predictions, actuals, vol_regimes, min_n=10)
+
+        # Should have at least some regimes
+        assert len(result.by_regime) > 0
+        assert result.n_total == n
+
+    def test_works_with_direction_regimes(self) -> None:
+        """Should work with direction regime classification."""
+        rng = np.random.default_rng(42)
+        n = 200
+
+        actuals = rng.normal(0, 0.1, n)
+        predictions = actuals + rng.normal(0, 0.02, n)
+
+        # Classify direction
+        threshold = np.percentile(np.abs(actuals), 70)
+        dir_regimes = classify_direction_regime(actuals, threshold)
+
+        result = compute_stratified_metrics(predictions, actuals, dir_regimes, min_n=5)
+
+        # Should have UP, DOWN, and/or FLAT
+        assert len(result.by_regime) > 0
+
+    def test_custom_min_n_threshold(self) -> None:
+        """Custom min_n should affect masking."""
+        predictions = np.array([1.0] * 15 + [2.0] * 10 + [3.0] * 5)
+        actuals = np.array([1.1] * 15 + [2.1] * 10 + [3.1] * 5)
+        regimes = np.array(["A"] * 15 + ["B"] * 10 + ["C"] * 5)
+
+        # With min_n=5, all should be included
+        result_low = compute_stratified_metrics(predictions, actuals, regimes, min_n=5)
+        assert len(result_low.by_regime) == 3
+        assert len(result_low.masked_regimes) == 0
+
+        # With min_n=12, C and B should be masked
+        result_high = compute_stratified_metrics(predictions, actuals, regimes, min_n=12)
+        assert len(result_high.by_regime) == 1
+        assert "A" in result_high.by_regime
+        assert "B" in result_high.masked_regimes
+        assert "C" in result_high.masked_regimes

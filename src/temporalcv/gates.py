@@ -55,7 +55,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, List, Literal, Optional, Protocol, Union
+from typing import Any, Callable, List, Literal, Optional, Protocol, Union, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -797,14 +797,14 @@ def _compute_acf(x: np.ndarray, max_lag: int) -> np.ndarray:
 
     if gamma_0 == 0:
         # Constant residuals → no autocorrelation
-        return np.zeros(max_lag)
+        return cast(np.ndarray, np.zeros(max_lag))
 
     acf_values = np.zeros(max_lag)
     for k in range(1, max_lag + 1):
         gamma_k = np.sum(x[k:] * x[:-k]) / n
         acf_values[k - 1] = gamma_k / gamma_0
 
-    return acf_values
+    return cast(np.ndarray, acf_values)
 
 
 def _ljung_box_test(residuals: np.ndarray, max_lag: int) -> tuple[float, float]:
@@ -1206,7 +1206,7 @@ def gate_theoretical_bounds(
         metric_value=model_mae,
         threshold=threshold,
         details=details,
-        recommendation=None,
+        recommendation="",
     )
 
 

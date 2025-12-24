@@ -643,6 +643,236 @@ def pt_test(
 
 
 # =============================================================================
+# Multi-Model Comparison
+# =============================================================================
+
+
+from typing import Dict, List, Tuple
+
+
+@dataclass
+class MultiModelComparisonResult:
+    """
+    Result from multi-model comparison using pairwise DM tests.
+
+    Attributes
+    ----------
+    pairwise_results : Dict[Tuple[str, str], DMTestResult]
+        Mapping from (model_a, model_b) to DM test result.
+        Tests are ordered so model_a vs model_b tests if A is better (lower loss).
+    best_model : str
+        Model with lowest mean loss.
+    bonferroni_alpha : float
+        Corrected significance level (alpha / n_comparisons).
+    original_alpha : float
+        Original significance level before Bonferroni correction.
+    model_rankings : List[Tuple[str, float]]
+        Models sorted by mean loss (ascending), with (name, mean_loss) pairs.
+    significant_pairs : List[Tuple[str, str]]
+        Pairs where model_a is significantly better than model_b at corrected alpha.
+
+    Examples
+    --------
+    >>> result = compare_multiple_models({"A": errors_a, "B": errors_b, "C": errors_c})
+    >>> print(f"Best model: {result.best_model}")
+    >>> for pair in result.significant_pairs:
+    ...     print(f"{pair[0]} significantly better than {pair[1]}")
+    """
+
+    pairwise_results: Dict[Tuple[str, str], DMTestResult]
+    best_model: str
+    bonferroni_alpha: float
+    original_alpha: float
+    model_rankings: List[Tuple[str, float]]
+    significant_pairs: List[Tuple[str, str]]
+
+    @property
+    def n_comparisons(self) -> int:
+        """Number of pairwise comparisons performed."""
+        return len(self.pairwise_results)
+
+    @property
+    def n_significant(self) -> int:
+        """Number of significant differences at Bonferroni-corrected level."""
+        return len(self.significant_pairs)
+
+    def summary(self) -> str:
+        """Generate human-readable summary of comparison results."""
+        lines = [
+            f"Multi-Model Comparison ({len(self.model_rankings)} models, {self.n_comparisons} pairs)",
+            f"Bonferroni-corrected α = {self.bonferroni_alpha:.4f} (original α = {self.original_alpha:.2f})",
+            "",
+            "Model Rankings (by mean loss):",
+        ]
+
+        for rank, (name, loss) in enumerate(self.model_rankings, 1):
+            marker = " ← best" if name == self.best_model else ""
+            lines.append(f"  {rank}. {name}: {loss:.6f}{marker}")
+
+        lines.append("")
+
+        if self.significant_pairs:
+            lines.append(f"Significant differences ({self.n_significant}):")
+            for model_a, model_b in self.significant_pairs:
+                result = self.pairwise_results[(model_a, model_b)]
+                lines.append(f"  {model_a} > {model_b}: p={result.pvalue:.4f}")
+        else:
+            lines.append("No significant differences at corrected α level.")
+
+        return "\n".join(lines)
+
+    def get_pairwise(self, model_a: str, model_b: str) -> Optional[DMTestResult]:
+        """Get DM test result for specific pair (order-independent lookup)."""
+        if (model_a, model_b) in self.pairwise_results:
+            return self.pairwise_results[(model_a, model_b)]
+        elif (model_b, model_a) in self.pairwise_results:
+            return self.pairwise_results[(model_b, model_a)]
+        return None
+
+
+def compare_multiple_models(
+    errors_dict: Dict[str, np.ndarray],
+    h: int = 1,
+    alpha: float = 0.05,
+    loss: Literal["squared", "absolute"] = "squared",
+    harvey_correction: bool = True,
+) -> MultiModelComparisonResult:
+    """
+    Compare multiple models using pairwise DM tests with Bonferroni correction.
+
+    Performs all pairwise comparisons and applies Bonferroni correction to
+    control family-wise error rate.
+
+    Parameters
+    ----------
+    errors_dict : Dict[str, np.ndarray]
+        Mapping from model name to error array.
+        All arrays must have the same length.
+    h : int, default=1
+        Forecast horizon for DM test HAC bandwidth.
+    alpha : float, default=0.05
+        Significance level (before Bonferroni correction).
+    loss : {"squared", "absolute"}, default="squared"
+        Loss function for DM test.
+    harvey_correction : bool, default=True
+        Apply Harvey et al. (1997) small-sample adjustment.
+
+    Returns
+    -------
+    MultiModelComparisonResult
+        Comprehensive comparison results including rankings and significant pairs.
+
+    Raises
+    ------
+    ValueError
+        If fewer than 2 models provided or arrays have mismatched lengths.
+
+    Notes
+    -----
+    Bonferroni correction: α_corrected = α / n_comparisons where
+    n_comparisons = n_models * (n_models - 1) / 2.
+
+    For k models, there are k(k-1)/2 pairwise comparisons:
+    - 2 models: 1 comparison
+    - 3 models: 3 comparisons
+    - 5 models: 10 comparisons
+    - 10 models: 45 comparisons
+
+    Alternative multiple testing corrections (e.g., Holm, FDR) could be
+    more powerful but Bonferroni is most conservative and widely accepted.
+
+    Examples
+    --------
+    >>> errors = {
+    ...     "Ridge": model_ridge_errors,
+    ...     "Lasso": model_lasso_errors,
+    ...     "Persistence": baseline_errors,
+    ... }
+    >>> result = compare_multiple_models(errors, h=2)
+    >>> print(result.summary())
+    Multi-Model Comparison (3 models, 3 pairs)
+    Bonferroni-corrected α = 0.0167 (original α = 0.05)
+
+    Model Rankings (by mean loss):
+      1. Ridge: 0.012345 ← best
+      2. Lasso: 0.013456
+      3. Persistence: 0.025678
+
+    Significant differences (1):
+      Ridge > Persistence: p=0.0034
+
+    See Also
+    --------
+    dm_test : Pairwise comparison between two models.
+    """
+    model_names = list(errors_dict.keys())
+    n_models = len(model_names)
+
+    if n_models < 2:
+        raise ValueError(
+            f"Need at least 2 models to compare. Got {n_models}. "
+            "Use dm_test() for single pairwise comparison."
+        )
+
+    # Validate all arrays have same length
+    lengths = [len(errors_dict[name]) for name in model_names]
+    if len(set(lengths)) > 1:
+        length_info = ", ".join(f"{name}={lengths[i]}" for i, name in enumerate(model_names))
+        raise ValueError(f"All error arrays must have same length. Got: {length_info}")
+
+    # Compute mean loss for each model
+    mean_losses: Dict[str, float] = {}
+    for name, errors in errors_dict.items():
+        if loss == "squared":
+            mean_losses[name] = float(np.mean(errors**2))
+        else:
+            mean_losses[name] = float(np.mean(np.abs(errors)))
+
+    # Rank models by mean loss (lower is better)
+    model_rankings = sorted(mean_losses.items(), key=lambda x: x[1])
+    best_model = model_rankings[0][0]
+
+    # Compute number of pairwise comparisons
+    n_comparisons = n_models * (n_models - 1) // 2
+    bonferroni_alpha = alpha / n_comparisons
+
+    # Run all pairwise DM tests
+    pairwise_results: Dict[Tuple[str, str], DMTestResult] = {}
+    significant_pairs: List[Tuple[str, str]] = []
+
+    for i, name_a in enumerate(model_names):
+        for name_b in model_names[i + 1 :]:
+            # Order so lower-loss model is first (tests if A is better)
+            if mean_losses[name_a] < mean_losses[name_b]:
+                better, worse = name_a, name_b
+            else:
+                better, worse = name_b, name_a
+
+            result = dm_test(
+                errors_dict[better],
+                errors_dict[worse],
+                h=h,
+                loss=loss,
+                alternative="less",  # Test if better model has lower loss
+                harvey_correction=harvey_correction,
+            )
+
+            pairwise_results[(better, worse)] = result
+
+            if result.pvalue < bonferroni_alpha:
+                significant_pairs.append((better, worse))
+
+    return MultiModelComparisonResult(
+        pairwise_results=pairwise_results,
+        best_model=best_model,
+        bonferroni_alpha=bonferroni_alpha,
+        original_alpha=alpha,
+        model_rankings=model_rankings,
+        significant_pairs=significant_pairs,
+    )
+
+
+# =============================================================================
 # Public API
 # =============================================================================
 
@@ -650,9 +880,11 @@ __all__ = [
     # Result classes
     "DMTestResult",
     "PTTestResult",
+    "MultiModelComparisonResult",
     # Tests
     "dm_test",
     "pt_test",
+    "compare_multiple_models",
     # Utilities
     "compute_hac_variance",
 ]
