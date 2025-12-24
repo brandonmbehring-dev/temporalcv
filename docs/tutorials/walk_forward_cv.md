@@ -179,13 +179,11 @@ y = np.zeros(n)
 for t in range(1, n):
     y[t] = 0.9 * y[t-1] + np.random.randn() * 0.1
 
-# Create lag features (will be proper since we're using CV correctly)
+# Helper: Create lag features WITHIN a fold (prevents leakage)
 def create_lag_features(data, n_lags=5):
-    """Create lag features from data."""
+    """Create lag features from data - use only within CV folds."""
     X = np.column_stack([np.roll(data, i) for i in range(1, n_lags + 1)])
     return X[n_lags:], data[n_lags:]  # Remove rows with NaN
-
-X, y_clean = create_lag_features(y, n_lags=5)
 
 # Walk-forward CV
 cv = WalkForwardCV(
@@ -196,24 +194,38 @@ cv = WalkForwardCV(
     test_size=5
 )
 
-# Evaluate
+# Evaluate - compute features INSIDE each fold to prevent leakage
 results = []
 model = Ridge(alpha=1.0)
+n_lags = 5
 
-for fold, (train_idx, test_idx) in enumerate(cv.split(X)):
+for fold, (train_idx, test_idx) in enumerate(cv.split(y)):
+    # Extract data for this fold
+    y_train = y[train_idx]
+    y_test = y[test_idx]
+
+    # Create features INSIDE the fold (correct approach)
+    X_train, y_train_clean = create_lag_features(y_train, n_lags=n_lags)
+
+    # For test: need context from training for first n_lags predictions
+    # Use last n_lags values from training as context
+    y_context = np.concatenate([y_train[-n_lags:], y_test])
+    X_test, _ = create_lag_features(y_context, n_lags=n_lags)
+    # X_test now has correct features for y_test (first n_lags rows are for context)
+
     # Fit on training
-    model.fit(X[train_idx], y_clean[train_idx])
+    model.fit(X_train, y_train_clean)
 
     # Predict on test
-    preds = model.predict(X[test_idx])
-    actuals = y_clean[test_idx]
+    preds = model.predict(X_test)
+    actuals = y_test
 
     # Compute metrics
     mae = mean_absolute_error(actuals, preds)
     results.append({
         'fold': fold,
-        'train_size': len(train_idx),
-        'test_size': len(test_idx),
+        'train_size': len(X_train),
+        'test_size': len(X_test),
         'mae': mae
     })
 
@@ -277,17 +289,31 @@ for train_idx, test_idx in cv.split(X):
 ### Pitfall 1: Features Computed Before Split
 
 ```python
-# WRONG
-X = create_features(y)  # Computed on full series
+# WRONG - features computed on full series before split
+X = create_lag_features(y)  # Uses future data for lags!
 for train_idx, test_idx in cv.split(X):
     model.fit(X[train_idx], y[train_idx])
 
-# RIGHT
+# WRONG - test features have no context for first n_lags
 for train_idx, test_idx in cv.split(y):
-    X_train = create_features(y[train_idx])
-    X_test = create_features(y[test_idx])
+    X_train = create_lag_features(y[train_idx])
+    X_test = create_lag_features(y[test_idx])  # First n_lags rows invalid!
     model.fit(X_train, y[train_idx])
+
+# RIGHT - use training context for test features
+for train_idx, test_idx in cv.split(y):
+    y_train, y_test = y[train_idx], y[test_idx]
+    X_train, y_train_clean = create_lag_features(y_train, n_lags)
+
+    # Test features need context from end of training
+    y_context = np.concatenate([y_train[-n_lags:], y_test])
+    X_test, _ = create_lag_features(y_context, n_lags)
+
+    model.fit(X_train, y_train_clean)
+    preds = model.predict(X_test)
 ```
+
+> **Note**: The "Complete Example" above shows this pattern in detail.
 
 ### Pitfall 2: Insufficient Gap
 

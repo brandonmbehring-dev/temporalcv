@@ -50,11 +50,15 @@ References
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Tuple
+from typing import Literal, Optional, Tuple
 
 import numpy as np
+
+# Type alias for target mode
+TargetMode = Literal["change", "level"]
 
 
 class MoveDirection(Enum):
@@ -151,6 +155,7 @@ class MoveConditionalResult:
 def compute_move_threshold(
     actuals: np.ndarray,
     percentile: float = 70.0,
+    target_mode: TargetMode = "change",
 ) -> float:
     """
     Compute move threshold from historical changes.
@@ -160,9 +165,14 @@ def compute_move_threshold(
     Parameters
     ----------
     actuals : np.ndarray
-        Historical actual changes (from training data)
+        Historical actual values (from training data).
+        Should be *changes* (returns/differences), not raw levels.
     percentile : float, default=70.0
         Percentile of |actuals| to use as threshold
+    target_mode : {"change", "level"}, default="change"
+        Whether actuals are changes/returns ("change") or raw levels ("level").
+        - "change": Data already represents differences (recommended)
+        - "level": Will raise ValueError; convert to changes first
 
     Returns
     -------
@@ -172,7 +182,7 @@ def compute_move_threshold(
     Raises
     ------
     ValueError
-        If actuals is empty or percentile invalid
+        If actuals is empty, percentile invalid, or target_mode="level"
 
     Notes
     -----
@@ -181,6 +191,12 @@ def compute_move_threshold(
 
     Using 70th percentile means ~30% of historical changes are "moves"
     and ~70% are "flat". This provides a meaningful signal-to-noise ratio.
+
+    **Why target_mode="level" raises an error:**
+    Persistence metrics assume the baseline predicts "no change" (zero).
+    This only makes sense when data represents changes/returns, not raw levels.
+    If you have level data, convert to changes first:
+    ``changes = np.diff(levels)``
 
     Examples
     --------
@@ -193,6 +209,13 @@ def compute_move_threshold(
     compute_move_conditional_metrics : Main MC-SS computation using threshold.
     classify_moves : Classify values into UP/DOWN/FLAT using threshold.
     """
+    if target_mode == "level":
+        raise ValueError(
+            "target_mode='level' not supported for persistence metrics. "
+            "Persistence baseline assumes data represents changes/returns. "
+            "Convert levels to changes first: changes = np.diff(levels)"
+        )
+
     actuals = np.asarray(actuals)
 
     if len(actuals) == 0:
@@ -289,6 +312,7 @@ def compute_move_conditional_metrics(
     actuals: np.ndarray,
     threshold: Optional[float] = None,
     threshold_percentile: float = 70.0,
+    target_mode: TargetMode = "change",
 ) -> MoveConditionalResult:
     """
     Compute move-conditional evaluation metrics.
@@ -301,14 +325,18 @@ def compute_move_conditional_metrics(
     Parameters
     ----------
     predictions : np.ndarray
-        Model predictions
+        Model predictions (should be predicted changes, not levels)
     actuals : np.ndarray
-        Actual values
+        Actual values (should be actual changes, not levels)
     threshold : float, optional
         Move threshold. If None, computed from actuals (NOT recommended
         for walk-forward; use training data threshold instead).
     threshold_percentile : float, default=70.0
         Percentile for threshold if computed from data
+    target_mode : {"change", "level"}, default="change"
+        Whether data represents changes/returns ("change") or raw levels ("level").
+        - "change": Data already represents differences (recommended)
+        - "level": Will raise ValueError; convert to changes first
 
     Returns
     -------
@@ -318,7 +346,7 @@ def compute_move_conditional_metrics(
     Raises
     ------
     ValueError
-        If arrays have different lengths
+        If arrays have different lengths, contain NaN, or target_mode="level"
 
     Notes
     -----
@@ -333,6 +361,12 @@ def compute_move_conditional_metrics(
     CRITICAL: For walk-forward evaluation, `threshold` should be computed
     from training data only to prevent leakage.
 
+    **Why target_mode="level" raises an error:**
+    The persistence baseline assumes predicting "no change" (zero).
+    This only makes sense when data represents changes/returns.
+    If you have level data, convert first:
+    ``changes = np.diff(levels)``
+
     Examples
     --------
     >>> # Compute threshold from training
@@ -342,8 +376,27 @@ def compute_move_conditional_metrics(
     >>> mc = compute_move_conditional_metrics(preds, actuals, threshold=threshold)
     >>> print(f"MC-SS: {mc.skill_score:.3f}")
     """
+    if target_mode == "level":
+        raise ValueError(
+            "target_mode='level' not supported for persistence metrics. "
+            "Persistence baseline assumes data represents changes/returns. "
+            "Convert levels to changes first: changes = np.diff(levels)"
+        )
+
     predictions = np.asarray(predictions)
     actuals = np.asarray(actuals)
+
+    # Validate no NaN values
+    if np.any(np.isnan(predictions)):
+        raise ValueError(
+            "predictions contains NaN values. Clean data before processing. "
+            "Use np.nan_to_num() or dropna() to handle missing values."
+        )
+    if np.any(np.isnan(actuals)):
+        raise ValueError(
+            "actuals contains NaN values. Clean data before processing. "
+            "Use np.nan_to_num() or dropna() to handle missing values."
+        )
 
     if len(predictions) != len(actuals):
         raise ValueError(
@@ -380,14 +433,42 @@ def compute_move_conditional_metrics(
     n_down = int(np.sum(down_mask))
     n_flat = int(np.sum(flat_mask))
 
-    # Conditional MAEs
-    mae_up = _compute_mae(predictions[up_mask], actuals[up_mask]) if n_up > 0 else float("nan")
-    mae_down = (
-        _compute_mae(predictions[down_mask], actuals[down_mask]) if n_down > 0 else float("nan")
-    )
-    mae_flat = (
-        _compute_mae(predictions[flat_mask], actuals[flat_mask]) if n_flat > 0 else float("nan")
-    )
+    # Conditional MAEs with warnings for empty subsets
+    if n_up > 0:
+        mae_up = _compute_mae(predictions[up_mask], actuals[up_mask])
+    else:
+        warnings.warn(
+            "No UP moves in sample (all values at or below threshold). "
+            f"mae_up will be NaN. Total samples: {len(actuals)}, "
+            f"threshold: {threshold:.4g}. Consider lowering the move threshold.",
+            UserWarning,
+            stacklevel=2,
+        )
+        mae_up = float("nan")
+
+    if n_down > 0:
+        mae_down = _compute_mae(predictions[down_mask], actuals[down_mask])
+    else:
+        warnings.warn(
+            "No DOWN moves in sample (all values at or above negative threshold). "
+            f"mae_down will be NaN. Total samples: {len(actuals)}, "
+            f"threshold: {threshold:.4g}. Consider lowering the move threshold.",
+            UserWarning,
+            stacklevel=2,
+        )
+        mae_down = float("nan")
+
+    if n_flat > 0:
+        mae_flat = _compute_mae(predictions[flat_mask], actuals[flat_mask])
+    else:
+        warnings.warn(
+            "No FLAT periods in sample (all values outside threshold). "
+            f"mae_flat will be NaN. Total samples: {len(actuals)}, "
+            f"threshold: {threshold:.4g}. This is unusual - check threshold.",
+            UserWarning,
+            stacklevel=2,
+        )
+        mae_flat = float("nan")
 
     # Compute MC-SS on moves only (UP + DOWN)
     move_mask = up_mask | down_mask
@@ -406,8 +487,22 @@ def compute_move_conditional_metrics(
         if persistence_mae_moves > epsilon:
             skill_score = 1.0 - (model_mae_moves / persistence_mae_moves)
         else:
+            warnings.warn(
+                "Persistence MAE on moves is near zero (all moves are negligibly small). "
+                f"skill_score will be NaN. persistence_mae_moves={persistence_mae_moves:.4e}, "
+                f"epsilon={epsilon:.4e}. Consider raising the move threshold.",
+                UserWarning,
+                stacklevel=2,
+            )
             skill_score = float("nan")
     else:
+        warnings.warn(
+            "No moves (UP or DOWN) in sample - all observations are FLAT. "
+            f"skill_score will be NaN. Total samples: {len(actuals)}, n_flat: {n_flat}. "
+            "Consider lowering the move threshold or checking data scale.",
+            UserWarning,
+            stacklevel=2,
+        )
         skill_score = float("nan")
 
     return MoveConditionalResult(
@@ -612,6 +707,8 @@ def compute_persistence_mae(
 # =============================================================================
 
 __all__ = [
+    # Type aliases
+    "TargetMode",
     # Enums and dataclasses
     "MoveDirection",
     "MoveConditionalResult",

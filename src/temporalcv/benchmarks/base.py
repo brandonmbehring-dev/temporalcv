@@ -94,6 +94,19 @@ class DatasetMetadata:
         License type ('public_domain', 'open_access', 'kaggle_tos', etc.)
     source_url : str
         Original source URL
+    official_split : bool
+        Whether the split is an official competition/benchmark split.
+        True = split matches competition protocol (reproducible comparisons).
+        False = split invented for convenience (NOT comparable to published results).
+    truncated : bool
+        Whether series have been truncated from their original lengths.
+        If True, results may not be comparable to original benchmark.
+    original_series_lengths : list[int], optional
+        Original lengths of each series before truncation (if applicable).
+        Used to document what was lost due to truncation.
+    split_source : str
+        Source of the split definition (e.g., "M4 Competition", "GluonTS",
+        "Monash Forecasting Repository", "invented"). Empty = unknown.
     """
 
     name: str
@@ -105,6 +118,10 @@ class DatasetMetadata:
     characteristics: Dict[str, Any] = field(default_factory=dict)
     license: str = "unknown"
     source_url: str = ""
+    official_split: bool = False
+    truncated: bool = False
+    original_series_lengths: Optional[list[int]] = None
+    split_source: str = ""
 
     def __post_init__(self) -> None:
         """Validate metadata fields."""
@@ -131,6 +148,10 @@ class DatasetMetadata:
             "characteristics": self.characteristics,
             "license": self.license,
             "source_url": self.source_url,
+            "official_split": self.official_split,
+            "truncated": self.truncated,
+            "original_series_lengths": self.original_series_lengths,
+            "split_source": self.split_source,
         }
 
 

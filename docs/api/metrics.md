@@ -126,6 +126,13 @@ def compute_pr_auc(
 **Notes**:
 - Preferred over ROC-AUC for imbalanced classification
 - Baseline equals positive class rate (random classifier)
+- Uses **trapezoidal integration**, which differs from sklearn's `average_precision_score` (step integration). Differences can be a few percentage points for jagged curves.
+
+> **sklearn compatibility**: For sklearn-equivalent results, use:
+> ```python
+> from sklearn.metrics import average_precision_score
+> ap = average_precision_score(actual_binary, pred_probs)
+> ```
 
 **Example**:
 

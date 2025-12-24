@@ -77,7 +77,9 @@ def load_fred_rates(
     start : str, default="2000-01-01"
         Start date (YYYY-MM-DD)
     end : str, optional
-        End date (YYYY-MM-DD). Default: today
+        End date (YYYY-MM-DD). Default: today.
+        **IMPORTANT**: For reproducible results, always set an explicit end date.
+        Running with end=None on different days produces different datasets.
     api_key : str, optional
         FRED API key. If None, uses FRED_API_KEY env var.
     frequency : {'D', 'W', 'M'}, default='W'
@@ -102,11 +104,21 @@ def load_fred_rates(
     FRED data is public domain (US government).
     Get API key from: https://fred.stlouisfed.org/docs/api/api_key.html
 
+    **Date Pinning for Reproducibility:**
+    Without an explicit `end` date, this function fetches data up to today,
+    making results non-reproducible across different runs. For reproducible
+    research, always specify both `start` and `end`:
+
+        dataset = load_fred_rates("DGS10", start="2010-01-01", end="2023-12-31")
+
     Examples
     --------
-    >>> dataset = load_fred_rates("DGS10", frequency="W")
-    >>> print(f"Observations: {len(dataset.values)}")
+    >>> # Reproducible (date-pinned)
+    >>> dataset = load_fred_rates("DGS10", start="2010-01-01", end="2023-12-31")
     >>> train, test = dataset.get_train_test_split()
+    >>>
+    >>> # Non-reproducible (changes daily)
+    >>> dataset = load_fred_rates("DGS10", frequency="W")  # end defaults to today
     """
     _check_fredapi()
 
@@ -163,6 +175,9 @@ def load_fred_rates(
     # Standard horizon for rates: 2 weeks (per MYGA research)
     horizon = 2 if frequency == "W" else 1
 
+    # Track date-pinning for reproducibility
+    is_date_pinned = end is not None
+
     metadata = DatasetMetadata(
         name=f"fred_{series_list[0]}" if len(series_list) == 1 else "fred_multi",
         frequency=frequency,
@@ -174,9 +189,16 @@ def load_fred_rates(
             "series_ids": series_list,
             "high_persistence": True,  # Rates are highly persistent
             "acf1_typical": 0.99,
+            "date_pinned": is_date_pinned,
+            "start_date": start,
+            "end_date": end,  # None if not pinned
         },
         license="public_domain",
         source_url="https://fred.stlouisfed.org/",
+        official_split=False,  # No official split; train_fraction is invented
+        truncated=False,
+        original_series_lengths=None,
+        split_source=f"temporalcv convenience ({train_fraction:.0%} train)",
     )
 
     dataset = TimeSeriesDataset(

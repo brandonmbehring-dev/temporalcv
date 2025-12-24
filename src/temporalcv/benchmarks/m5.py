@@ -143,6 +143,10 @@ def load_m5(
         },
         license="kaggle_tos",
         source_url=M5_DOWNLOAD_URL,
+        official_split=True,  # M5 Competition protocol
+        truncated=False,  # M5 has fixed-length series
+        original_series_lengths=None,
+        split_source="M5 Competition (Kaggle, 2020)",
     )
 
     dataset = TimeSeriesDataset(

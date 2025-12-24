@@ -118,16 +118,19 @@ def load_m3(
         unique_ids = rng.choice(unique_ids, size=sample_size, replace=False)
 
     series_list = []
-    min_len = float("inf")
+    original_lengths: list[int] = []
     for uid in unique_ids:
         vals = df[df["unique_id"] == uid]["y"].values.astype(np.float64)
         series_list.append(vals)
-        min_len = min(min_len, len(vals))
+        original_lengths.append(len(vals))
 
-    # Truncate to common length
-    min_len_int = int(min_len)
+    # Truncate to common length (required for array format)
+    min_len_int = min(original_lengths)
+    max_len_int = max(original_lengths)
+    was_truncated = min_len_int != max_len_int
     values = np.array([s[:min_len_int] for s in series_list], dtype=np.float64)
 
+    # M3 Competition protocol: test = last `horizon` observations
     horizon = M3_HORIZONS[subset]
     train_end_idx = min_len_int - horizon
 
@@ -144,6 +147,10 @@ def load_m3(
         },
         license="open_access",
         source_url=MONASH_URL,
+        official_split=True,  # M3 Competition protocol
+        truncated=was_truncated,
+        original_series_lengths=original_lengths if was_truncated else None,
+        split_source="M3 Competition (Makridakis & Hibon, 2000)",
     )
 
     dataset = TimeSeriesDataset(
@@ -199,15 +206,19 @@ def load_m4(
         unique_ids = rng.choice(unique_ids, size=sample_size, replace=False)
 
     series_list = []
-    min_len = float("inf")
+    original_lengths: list[int] = []
     for uid in unique_ids:
         vals = df[df["unique_id"] == uid]["y"].values.astype(np.float64)
         series_list.append(vals)
-        min_len = min(min_len, len(vals))
+        original_lengths.append(len(vals))
 
-    min_len_int = int(min_len)
+    # Truncate to common length (required for array format)
+    min_len_int = min(original_lengths)
+    max_len_int = max(original_lengths)
+    was_truncated = min_len_int != max_len_int
     values = np.array([s[:min_len_int] for s in series_list], dtype=np.float64)
 
+    # M4 Competition protocol: test = last `horizon` observations
     horizon = M4_HORIZONS[subset]
     train_end_idx = min_len_int - horizon
 
@@ -224,6 +235,10 @@ def load_m4(
         },
         license="open_access",
         source_url=MONASH_URL,
+        official_split=True,  # M4 Competition protocol
+        truncated=was_truncated,
+        original_series_lengths=original_lengths if was_truncated else None,
+        split_source="M4 Competition (Makridakis et al., 2018)",
     )
 
     dataset = TimeSeriesDataset(
