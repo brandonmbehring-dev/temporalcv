@@ -9,6 +9,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [0.4.0] - 2025-12-24
+
+Hardening release with robustness testing and cross-platform CI.
+
+### Added
+
+#### Performance Benchmarks
+- pytest-benchmark infrastructure for critical path testing
+- `tests/benchmarks/test_cv_benchmarks.py` - CV splitting performance
+- `tests/benchmarks/test_gate_benchmarks.py` - gate evaluation timing
+- `tests/benchmarks/test_metric_benchmarks.py` - metric computation benchmarks
+
+#### Cross-Platform CI
+- Windows CI job in GitHub Actions matrix
+- `os: [ubuntu-latest, windows-latest]` matrix support
+- Python 3.10, 3.11, 3.12 on both platforms
+
+#### Seed-Sweep Reproducibility Tests
+- `tests/reproducibility/test_seed_determinism.py` - 20-seed sweeps
+- Determinism tests for gates, bootstrap, conformal prediction
+- Bootstrap strategy reproducibility (MovingBlock, Stationary, Residual)
+- TimeSeriesBagger prediction determinism
+
+#### Expanded Property-Based Tests
+- `tests/property/test_stationarity_invariants.py` - ADF, KPSS, PP invariants
+- `tests/property/test_financial_cv_invariants.py` - PurgedKFold, CPCV, PurgedWalkForward
+- `tests/property/test_metric_invariants.py` - MAE, MSE, RMSE, MAPE, pinball, Huber, LinEx
+
+### Technical Notes
+
+**Test Count**: 1,428 tests (up from 1,243)
+
+**Coverage**: Maintained 85%+
+
+---
+
+## [0.3.0] - 2025-12-24
+
+Capability gaps release with comprehensive time-series analysis toolkit.
+
+### Added
+
+#### Stationarity Testing
+- `adf_test()` - Augmented Dickey-Fuller test
+- `kpss_test()` - KPSS stationarity test
+- `pp_test()` - Phillips-Perron test
+- `check_stationarity()` - unified stationarity assessment
+- `difference_until_stationary()` - automatic differencing
+- `StationarityConclusion` enum for conclusions
+
+#### Lag Selection
+- `select_lag_pacf()` - PACF-based lag selection
+- `select_lag_aic()` - AIC minimization
+- `select_lag_bic()` - BIC minimization
+
+#### Changepoint Detection
+- `detect_variance_changepoints()` - variance-based detection
+- `detect_changepoints_pelt()` - PELT algorithm (ruptures optional)
+
+#### Residual Bootstrap
+- `ResidualBootstrap` class with STL decomposition support
+- `seasonal_period` parameter for seasonal adjustment
+- Integration with `TimeSeriesBagger`
+
+#### Financial Cross-Validation
+- `PurgedKFold` - K-fold with purge gap and embargo
+- `CombinatorialPurgedCV` (CPCV) - combinatorial path testing
+- `PurgedWalkForward` - walk-forward with purge gap
+- `compute_label_overlap()` - label overlap matrix
+- `estimate_purge_gap()` - gap estimation from horizon
+
+#### Guardrails Module
+- `check_suspicious_improvement()` - >20% improvement trigger
+- `check_minimum_sample_size()` - statistical power validation
+- `check_stratified_sample_size()` - per-regime minimum n
+- `check_forecast_horizon_consistency()` - horizon alignment
+- `check_residual_autocorrelation()` - Ljung-Box check
+- `run_all_guardrails()` - unified validation suite
+
+#### Validators Module
+- `validate_predictions()` - prediction array validation
+- `validate_actuals()` - actuals array validation
+- `validate_prediction_pair()` - paired validation
+- `validate_positive()` - positivity constraint
+
+### Technical Notes
+
+**Test Count**: 1,243 tests (up from 1,042)
+
+**Coverage**: 85%+
+
+---
+
 ## [0.2.0] - 2025-12-24
 
 Major metrics expansion release with comprehensive evaluation toolkit.
@@ -203,6 +296,8 @@ Major metrics expansion release with comprehensive evaluation toolkit.
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.4.0 | 2025-12-24 | Hardening (benchmarks, Windows CI, reproducibility, property tests) |
+| 0.3.0 | 2025-12-24 | Capability gaps (stationarity, financial CV, guardrails) |
 | 0.2.0 | 2025-12-24 | Major metrics expansion (40+ new functions) |
 | 0.1.0-alpha | 2025-12-23 | Complete feature set (gates, CV, conformal, bagging) |
 

@@ -1,7 +1,7 @@
 # temporalcv Planning Index
 
 **Package**: temporalcv - Temporal CV with leakage protection
-**Status**: Phase 5 Complete, v1.0 Preparation
+**Status**: v0.4.0 Complete, v1.0 Release Candidate
 
 ---
 
@@ -12,7 +12,10 @@
 → Phase 3: Complete ✓ (95% coverage, 162 tests)
 → Phase 4: Complete ✓ (96% coverage, 251 tests)
 → Phase 5: Complete ✓ (85% coverage, 366 tests) - 2025-12-23
-→ Next: v1.0 Preparation (documentation, patterns, release)
+→ v0.2.0: Complete ✓ (85% coverage, 1,042 tests) - Major metrics expansion
+→ v0.3.0: Complete ✓ (85% coverage, 1,243 tests) - Capability gaps
+→ v0.4.0: Complete ✓ (85% coverage, 1,483 tests) - Hardening
+→ Next: v1.0.0-rc1 Release
 
 ## Quick Navigation
 
