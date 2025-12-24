@@ -24,7 +24,7 @@ temporalcv is a **spoke** project in the lever_of_archimedes hub-and-spoke archi
 | 6-layer validation | ✅ Complete | `tests/property/` (Layer 6), unit tests (Layer 3-5) |
 | Data leakage prevention | ✅ Complete | All 10 bug categories addressed in gates |
 | Knowledge tiers | ✅ Complete | [T1]/[T2]/[T3] in `docs/knowledge/` |
-| Session workflow | ⚠️ Partial | ROADMAP.md planned, no CURRENT_WORK.md |
+| Session workflow | ✅ Complete | CURRENT_WORK.md at project root |
 | Precision feedback | ✅ Complete | CLAUDE.md output style integration |
 | Git workflow | ✅ Complete | Conventional commits in practice |
 
@@ -130,8 +130,8 @@ temporalcv provides **temporal cross-validation primitives** for the ML ecosyste
 - [x] HUB_RELATIONSHIP.md exists (this file)
 - [x] Knowledge tiers applied to documentation
 - [x] Pattern compliance documented above
-- [ ] Listed in hub README spoke registry
-- [ ] Session workflow files (CURRENT_WORK.md)
+- [x] Listed in hub README spoke registry
+- [x] Session workflow files (CURRENT_WORK.md)
 
 ---
 
