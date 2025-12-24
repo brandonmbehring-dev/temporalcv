@@ -207,11 +207,11 @@ REQUIRED: train_end + gap < test_start
 
 ### 5.2 Minimum Observations
 
-| Context | Minimum n | Justification |
-|---------|-----------|---------------|
-| DM test | 30 | CLT requirement for asymptotic normality + Harvey adjustment |
-| PT test | 30 | Variance estimation stability |
-| Conformal | 50 | Quantile estimation reliability |
+| Context | Enforced Min | Recommended Min | Justification |
+|---------|--------------|-----------------|---------------|
+| DM test | 30 | 50 | CLT requirement for asymptotic normality + Harvey adjustment |
+| PT test | 20 | 30 | Variance estimation stability |
+| Conformal | 10 | 30-50 | Quantile estimation; 10 allows use, 50 for reliable inference |
 
 ---
 

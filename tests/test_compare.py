@@ -602,3 +602,96 @@ class TestCompareIntegration:
         md = report.to_markdown()
         assert "# Model Comparison Report" in md
         assert "Naive" in md
+
+
+# =============================================================================
+# Regression Tests (Critical Bug Fixes)
+# =============================================================================
+
+
+class TestDMTestRunnerIntegration:
+    """
+    Regression test for DM test parameter name fix in runner.py.
+
+    Bug: Parameter names errors1/errors2/horizon didn't match dm_test signature
+         (errors_1/errors_2/h) causing silent TypeError (2025-12-23)
+    Impact: All benchmark DM tests silently failed, caught by broad except Exception.
+    Fix: Changed to errors_1, errors_2, h to match dm_test signature.
+    """
+
+    def test_dm_test_runs_through_runner(self) -> None:
+        """
+        DM test should actually run through run_comparison, not silently fail.
+
+        Before fix: statistical_tests would contain {"error": "..."} for every model.
+        After fix: statistical_tests should contain actual statistics and p-values.
+        """
+        from temporalcv.benchmarks import create_synthetic_dataset
+
+        # Use n_obs=200 to ensure sufficient test samples (DM requires n >= 30)
+        dataset = create_synthetic_dataset(n_obs=200, seed=42)
+        adapters = [NaiveAdapter(), SeasonalNaiveAdapter(season_length=4)]
+
+        result = run_comparison(
+            dataset,
+            adapters,
+            primary_metric="mae",
+            include_dm_test=True,
+        )
+
+        # Check that statistical_tests exist and contain actual statistics
+        assert result.statistical_tests is not None, "statistical_tests should not be None"
+        assert len(result.statistical_tests) > 0, "statistical_tests should not be empty"
+
+        # At least one comparison should have real statistics, not error
+        has_valid_result = False
+        for model_name, dm_data in result.statistical_tests.items():
+            if isinstance(dm_data, dict) and "error" not in dm_data:
+                has_valid_result = True
+                # Verify actual DM test output structure
+                assert "statistic" in dm_data, f"Missing 'statistic' for {model_name}"
+                assert "p_value" in dm_data, f"Missing 'p_value' for {model_name}"
+                assert "significant" in dm_data, f"Missing 'significant' for {model_name}"
+                # Verify values are reasonable
+                assert isinstance(dm_data["statistic"], float), "statistic should be float"
+                assert 0 <= dm_data["p_value"] <= 1, "p_value should be in [0, 1]"
+
+        assert has_valid_result, (
+            "All DM tests failed with errors - likely parameter name mismatch. "
+            f"Results: {result.statistical_tests}"
+        )
+
+    def test_dm_results_not_all_errors(self) -> None:
+        """
+        DM results should not be 100% error payloads.
+
+        This catches the silent failure pattern where TypeError is caught
+        by broad exception handler.
+        """
+        from temporalcv.benchmarks import create_synthetic_dataset
+
+        # Use n_obs=200 to ensure sufficient test samples (DM requires n >= 30)
+        dataset = create_synthetic_dataset(n_obs=200, seed=123)
+        adapters = [
+            NaiveAdapter(),
+            SeasonalNaiveAdapter(season_length=7),
+        ]
+
+        result = run_comparison(
+            dataset,
+            adapters,
+            include_dm_test=True,
+        )
+
+        if result.statistical_tests:
+            error_count = sum(
+                1 for dm_data in result.statistical_tests.values()
+                if isinstance(dm_data, dict) and "error" in dm_data
+            )
+            total_count = len(result.statistical_tests)
+
+            # Should not have 100% error rate (which would indicate silent failure)
+            assert error_count < total_count, (
+                f"All {total_count} DM tests returned errors - "
+                "this suggests dm_test is not being called correctly"
+            )

@@ -294,8 +294,8 @@ class TestTheoreticalBoundsAdversarial:
 
     def test_white_noise_series(self):
         """White noise (phi=0) should work correctly."""
-        np.random.seed(42)
-        y_train = np.random.randn(200)  # phi = 0
+        rng = np.random.default_rng(42)
+        y_train = rng.standard_normal(200)  # phi = 0
         result = gate_theoretical_bounds(1.0, y_train)
 
         # Should work with phi ≈ 0
@@ -344,8 +344,8 @@ class TestTheoreticalBoundsAdversarial:
 
     def test_negative_mae_halts(self):
         """Negative MAE is physically impossible, should HALT."""
-        np.random.seed(42)
-        y_train = np.random.randn(100)
+        rng = np.random.default_rng(42)
+        y_train = rng.standard_normal(100)
         result = gate_theoretical_bounds(-1.0, y_train)
 
         # Negative MAE is below any positive theoretical threshold → HALT

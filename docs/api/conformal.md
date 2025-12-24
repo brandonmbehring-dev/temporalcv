@@ -2,6 +2,8 @@
 
 Distribution-free prediction intervals with coverage guarantees.
 
+**⚠️ Time Series Caveat**: Conformal prediction provides *exact* coverage guarantees only under exchangeability (i.i.d. data). For time series, coverage is *approximate* because temporal dependence violates exchangeability. Use `AdaptiveConformalPredictor` for distribution shift, and expect coverage to be within ±5% of nominal for well-behaved series.
+
 ---
 
 ## Data Classes

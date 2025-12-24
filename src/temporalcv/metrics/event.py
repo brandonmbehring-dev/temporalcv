@@ -449,6 +449,16 @@ def compute_pr_auc(
 
     Baseline PR-AUC equals the positive class rate (random classifier).
 
+    **Difference from sklearn.metrics.average_precision_score**:
+    This implementation uses trapezoidal integration, which can give
+    slightly different values from sklearn's average_precision_score
+    (which uses step function integration). For jagged PR curves,
+    differences can be up to a few percentage points. For
+    sklearn-compatible behavior, use:
+
+        from sklearn.metrics import average_precision_score
+        ap = average_precision_score(actual_binary, pred_probs)
+
     Examples
     --------
     >>> probs = np.array([0.9, 0.8, 0.3, 0.1, 0.7])

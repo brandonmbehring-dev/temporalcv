@@ -54,7 +54,7 @@ def create_block_bagger(
     n_estimators: int = 20,
     block_length: Optional[int] = None,
     aggregation: str = "mean",
-    random_state: int = 42,
+    random_state: Optional[int] = None,
 ) -> TimeSeriesBagger:
     """
     Create bagged model with Moving Block Bootstrap.
@@ -69,8 +69,8 @@ def create_block_bagger(
         Block length. If None, auto-compute as n^(1/3)
     aggregation : {"mean", "median"}, default="mean"
         How to combine predictions
-    random_state : int, default=42
-        Random seed for reproducibility
+    random_state : int or None, default=None
+        Random seed for reproducibility. None for non-deterministic.
 
     Returns
     -------
@@ -104,7 +104,7 @@ def create_stationary_bagger(
     n_estimators: int = 20,
     expected_block_length: Optional[float] = None,
     aggregation: str = "mean",
-    random_state: int = 42,
+    random_state: Optional[int] = None,
 ) -> TimeSeriesBagger:
     """
     Create bagged model with Stationary Bootstrap.
@@ -119,8 +119,8 @@ def create_stationary_bagger(
         Expected block length. If None, auto-compute as n^(1/3)
     aggregation : {"mean", "median"}, default="mean"
         How to combine predictions
-    random_state : int, default=42
-        Random seed for reproducibility
+    random_state : int or None, default=None
+        Random seed for reproducibility. None for non-deterministic.
 
     Returns
     -------
@@ -152,7 +152,7 @@ def create_feature_bagger(
     n_estimators: int = 20,
     max_features: float = 0.7,
     aggregation: str = "mean",
-    random_state: int = 42,
+    random_state: Optional[int] = None,
 ) -> TimeSeriesBagger:
     """
     Create bagged model with Feature Bagging (Random Subspace).
@@ -167,8 +167,8 @@ def create_feature_bagger(
         Fraction of features per estimator (0.0-1.0)
     aggregation : {"mean", "median"}, default="mean"
         How to combine predictions
-    random_state : int, default=42
-        Random seed for reproducibility
+    random_state : int or None, default=None
+        Random seed for reproducibility. None for non-deterministic.
 
     Returns
     -------

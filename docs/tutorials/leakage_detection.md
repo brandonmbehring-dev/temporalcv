@@ -64,8 +64,8 @@ print(result)
 ```python
 if result.status.name == "HALT":
     print(f"LEAKAGE DETECTED!")
-    print(f"Real MAE: {result.details['real_mae']:.4f}")
-    print(f"Shuffled MAE: {result.details['shuffled_mae']:.4f}")
+    print(f"Real MAE: {result.details['mae_real']:.4f}")
+    print(f"Shuffled MAE: {result.details['mae_shuffled_avg']:.4f}")
     print(f"Improvement: {result.details['improvement_ratio']:.1%}")
 ```
 
@@ -230,8 +230,8 @@ model = Ridge(alpha=1.0)
 result = gate_shuffled_target(model, X_leaky, y_leaky, random_state=42)
 
 print(f"Status: {result.status.name}")
-print(f"Real MAE: {result.details['real_mae']:.4f}")
-print(f"Shuffled MAE: {result.details['shuffled_mae']:.4f}")
+print(f"Real MAE: {result.details['mae_real']:.4f}")
+print(f"Shuffled MAE: {result.details['mae_shuffled_avg']:.4f}")
 # Status: HALT (leakage detected!)
 ```
 

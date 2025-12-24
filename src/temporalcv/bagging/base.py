@@ -158,8 +158,8 @@ class TimeSeriesBagger:
         Number of bootstrap samples/estimators
     aggregation : {"mean", "median"}, default="mean"
         How to combine predictions
-    random_state : int, default=42
-        For reproducibility
+    random_state : int or None, default=None
+        For reproducibility. None for non-deterministic behavior.
 
     Attributes
     ----------
@@ -199,7 +199,7 @@ class TimeSeriesBagger:
         strategy: BootstrapStrategy,
         n_estimators: int = 20,
         aggregation: Literal["mean", "median"] = "mean",
-        random_state: int = 42,
+        random_state: Optional[int] = None,
     ):
         if n_estimators < 1:
             raise ValueError(f"n_estimators must be >= 1, got {n_estimators}")

@@ -80,7 +80,7 @@ temporalcv provides **validation gates** that catch these bugs before they corru
 
 3. **Temporal-Aware Conformal Prediction**
    - Adaptive conformal for distribution shift (Gibbs & Candès 2021)
-   - Coverage guarantee without distributional assumptions
+   - Approximate coverage for time series (exact guarantees require exchangeability)
 
 4. **High-Persistence Metrics** — For sticky series (ACF(1) > 0.9)
    - MASE, MC-SS ratio, directional accuracy

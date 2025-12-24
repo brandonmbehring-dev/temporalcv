@@ -540,3 +540,86 @@ class TestIntegration:
             )
             # Just verify it runs (random data may have any result)
             assert result.status in (GateStatus.PASS, GateStatus.WARN, GateStatus.HALT)
+
+
+# =============================================================================
+# Horizon Validation Tests (Phase 2 Feature)
+# =============================================================================
+
+
+class TestHorizonValidation:
+    """
+    Tests for horizon parameter validation in WalkForwardCV.
+
+    [T1] Per Bergmeir & Benitez (2012): gap must equal or exceed forecast horizon
+    to prevent target leakage in multi-step forecasting.
+    """
+
+    def test_horizon_with_sufficient_gap_passes(self) -> None:
+        """Horizon with gap >= horizon should work fine."""
+        # gap == horizon: valid
+        cv = WalkForwardCV(n_splits=3, horizon=3, gap=3)
+        assert cv.horizon == 3
+        assert cv.gap == 3
+
+        # gap > horizon: also valid
+        cv = WalkForwardCV(n_splits=3, horizon=2, gap=5)
+        assert cv.horizon == 2
+        assert cv.gap == 5
+
+    def test_horizon_with_insufficient_gap_raises(self) -> None:
+        """Horizon with gap < horizon should raise ValueError."""
+        with pytest.raises(ValueError, match="gap.*must be >= horizon"):
+            WalkForwardCV(n_splits=3, horizon=3, gap=2)
+
+        with pytest.raises(ValueError, match="gap.*must be >= horizon"):
+            WalkForwardCV(n_splits=3, horizon=5, gap=0)
+
+    def test_horizon_none_allows_any_gap(self) -> None:
+        """When horizon is None, any gap value is allowed."""
+        # No horizon means no validation
+        cv = WalkForwardCV(n_splits=3, gap=0)
+        assert cv.horizon is None
+        assert cv.gap == 0
+
+        cv = WalkForwardCV(n_splits=3, gap=10)
+        assert cv.horizon is None
+        assert cv.gap == 10
+
+    def test_horizon_validation_error_message_is_helpful(self) -> None:
+        """Error message should explain how to fix the issue."""
+        with pytest.raises(ValueError) as exc_info:
+            WalkForwardCV(n_splits=3, horizon=4, gap=2)
+
+        error_msg = str(exc_info.value)
+        assert "gap (2)" in error_msg
+        assert "horizon (4)" in error_msg
+        assert "target leakage" in error_msg
+        assert "4-step forecasting" in error_msg
+        assert "gap >= 4" in error_msg
+
+    def test_horizon_must_be_positive(self) -> None:
+        """Horizon must be >= 1 if provided."""
+        with pytest.raises(ValueError, match="horizon must be >= 1"):
+            WalkForwardCV(n_splits=3, horizon=0, gap=0)
+
+        with pytest.raises(ValueError, match="horizon must be >= 1"):
+            WalkForwardCV(n_splits=3, horizon=-1, gap=0)
+
+    def test_horizon_is_stored_as_attribute(self) -> None:
+        """Horizon should be accessible as instance attribute."""
+        cv = WalkForwardCV(n_splits=5, horizon=3, gap=3)
+        assert hasattr(cv, "horizon")
+        assert cv.horizon == 3
+
+    def test_splits_work_with_horizon(self, sample_data: tuple) -> None:
+        """CV should generate valid splits when horizon is set."""
+        X, y = sample_data
+        cv = WalkForwardCV(n_splits=3, horizon=2, gap=2)
+
+        splits = list(cv.split(X))
+        assert len(splits) == 3
+
+        for train, test in splits:
+            # Gap is enforced
+            assert train[-1] + cv.gap < test[0]

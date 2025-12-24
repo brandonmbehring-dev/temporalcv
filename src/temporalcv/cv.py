@@ -114,6 +114,10 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
     ----------
     n_splits : int, default=5
         Number of CV folds.
+    horizon : int, optional
+        Forecast horizon (h-step ahead). When provided, validates that
+        gap >= horizon to prevent target leakage for multi-step forecasting.
+        [T1] Per Bergmeir & Benitez (2012), gap must equal or exceed horizon.
     window_type : {"expanding", "sliding"}, default="expanding"
         Type of training window:
         - "expanding": Training set grows from min_train_size
@@ -133,6 +137,8 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
     ----------
     n_splits : int
         Number of splits.
+    horizon : int or None
+        Forecast horizon for gap validation.
     window_type : str
         Window type ("expanding" or "sliding").
     window_size : int or None
@@ -168,6 +174,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
     def __init__(
         self,
         n_splits: int = 5,
+        horizon: Optional[int] = None,
         window_type: Literal["expanding", "sliding"] = "expanding",
         window_size: Optional[int] = None,
         gap: int = 0,
@@ -177,6 +184,9 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
         # Validate parameters
         if n_splits < 1:
             raise ValueError(f"n_splits must be >= 1, got {n_splits}")
+
+        if horizon is not None and horizon < 1:
+            raise ValueError(f"horizon must be >= 1, got {horizon}")
 
         if window_type not in ("expanding", "sliding"):
             raise ValueError(
@@ -195,7 +205,17 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
         if test_size < 1:
             raise ValueError(f"test_size must be >= 1, got {test_size}")
 
+        # [T1] Gap >= horizon prevents target leakage for h-step forecasting
+        # Per Bergmeir & Benitez (2012): gap must equal or exceed forecast horizon
+        if horizon is not None and gap < horizon:
+            raise ValueError(
+                f"gap ({gap}) must be >= horizon ({horizon}) to prevent target leakage. "
+                f"For {horizon}-step forecasting, set gap >= {horizon}. "
+                "See Bergmeir & Benitez (2012) for details on temporal CV for multi-step forecasts."
+            )
+
         self.n_splits = n_splits
+        self.horizon = horizon
         self.window_type = window_type
         self.window_size = window_size
         self.gap = gap

@@ -18,6 +18,7 @@ Example
 from __future__ import annotations
 
 import time
+import warnings
 from typing import Any, Dict, List, Optional, Protocol, Tuple
 
 import numpy as np
@@ -226,9 +227,9 @@ def _run_dm_tests(
         try:
             # Errors = actual - predicted (positive means underprediction)
             dm_result = dm_test(
-                errors1=test_flat[:min_len] - best_flat[:min_len],
-                errors2=test_flat[:min_len] - other_flat[:min_len],
-                horizon=horizon,
+                errors_1=test_flat[:min_len] - best_flat[:min_len],
+                errors_2=test_flat[:min_len] - other_flat[:min_len],
+                h=horizon,
                 loss="absolute",
             )
             dm_results[result.model_name] = {
@@ -236,8 +237,18 @@ def _run_dm_tests(
                 "p_value": dm_result.pvalue,
                 "significant": dm_result.pvalue < 0.05,
             }
-        except Exception as e:
+        except ValueError as e:
+            # Expected: insufficient samples, invalid inputs
             dm_results[result.model_name] = {"error": str(e)}
+        except Exception as e:
+            # Unexpected error - warn but don't crash
+            warnings.warn(
+                f"Unexpected error in DM test for {result.model_name}: {type(e).__name__}: {e}. "
+                "This may indicate a bug - please report.",
+                UserWarning,
+                stacklevel=2,
+            )
+            dm_results[result.model_name] = {"error": f"Unexpected: {type(e).__name__}: {e}"}
 
     return dm_results
 

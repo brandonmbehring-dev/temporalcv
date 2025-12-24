@@ -17,11 +17,9 @@ Example
 >>> from temporalcv import run_gates, WalkForwardCV
 >>> from temporalcv.gates import gate_shuffled_target
 >>>
->>> report = run_gates(
-...     model=my_model,
-...     X=X, y=y,
-...     gates=[gate_shuffled_target(n_shuffles=5)]
-... )
+>>> # Pre-compute gates, then aggregate
+>>> gates = [gate_shuffled_target(model=my_model, X=X, y=y, n_shuffles=5, random_state=42)]
+>>> report = run_gates(gates)
 >>> if report.status == "HALT":
 ...     raise ValueError(f"Leakage detected: {report.failures}")
 

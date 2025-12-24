@@ -18,15 +18,14 @@ from temporalcv.tests import dm_test, pt_test
 from temporalcv.cv import WalkForwardCV
 
 # === Core validation workflow ===
-report = run_gates(
-    model=my_model,
-    X=X, y=y,
-    gates=[
-        gate_shuffled_target(n_shuffles=5),
-        gate_synthetic_ar1(phi=0.95),
-        gate_suspicious_improvement(threshold=0.20),
-    ]
-)
+# Pre-compute gates, then aggregate
+gates = [
+    gate_shuffled_target(model=my_model, X=X, y=y, n_shuffles=5, random_state=42),
+    gate_synthetic_ar1(model=my_model, phi=0.95, random_state=42),
+    gate_suspicious_improvement(model_metric=model_mae, baseline_metric=baseline_mae),
+]
+
+report = run_gates(gates)
 
 if report.status == "HALT":
     raise ValueError(f"Validation failed: {report.failures}")

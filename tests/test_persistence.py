@@ -28,8 +28,8 @@ from temporalcv.persistence import (
 @pytest.fixture
 def sample_actuals() -> np.ndarray:
     """Sample actual changes with known distribution."""
-    np.random.seed(42)
-    return np.random.normal(0, 0.05, 100)
+    rng = np.random.default_rng(42)
+    return rng.normal(0, 0.05, 100)
 
 
 @pytest.fixture
@@ -63,8 +63,8 @@ class TestComputeMoveThreshold:
 
     def test_default_percentile_is_70(self) -> None:
         """Default should be 70th percentile."""
-        np.random.seed(42)
-        actuals = np.random.normal(0, 1, 1000)
+        rng = np.random.default_rng(42)
+        actuals = rng.normal(0, 1, 1000)
 
         threshold_default = compute_move_threshold(actuals)
         threshold_70 = compute_move_threshold(actuals, percentile=70.0)
@@ -457,11 +457,11 @@ class TestPersistenceIntegration:
 
     def test_full_evaluation_workflow(self) -> None:
         """Test full evaluation workflow."""
-        np.random.seed(42)
+        rng = np.random.default_rng(42)
 
         # Simulate training and test data
-        train_actuals = np.random.normal(0, 0.05, 200)
-        test_actuals = np.random.normal(0, 0.05, 50)
+        train_actuals = rng.normal(0, 0.05, 200)
+        test_actuals = rng.normal(0, 0.05, 50)
 
         # Compute threshold from TRAINING data (critical!)
         threshold = compute_move_threshold(train_actuals, percentile=70.0)
@@ -481,15 +481,15 @@ class TestPersistenceIntegration:
 
     def test_mc_ss_bounds(self) -> None:
         """MC-SS should be in reasonable bounds."""
-        np.random.seed(42)
-        actuals = np.random.normal(0, 0.1, 100)
+        rng = np.random.default_rng(42)
+        actuals = rng.normal(0, 0.1, 100)
         threshold = compute_move_threshold(actuals)
 
         # Various prediction scenarios
         scenarios = [
             ("perfect", actuals.copy()),
             ("persistence", np.zeros(100)),
-            ("random", np.random.normal(0, 0.1, 100)),
+            ("random", rng.normal(0, 0.1, 100)),
             ("inverse", -actuals),
         ]
 

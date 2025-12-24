@@ -274,11 +274,14 @@ class TestGateShuffledTarget:
         X, y = simple_data
         model = MockModel("mean")
 
+        # Use IID permutation for this test - it tests that a mean predictor
+        # doesn't beat a random baseline, which is clearer with IID shuffling
         result = gate_shuffled_target(
             model=model,
             X=X,
             y=y,
             n_shuffles=3,
+            permutation="iid",  # Explicit IID for backward compatibility
             random_state=42,
         )
 
@@ -341,6 +344,84 @@ class TestGateShuffledTarget:
         result2 = gate_shuffled_target(model, X, y, n_shuffles=3, random_state=42)
 
         assert result1.metric_value == result2.metric_value
+
+    def test_block_permutation_preserves_local_structure(self) -> None:
+        """Block permutation should preserve within-block ordering."""
+        rng = np.random.default_rng(42)
+        n = 100
+        X = rng.standard_normal((n, 3))
+        y = rng.standard_normal(n)
+        model = MockModel("mean")
+
+        result = gate_shuffled_target(
+            model=model,
+            X=X,
+            y=y,
+            n_shuffles=3,
+            permutation="block",
+            block_size=10,  # Explicit block size
+            random_state=42,
+        )
+
+        # Verify block permutation was used
+        assert result.details["permutation"] == "block"
+        assert result.details["block_size"] == 10
+
+    def test_auto_block_size_uses_cube_root(self) -> None:
+        """Auto block size should use n^(1/3) per Kunsch (1989)."""
+        rng = np.random.default_rng(42)
+        n = 125  # 125^(1/3) = 5
+        X = rng.standard_normal((n, 3))
+        y = rng.standard_normal(n)
+        model = MockModel("mean")
+
+        result = gate_shuffled_target(
+            model=model,
+            X=X,
+            y=y,
+            n_shuffles=2,
+            permutation="block",
+            block_size="auto",
+            random_state=42,
+        )
+
+        # 125^(1/3) = 5
+        assert result.details["block_size"] == 5
+
+    def test_iid_permutation_no_block_size(self) -> None:
+        """IID permutation should report None for block_size."""
+        rng = np.random.default_rng(42)
+        X = rng.standard_normal((100, 3))
+        y = rng.standard_normal(100)
+        model = MockModel("mean")
+
+        result = gate_shuffled_target(
+            model=model,
+            X=X,
+            y=y,
+            n_shuffles=2,
+            permutation="iid",
+            random_state=42,
+        )
+
+        assert result.details["permutation"] == "iid"
+        assert result.details["block_size"] is None
+
+    def test_invalid_permutation_raises(self) -> None:
+        """Invalid permutation value should raise ValueError."""
+        rng = np.random.default_rng(42)
+        X = rng.standard_normal((100, 3))
+        y = rng.standard_normal(100)
+        model = MockModel("mean")
+
+        with pytest.raises(ValueError, match="permutation must be"):
+            gate_shuffled_target(
+                model=model,
+                X=X,
+                y=y,
+                permutation="invalid",  # type: ignore
+                random_state=42,
+            )
 
 
 # =============================================================================

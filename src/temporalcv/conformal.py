@@ -238,6 +238,18 @@ class SplitConformalPredictor:
         predictions = np.asarray(predictions)
         actuals = np.asarray(actuals)
 
+        # Validate no NaN values
+        if np.any(np.isnan(predictions)):
+            raise ValueError(
+                "predictions contains NaN values. Clean data before processing. "
+                "Use np.nan_to_num() or dropna() to handle missing values."
+            )
+        if np.any(np.isnan(actuals)):
+            raise ValueError(
+                "actuals contains NaN values. Clean data before processing. "
+                "Use np.nan_to_num() or dropna() to handle missing values."
+            )
+
         if len(predictions) != len(actuals):
             raise ValueError(
                 f"predictions ({len(predictions)}) and actuals ({len(actuals)}) "

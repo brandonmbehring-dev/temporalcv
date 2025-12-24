@@ -55,7 +55,6 @@ class TestResidualDiagnosticsBasic:
 
     def test_white_noise_passes(self):
         """IID N(0,1) residuals should PASS all checks."""
-        np.random.seed(42)
         residuals = dgp_white_noise(n=100, sigma=1.0, random_state=42)
         result = gate_residual_diagnostics(residuals)
         # White noise should typically pass (may occasionally warn due to randomness)
@@ -113,8 +112,8 @@ class TestResidualDiagnosticsBasic:
 
     def test_biased_mean_warns(self):
         """Non-zero mean residuals should trigger mean warning."""
-        np.random.seed(42)
-        residuals = np.random.randn(100) + 2.0  # Mean ≈ 2, clearly non-zero
+        rng = np.random.default_rng(42)
+        residuals = rng.standard_normal(100) + 2.0  # Mean ≈ 2, clearly non-zero
         result = gate_residual_diagnostics(residuals)
 
         # Should detect non-zero mean
@@ -124,9 +123,9 @@ class TestResidualDiagnosticsBasic:
 
     def test_perfect_residuals_pass(self):
         """Well-behaved residuals should PASS."""
-        np.random.seed(123)
+        rng = np.random.default_rng(123)
         # Generate truly IID normal residuals
-        residuals = np.random.randn(200)  # Larger sample for stability
+        residuals = rng.standard_normal(200)  # Larger sample for stability
         result = gate_residual_diagnostics(residuals)
 
         # Should PASS with well-behaved residuals
@@ -227,8 +226,8 @@ class TestResidualDiagnosticsAdversarial:
 
     def test_single_outlier(self):
         """Single extreme outlier should affect normality test."""
-        np.random.seed(42)
-        residuals = np.random.randn(100)
+        rng = np.random.default_rng(42)
+        residuals = rng.standard_normal(100)
         residuals[50] = 100.0  # Extreme outlier
 
         result = gate_residual_diagnostics(residuals)
@@ -241,7 +240,8 @@ class TestResidualDiagnosticsAdversarial:
 
     def test_minimum_samples_skip(self):
         """n=20 should SKIP (insufficient for reliable Ljung-Box, min is 30)."""
-        residuals = np.random.randn(20)
+        rng = np.random.default_rng(42)
+        residuals = rng.standard_normal(20)
         result = gate_residual_diagnostics(residuals)
 
         # Should SKIP due to insufficient samples (min is 30)
@@ -249,8 +249,8 @@ class TestResidualDiagnosticsAdversarial:
 
     def test_minimum_samples_boundary(self):
         """n=30 should work (minimum viable sample)."""
-        np.random.seed(42)
-        residuals = np.random.randn(30)
+        rng = np.random.default_rng(42)
+        residuals = rng.standard_normal(30)
         result = gate_residual_diagnostics(residuals)
 
         # Should work, not SKIP (30 is the minimum)
@@ -258,8 +258,8 @@ class TestResidualDiagnosticsAdversarial:
 
     def test_very_small_residuals(self):
         """Residuals near machine precision should handle gracefully."""
-        np.random.seed(42)
-        residuals = np.random.randn(100) * 1e-15
+        rng = np.random.default_rng(42)
+        residuals = rng.standard_normal(100) * 1e-15
         result = gate_residual_diagnostics(residuals)
 
         # Should not crash
@@ -267,8 +267,8 @@ class TestResidualDiagnosticsAdversarial:
 
     def test_very_large_residuals(self):
         """Large magnitude residuals should handle gracefully."""
-        np.random.seed(42)
-        residuals = np.random.randn(100) * 1e10
+        rng = np.random.default_rng(42)
+        residuals = rng.standard_normal(100) * 1e10
         result = gate_residual_diagnostics(residuals)
 
         # Should not crash, results should be valid
@@ -285,7 +285,8 @@ class TestResidualDiagnosticsAdversarial:
 
     def test_trending_residuals(self):
         """Trending residuals (non-stationary) should be detected."""
-        residuals = np.arange(100, dtype=float) + np.random.randn(100) * 0.1
+        rng = np.random.default_rng(42)
+        residuals = np.arange(100, dtype=float) + rng.standard_normal(100) * 0.1
         result = gate_residual_diagnostics(residuals)
 
         # Trending residuals have non-zero mean and autocorrelation
@@ -302,8 +303,8 @@ class TestResidualDiagnosticsParameters:
 
     def test_max_lag_parameter(self):
         """max_lag parameter should be respected."""
-        np.random.seed(42)
-        residuals = np.random.randn(100)
+        rng = np.random.default_rng(42)
+        residuals = rng.standard_normal(100)
 
         # Different max_lag values should work
         result1 = gate_residual_diagnostics(residuals, max_lag=5)
@@ -314,7 +315,6 @@ class TestResidualDiagnosticsParameters:
 
     def test_significance_parameter(self):
         """significance parameter should affect detection threshold."""
-        np.random.seed(42)
         # Use mildly autocorrelated data
         residuals = dgp_ar1(n=100, phi=0.3, sigma=1.0, random_state=42)
 
@@ -329,10 +329,11 @@ class TestResidualDiagnosticsParameters:
 
     def test_halt_flags_independence(self):
         """halt_on_autocorr and halt_on_normality should work independently."""
+        rng = np.random.default_rng(42)
         # Create residuals that fail both tests
         residuals = dgp_ar1(n=100, phi=0.7, sigma=1.0, random_state=42)
         # Add heavy tails
-        residuals = residuals + np.random.standard_t(3, 100) * 0.5
+        residuals = residuals + rng.standard_t(3, 100) * 0.5
 
         # Test with only autocorr halt
         result_autocorr = gate_residual_diagnostics(
@@ -365,7 +366,8 @@ class TestResidualDiagnosticsResult:
 
     def test_result_has_required_fields(self):
         """Result should have status, message, and details."""
-        residuals = np.random.randn(100)
+        rng = np.random.default_rng(42)
+        residuals = rng.standard_normal(100)
         result = gate_residual_diagnostics(residuals)
 
         assert hasattr(result, "status")
@@ -377,8 +379,8 @@ class TestResidualDiagnosticsResult:
 
     def test_details_contain_test_results(self):
         """Details should contain diagnostic test results."""
-        np.random.seed(42)
-        residuals = np.random.randn(100)
+        rng = np.random.default_rng(42)
+        residuals = rng.standard_normal(100)
         result = gate_residual_diagnostics(residuals)
 
         # Should have some diagnostic information

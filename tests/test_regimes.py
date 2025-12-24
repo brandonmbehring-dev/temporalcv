@@ -25,15 +25,15 @@ from temporalcv.regimes import (
 @pytest.fixture
 def sample_values() -> np.ndarray:
     """Generate sample values with known volatility pattern."""
-    np.random.seed(42)
+    rng = np.random.default_rng(42)
     n = 200
 
     # First half: low volatility (small changes)
     # Second half: high volatility (large changes)
     changes = np.concatenate(
         [
-            np.random.normal(0, 0.01, n // 2),  # Low vol
-            np.random.normal(0, 0.05, n // 2),  # High vol
+            rng.normal(0, 0.01, n // 2),  # Low vol
+            rng.normal(0, 0.05, n // 2),  # High vol
         ]
     )
     return 3.5 + np.cumsum(changes)
@@ -46,12 +46,12 @@ def drifting_values() -> np.ndarray:
 
     KEY test case for changes vs levels distinction.
     """
-    np.random.seed(42)
+    rng = np.random.default_rng(42)
     n = 200
 
     # Steady drift: constant increase + tiny noise
     # HIGH std of levels, LOW std of changes
-    changes = 0.01 + np.random.normal(0, 0.001, n)
+    changes = 0.01 + rng.normal(0, 0.001, n)
     return 3.0 + np.cumsum(changes)
 
 

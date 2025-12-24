@@ -52,9 +52,10 @@ References
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, List, Optional, Protocol, Union
+from typing import Any, Callable, List, Literal, Optional, Protocol, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -203,6 +204,8 @@ def gate_shuffled_target(
     n_shuffles: int = 5,
     threshold: float = 0.05,
     n_cv_splits: int = 3,
+    permutation: Literal["iid", "block"] = "block",
+    block_size: Union[int, Literal["auto"]] = "auto",
     random_state: Optional[int] = None,
 ) -> GateResult:
     """
@@ -229,6 +232,15 @@ def gate_shuffled_target(
     n_cv_splits : int, default=3
         Number of walk-forward CV splits for out-of-sample evaluation.
         Uses expanding window CV to ensure proper temporal evaluation.
+    permutation : {"iid", "block"}, default="block"
+        Permutation strategy for null hypothesis:
+        - "iid": Standard random permutation (may produce false positives
+          on persistent time series)
+        - "block": Block permutation that preserves local autocorrelation
+          [T1] Per Kunsch (1989), Politis & Romano (1994)
+    block_size : int or "auto", default="auto"
+        Block size for block permutation. "auto" uses n^(1/3) per Kunsch (1989).
+        Ignored if permutation="iid".
     random_state : int, optional
         Random seed for reproducibility
 
@@ -246,7 +258,22 @@ def gate_shuffled_target(
     Uses WalkForwardCV internally to compute out-of-sample MAE, avoiding
     the bias of in-sample evaluation that could mask or exaggerate leakage.
 
+    The block permutation (default) preserves local autocorrelation structure,
+    which is important for time series with persistence. IID permutation
+    may produce false positives on persistent series because any model
+    with legitimate predictive ability should beat a fully shuffled target.
+
+    Models are cloned for each shuffle to prevent state leakage from
+    warm-start or incremental learning algorithms.
+
     Complexity: O(n_shuffles × n_cv_splits × model_fit_time)
+
+    References
+    ----------
+    [T1] Kunsch, H.R. (1989). The Jackknife and the Bootstrap for General
+         Stationary Observations. Annals of Statistics, 17(3), 1217-1241.
+    [T1] Politis, D.N. & Romano, J.P. (1994). The Stationary Bootstrap.
+         JASA, 89(428), 1303-1313.
 
     See Also
     --------
@@ -257,6 +284,18 @@ def gate_shuffled_target(
     X = np.asarray(X)
     y = np.asarray(y)
 
+    # Validate no NaN values
+    if np.any(np.isnan(X)):
+        raise ValueError(
+            "X contains NaN values. Clean data before processing. "
+            "Use np.nan_to_num() or dropna() to handle missing values."
+        )
+    if np.any(np.isnan(y)):
+        raise ValueError(
+            "y contains NaN values. Clean data before processing. "
+            "Use np.nan_to_num() or dropna() to handle missing values."
+        )
+
     # Validate shapes
     if X.shape[0] != len(y):
         raise ValueError(
@@ -264,8 +303,52 @@ def gate_shuffled_target(
             f"Got X.shape[0]={X.shape[0]}, len(y)={len(y)}"
         )
 
+    if permutation not in ("iid", "block"):
+        raise ValueError(f"permutation must be 'iid' or 'block', got {permutation!r}")
+
     n = len(y)
     rng = np.random.default_rng(random_state)
+
+    # Compute block size for block permutation
+    if permutation == "block":
+        if block_size == "auto":
+            # Kunsch (1989) recommendation: n^(1/3)
+            computed_block_size = max(1, int(round(n ** (1 / 3))))
+        else:
+            computed_block_size = int(block_size)
+            if computed_block_size < 1:
+                raise ValueError(f"block_size must be >= 1, got {block_size}")
+    else:
+        computed_block_size = 1  # Not used for IID
+
+    def block_permute(arr: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+        """
+        Block permutation: shuffle blocks to preserve local autocorrelation.
+
+        [T1] Per Kunsch (1989): dividing data into non-overlapping blocks
+        and permuting blocks preserves within-block dependence structure.
+        """
+        n_arr = len(arr)
+        n_blocks = max(1, n_arr // computed_block_size)
+
+        # Create block indices
+        block_indices = []
+        for i in range(n_blocks):
+            start = i * computed_block_size
+            end = min((i + 1) * computed_block_size, n_arr)
+            block_indices.append(list(range(start, end)))
+
+        # Handle remainder
+        remainder_start = n_blocks * computed_block_size
+        if remainder_start < n_arr:
+            block_indices.append(list(range(remainder_start, n_arr)))
+
+        # Shuffle block order
+        rng.shuffle(block_indices)
+
+        # Reconstruct permuted array
+        permuted_indices = [idx for block in block_indices for idx in block]
+        return arr[permuted_indices]
 
     # Set up walk-forward CV for out-of-sample evaluation
     cv = WalkForwardCV(
@@ -275,24 +358,46 @@ def gate_shuffled_target(
         test_size=max(1, n // (n_cv_splits + 1)),  # Reasonable test size
     )
 
-    def compute_cv_mae(X_data: np.ndarray, y_data: np.ndarray) -> float:
+    def compute_cv_mae(
+        X_data: np.ndarray, y_data: np.ndarray, model_instance: FitPredictModel
+    ) -> float:
         """Compute out-of-sample MAE using walk-forward CV."""
         all_errors: List[float] = []
         for train_idx, test_idx in cv.split(X_data, y_data):
-            model.fit(X_data[train_idx], y_data[train_idx])
-            preds = np.asarray(model.predict(X_data[test_idx]))
+            # Clone model for each fold to prevent state leakage
+            try:
+                from sklearn.base import clone
+                fold_model = clone(model_instance)
+            except (ImportError, TypeError):
+                # Fall back to using same instance if clone not available
+                fold_model = model_instance
+
+            fold_model.fit(X_data[train_idx], y_data[train_idx])
+            preds = np.asarray(fold_model.predict(X_data[test_idx]))
             errors = np.abs(y_data[test_idx] - preds)
             all_errors.extend(errors.tolist())
         return float(np.mean(all_errors)) if all_errors else 0.0
 
     # Compute out-of-sample MAE on real target
-    mae_real = compute_cv_mae(X, y)
+    mae_real = compute_cv_mae(X, y, model)
 
     # Compute out-of-sample MAE on shuffled targets
     shuffled_maes: List[float] = []
     for _ in range(n_shuffles):
-        y_shuffled = rng.permutation(y)
-        mae_shuffled = compute_cv_mae(X, y_shuffled)
+        # Apply permutation strategy
+        if permutation == "block":
+            y_shuffled = block_permute(y, rng)
+        else:
+            y_shuffled = rng.permutation(y)
+
+        # Clone model for each shuffle to prevent state leakage
+        try:
+            from sklearn.base import clone
+            shuffle_model = clone(model)
+        except (ImportError, TypeError):
+            shuffle_model = model
+
+        mae_shuffled = compute_cv_mae(X, y_shuffled, shuffle_model)
         shuffled_maes.append(mae_shuffled)
 
     mae_shuffled_avg = float(np.mean(shuffled_maes))
@@ -301,6 +406,15 @@ def gate_shuffled_target(
     if mae_shuffled_avg > 0:
         improvement_ratio = 1 - (mae_real / mae_shuffled_avg)
     else:
+        warnings.warn(
+            "Shuffled target MAE is zero - model achieves perfect predictions on shuffled data. "
+            "This is highly unusual and indicates a degenerate case. "
+            "improvement_ratio will be 0.0 (cannot compute meaningful comparison). "
+            "Check: (1) constant target values, (2) data preprocessing issues, "
+            "(3) model memorization.",
+            UserWarning,
+            stacklevel=2,
+        )
         improvement_ratio = 0.0
 
     details = {
@@ -310,6 +424,8 @@ def gate_shuffled_target(
         "n_shuffles": n_shuffles,
         "n_cv_splits": n_cv_splits,
         "evaluation_method": "walk_forward_cv",
+        "permutation": permutation,
+        "block_size": computed_block_size if permutation == "block" else None,
     }
 
     if improvement_ratio > threshold:
@@ -807,6 +923,14 @@ def gate_residual_diagnostics(
     from scipy import stats
 
     residuals = np.asarray(residuals)
+
+    # Validate no NaN values
+    if np.any(np.isnan(residuals)):
+        raise ValueError(
+            "residuals contains NaN values. Clean data before processing. "
+            "Use np.nan_to_num() or dropna() to handle missing values."
+        )
+
     n = len(residuals)
 
     # Minimum sample size for reliable tests

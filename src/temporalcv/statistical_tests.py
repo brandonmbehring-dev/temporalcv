@@ -48,6 +48,7 @@ References
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from typing import Literal, Optional
 
@@ -307,6 +308,18 @@ def dm_test(
     errors_1 = np.asarray(errors_1, dtype=np.float64)
     errors_2 = np.asarray(errors_2, dtype=np.float64)
 
+    # Validate no NaN values
+    if np.any(np.isnan(errors_1)):
+        raise ValueError(
+            "errors_1 contains NaN values. Clean data before processing. "
+            "Use np.nan_to_num() or dropna() to handle missing values."
+        )
+    if np.any(np.isnan(errors_2)):
+        raise ValueError(
+            "errors_2 contains NaN values. Clean data before processing. "
+            "Use np.nan_to_num() or dropna() to handle missing values."
+        )
+
     if len(errors_1) != len(errors_2):
         raise ValueError(
             f"Error arrays must have same length. "
@@ -344,8 +357,17 @@ def dm_test(
     bandwidth = max(0, h - 1)
     var_d = compute_hac_variance(d, bandwidth=bandwidth)
 
-    # Handle degenerate case
+    # Handle degenerate case - warn instead of failing silently
     if var_d <= 0:
+        warnings.warn(
+            f"DM test variance is non-positive (var_d={var_d:.2e}). "
+            "This can occur when loss differences are constant or nearly constant. "
+            "Returning pvalue=1.0 (cannot reject null). "
+            "Consider: (1) checking for identical predictions, "
+            "(2) using bootstrap-based tests for small samples.",
+            UserWarning,
+            stacklevel=2,
+        )
         return DMTestResult(
             statistic=float("nan"),
             pvalue=1.0,
@@ -476,6 +498,18 @@ def pt_test(
     actual = np.asarray(actual, dtype=np.float64)
     predicted = np.asarray(predicted, dtype=np.float64)
 
+    # Validate no NaN values
+    if np.any(np.isnan(actual)):
+        raise ValueError(
+            "actual contains NaN values. Clean data before processing. "
+            "Use np.nan_to_num() or dropna() to handle missing values."
+        )
+    if np.any(np.isnan(predicted)):
+        raise ValueError(
+            "predicted contains NaN values. Clean data before processing. "
+            "Use np.nan_to_num() or dropna() to handle missing values."
+        )
+
     if len(actual) != len(predicted):
         raise ValueError(
             f"Arrays must have same length. "
@@ -529,8 +563,9 @@ def pt_test(
         p_star = p_y[1] * p_x[1] + p_y[-1] * p_x[-1] + p_y[0] * p_x[0]
 
         # Variance estimates (simplified for 3-class)
+        # Note: The * 4 factor is a [T3] approximation for 3-class case
         var_p_hat = p_star * (1 - p_star) / n_effective
-        var_p_star = p_star * (1 - p_star) / (n_effective**2) * 4
+        var_p_star = p_star * (1 - p_star) / n_effective * 4
 
     else:
         # 2-class: exclude zeros (undefined direction)
@@ -538,6 +573,13 @@ def pt_test(
         n_effective = int(np.sum(nonzero_mask))
 
         if n_effective == 0:
+            warnings.warn(
+                "PT test has no non-zero observations for 2-class mode. "
+                "All actual values may be zero. Returning pvalue=1.0. "
+                "Consider using 3-class mode with move_threshold parameter.",
+                UserWarning,
+                stacklevel=2,
+            )
             return PTTestResult(
                 statistic=float("nan"),
                 pvalue=1.0,
@@ -556,17 +598,25 @@ def pt_test(
         # Expected accuracy under independence
         p_star = p_y_pos * p_x_pos + (1 - p_y_pos) * (1 - p_x_pos)
 
-        # Variance estimates (2-class formula from PT 1992)
+        # Variance estimates (2-class formula from PT 1992, equation 8) [T1]
         var_p_hat = p_star * (1 - p_star) / n_effective
         term1 = (2 * p_y_pos - 1) ** 2 * p_x_pos * (1 - p_x_pos) / n_effective
         term2 = (2 * p_x_pos - 1) ** 2 * p_y_pos * (1 - p_y_pos) / n_effective
-        term3 = 4 * p_y_pos * p_x_pos * (1 - p_y_pos) * (1 - p_x_pos) / (n_effective**2)
+        term3 = 4 * p_y_pos * p_x_pos * (1 - p_y_pos) * (1 - p_x_pos) / n_effective
         var_p_star = term1 + term2 + term3
 
     # Total variance under null
     var_total = var_p_hat + var_p_star
 
     if var_total <= 0:
+        warnings.warn(
+            f"PT test total variance is non-positive (var_total={var_total:.2e}). "
+            "This can occur with degenerate probability estimates. "
+            "Returning pvalue=1.0 (cannot reject null). "
+            "Check that predictions have variance.",
+            UserWarning,
+            stacklevel=2,
+        )
         return PTTestResult(
             statistic=float("nan"),
             pvalue=1.0,

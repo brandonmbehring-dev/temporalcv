@@ -71,13 +71,13 @@ class SimpleModel:
 @pytest.fixture
 def linear_data():
     """Generate linear data for testing."""
-    np.random.seed(42)
+    rng = np.random.default_rng(42)
     n = 100
     n_features = 5
 
-    X = np.random.randn(n, n_features)
+    X = rng.standard_normal((n, n_features))
     true_coef = np.array([1.0, -0.5, 0.3, -0.2, 0.1])
-    noise = np.random.normal(0, 0.5, n)
+    noise = rng.normal(0, 0.5, n)
     y = X @ true_coef + noise
 
     return X, y
@@ -86,23 +86,23 @@ def linear_data():
 @pytest.fixture
 def time_series_data():
     """Generate autocorrelated time series data."""
-    np.random.seed(42)
+    rng = np.random.default_rng(42)
     n = 150
     n_features = 3
 
     # Generate AR(1) features
     X = np.zeros((n, n_features))
     for j in range(n_features):
-        X[0, j] = np.random.randn()
+        X[0, j] = rng.standard_normal()
         for i in range(1, n):
-            X[i, j] = 0.8 * X[i - 1, j] + 0.2 * np.random.randn()
+            X[i, j] = 0.8 * X[i - 1, j] + 0.2 * rng.standard_normal()
 
     # Target with autocorrelation
     y = np.zeros(n)
     true_coef = np.array([0.5, -0.3, 0.2])
-    y[0] = X[0] @ true_coef + np.random.randn() * 0.3
+    y[0] = X[0] @ true_coef + rng.standard_normal() * 0.3
     for i in range(1, n):
-        y[i] = 0.5 * y[i - 1] + 0.5 * (X[i] @ true_coef) + np.random.randn() * 0.3
+        y[i] = 0.5 * y[i - 1] + 0.5 * (X[i] @ true_coef) + rng.standard_normal() * 0.3
 
     return X, y
 

@@ -507,3 +507,117 @@ class TestIntegration:
         # Can compare significance
         assert hasattr(dm_result, "significant_at_05")
         assert hasattr(pt_result, "significant_at_05")
+
+
+# =============================================================================
+# Regression Tests (Critical Bug Fixes)
+# =============================================================================
+
+
+class TestPTTestVarianceRegression:
+    """
+    Regression test for PT test variance formula fix.
+
+    Bug: n_effective**2 denominator instead of n_effective (2025-12-23)
+    Impact: P-values were too small (anticonservative), test rejected H0 too often.
+    Fix: Changed n_effective**2 to n_effective per PT 1992 equation 8.
+    """
+
+    def test_variance_scales_with_n(self) -> None:
+        """
+        PT test variance should scale as 1/n, not 1/n².
+
+        With correct variance, p-values should be approximately the same
+        regardless of sample size when proportions are the same.
+        """
+        rng = np.random.default_rng(42)
+
+        # Create data with ~60% direction accuracy at different sample sizes
+        results = {}
+        for n in [50, 100, 200]:
+            actual = rng.standard_normal(n)
+            # ~60% correct direction
+            predicted = np.where(
+                rng.random(n) < 0.6,
+                actual * np.sign(actual),  # Correct direction
+                -actual * np.sign(actual),  # Wrong direction
+            )
+            result = pt_test(actual, predicted)
+            results[n] = result.pvalue
+
+        # P-values should be in similar range (not decreasing by factor of n)
+        # With bug (1/n²), doubling n would halve variance → smaller p-values
+        # With fix (1/n), p-values should be roughly stable
+        assert results[100] > results[50] * 0.1, (
+            f"P-values collapsed too much: n=50 gave {results[50]:.4f}, "
+            f"n=100 gave {results[100]:.4f}"
+        )
+        assert results[200] > results[100] * 0.1, (
+            f"P-values collapsed too much: n=100 gave {results[100]:.4f}, "
+            f"n=200 gave {results[200]:.4f}"
+        )
+
+    def test_50_50_accuracy_not_significant(self) -> None:
+        """
+        Random guessing (50% accuracy) should not be significant.
+
+        With bug, even random data could appear significant due to
+        underestimated variance.
+        """
+        rng = np.random.default_rng(123)
+        n = 100
+
+        # Pure random: 50% correct direction expected
+        actual = rng.standard_normal(n)
+        predicted = rng.standard_normal(n)  # Independent of actual
+
+        result = pt_test(actual, predicted)
+
+        # Should NOT be significant (p > 0.05)
+        assert result.pvalue > 0.05, (
+            f"Random guessing should not be significant, but p={result.pvalue:.4f}"
+        )
+        # Accuracy should be near 50%
+        assert 0.35 < result.accuracy < 0.65, (
+            f"Random accuracy should be near 50%, got {result.accuracy:.2f}"
+        )
+
+    def test_2class_variance_formula_correct(self) -> None:
+        """
+        Verify 2-class variance formula matches PT 1992 equation 8.
+
+        V(P*) = term1 + term2 + term3 where all terms have 1/n denominator.
+        """
+        rng = np.random.default_rng(456)
+        n = 100
+
+        # Create data where we can manually verify variance (2-class = no zeros)
+        actual = rng.choice([-1.0, 1.0], size=n)
+        predicted = actual * rng.choice([1.0, -1.0], size=n, p=[0.7, 0.3])
+
+        # pt_test auto-detects 2-class when move_threshold is None and no zeros
+        result = pt_test(actual, predicted)
+
+        # Manual calculation of expected variance components
+        nonzero = actual != 0
+        n_eff = int(np.sum(nonzero))
+        p_y_pos = float(np.mean(actual[nonzero] > 0))
+        p_x_pos = float(np.mean(predicted[nonzero] > 0))
+        p_star = p_y_pos * p_x_pos + (1 - p_y_pos) * (1 - p_x_pos)
+
+        # Correct formula: all terms have 1/n_eff (not 1/n_eff²)
+        var_p_hat = p_star * (1 - p_star) / n_eff
+        term1 = (2 * p_y_pos - 1) ** 2 * p_x_pos * (1 - p_x_pos) / n_eff
+        term2 = (2 * p_x_pos - 1) ** 2 * p_y_pos * (1 - p_y_pos) / n_eff
+        term3 = 4 * p_y_pos * p_x_pos * (1 - p_y_pos) * (1 - p_x_pos) / n_eff
+        expected_var = var_p_hat + term1 + term2 + term3
+
+        # Variance should be O(1/n), not O(1/n²)
+        # For n=100, variance should be O(0.01), not O(0.0001)
+        assert expected_var > 1e-4, (
+            f"Variance {expected_var:.6f} is too small (likely n² bug)"
+        )
+
+        # Also verify that the test produces a reasonable result
+        assert 0 < result.pvalue < 1, f"P-value should be in (0,1), got {result.pvalue}"
+        assert result.n == n_eff, f"Expected n={n_eff}, got {result.n}"

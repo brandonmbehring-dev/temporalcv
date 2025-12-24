@@ -55,7 +55,8 @@ These assumptions apply across all modules:
 | Assumption | Required For | Violation Consequence | Validation |
 |------------|--------------|----------------------|------------|
 | **Exchangeability** | Coverage guarantee | Coverage < (1-α) | Shuffle test |
-| Calibration ≥ 30 | Stable quantile | High variance | n_calibration check |
+| Calibration ≥ 10 (enforced) | Valid quantile | Raises ValueError | n_calibration check |
+| Calibration ≥ 30-50 (recommended) | Stable quantile | High variance | Sample size check |
 | i.i.d. residuals | Valid quantile | Systematic under/over-coverage | Residual diagnostics |
 
 **Critical**: Time series data is NOT exchangeable. Split conformal provides approximate, not exact, coverage for temporal data.
