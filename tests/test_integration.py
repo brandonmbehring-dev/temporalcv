@@ -52,7 +52,7 @@ class TestWalkForwardGatePipeline:
             n_splits=5,
             window_type="sliding",
             window_size=150,
-            gap=2,
+            extra_gap=2,
             test_size=10,
         )
 
@@ -108,7 +108,7 @@ class TestWalkForwardGatePipeline:
             train_end_idx=150,
             test_start_idx=155,
             horizon=2,
-            gap=2,
+            extra_gap=2,
         )
         assert boundary_result.status == GateStatus.PASS
 
@@ -331,14 +331,14 @@ class TestCrossModuleConsistency:
         horizon = 1
         cv_gap = 2  # CV gap parameter
         # required_gap = horizon + cv_gap = 1 + 2 = 3
-        # CV with gap=2 creates actual_gap of 2 between train_end and test_start
+        # CV with extra_gap=2 creates actual_gap of 2 between train_end and test_start
         # So we need to verify that CV-created gaps satisfy the gate
 
         cv = WalkForwardCV(
             n_splits=3,
             window_type="sliding",
             window_size=100,
-            gap=cv_gap,
+            extra_gap=cv_gap,
             test_size=10,
         )
 
@@ -351,13 +351,13 @@ class TestCrossModuleConsistency:
                 train_end_idx=train_idx[-1],
                 test_start_idx=test_idx[0],
                 horizon=horizon,
-                gap=cv_gap,
+                extra_gap=cv_gap,
             )
 
             # If CV creates sufficient gap, gate should pass
             if actual_gap >= required_gap:
                 assert result.status == GateStatus.PASS, (
-                    f"Gate failed: actual_gap={actual_gap}, required={required_gap}"
+                    f"Gate failed: actual_extra_gap={actual_gap}, required={required_gap}"
                 )
             else:
                 # If CV gap isn't sufficient, gate should HALT (expected behavior)

@@ -146,7 +146,7 @@ class TestGapEnforcement:
 
     def test_gap_enforced_in_splits(self) -> None:
         """Gap should be enforced between train and test."""
-        cv = CrossFitCV(n_splits=5, gap=5)
+        cv = CrossFitCV(n_splits=5, extra_gap=5)
         X = np.random.default_rng(42).standard_normal((100, 3))
 
         for train_idx, test_idx in cv.split(X):
@@ -155,8 +155,8 @@ class TestGapEnforcement:
 
     def test_large_gap_reduces_splits(self) -> None:
         """Large gap may reduce number of valid splits."""
-        cv_no_gap = CrossFitCV(n_splits=5, gap=0)
-        cv_large_gap = CrossFitCV(n_splits=5, gap=10)
+        cv_no_gap = CrossFitCV(n_splits=5, extra_gap=0)
+        cv_large_gap = CrossFitCV(n_splits=5, extra_gap=10)
         X = np.random.default_rng(42).standard_normal((50, 3))
 
         splits_no_gap = list(cv_no_gap.split(X))
@@ -235,7 +235,7 @@ class TestEdgeCases:
     def test_negative_gap_raises(self) -> None:
         """Should raise error for negative gap."""
         with pytest.raises(ValueError, match="gap must be >= 0"):
-            CrossFitCV(n_splits=5, gap=-1)
+            CrossFitCV(n_splits=5, extra_gap=-1)
 
     def test_test_size_parameter(self) -> None:
         """Custom test_size should be respected."""
@@ -267,11 +267,11 @@ class TestSklearnCompatibility:
 
     def test_repr(self) -> None:
         """Repr should be informative."""
-        cv = CrossFitCV(n_splits=5, gap=2, test_size=10)
+        cv = CrossFitCV(n_splits=5, extra_gap=2, test_size=10)
 
         repr_str = repr(cv)
 
         assert "CrossFitCV" in repr_str
         assert "n_splits=5" in repr_str
-        assert "gap=2" in repr_str
+        assert "extra_gap=2" in repr_str
         assert "test_size=10" in repr_str

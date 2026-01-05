@@ -224,13 +224,13 @@ class TestCVBoundaryConditions:
         cv = WalkForwardCV(
             n_splits=2,
             window_type="expanding",
-            gap=5,
+            extra_gap=5,
             test_size=5,
         )
 
         for train_idx, test_idx in cv.split(y):
             gap_actual = test_idx[0] - train_idx[-1] - 1
-            assert gap_actual >= cv.gap
+            assert gap_actual >= cv.extra_gap
 
     def test_cv_single_split(self) -> None:
         """CV with single split should work."""
@@ -282,7 +282,7 @@ class TestGateEdgeCases:
             train_end_idx=99,
             test_start_idx=103,  # actual_gap = 3
             horizon=1,
-            gap=2,  # required_gap = 1 + 2 = 3, so 3 >= 3 passes
+            extra_gap=2,  # required_gap = 1 + 2 = 3, so 3 >= 3 passes
         )
         assert result.status == GateStatus.PASS
 
@@ -292,7 +292,7 @@ class TestGateEdgeCases:
             train_end_idx=99,
             test_start_idx=100,  # gap of 0
             horizon=2,  # Need gap >= 2
-            gap=0,
+            extra_gap=0,
         )
         assert result.status == GateStatus.HALT
 
@@ -302,7 +302,7 @@ class TestGateEdgeCases:
             train_end_idx=105,  # Train ends AFTER test starts
             test_start_idx=100,
             horizon=1,
-            gap=0,
+            extra_gap=0,
         )
         assert result.status == GateStatus.HALT
 

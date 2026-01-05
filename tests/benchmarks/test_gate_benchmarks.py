@@ -168,7 +168,7 @@ class TestTemporalBoundaryGateBenchmarks:
         def run_gate() -> object:
             # Validate proper gap enforcement: train_end=99, test_start=100, horizon=1
             return gate_temporal_boundary(
-                train_end_idx=99, test_start_idx=100, horizon=1, gap=0
+                train_end_idx=99, test_start_idx=100, horizon=1, extra_gap=0
             )
 
         result = benchmark(run_gate)
@@ -245,7 +245,7 @@ class TestRunGatesBenchmarks:
                 baseline_metric=baseline_mae,
             ),
             gate_temporal_boundary(
-                train_end_idx=99, test_start_idx=100, horizon=1, gap=0
+                train_end_idx=99, test_start_idx=100, horizon=1, extra_gap=0
             ),
         ]
         return gates

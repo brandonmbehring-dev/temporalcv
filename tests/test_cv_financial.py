@@ -287,8 +287,8 @@ class TestPurgedWalkForward:
     def test_gap_parameter(self) -> None:
         """Additional gap should create larger separation."""
         X = np.arange(200).reshape(-1, 1)
-        cv_no_gap = PurgedWalkForward(n_splits=3, test_size=20, gap=0, purge_gap=0)
-        cv_with_gap = PurgedWalkForward(n_splits=3, test_size=20, gap=10, purge_gap=0)
+        cv_no_gap = PurgedWalkForward(n_splits=3, test_size=20, extra_gap=0, purge_gap=0)
+        cv_with_gap = PurgedWalkForward(n_splits=3, test_size=20, extra_gap=10, purge_gap=0)
 
         for (train_no, test_no), (train_with, test_with) in zip(
             cv_no_gap.split(X), cv_with_gap.split(X)

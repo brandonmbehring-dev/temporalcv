@@ -35,7 +35,7 @@ class TestBoundaryViolationDetection:
             train_end_idx=100,
             test_start_idx=95,  # Overlaps with train
             horizon=1,
-            gap=0,
+            extra_gap=0,
         )
 
         assert result.status == GateStatus.HALT, (
@@ -52,7 +52,7 @@ class TestBoundaryViolationDetection:
             train_end_idx=99,
             test_start_idx=100,  # Immediately adjacent
             horizon=2,  # 2-step ahead needs gap
-            gap=0,
+            extra_gap=0,
         )
 
         assert result.status == GateStatus.HALT, (
@@ -69,7 +69,7 @@ class TestBoundaryViolationDetection:
             train_end_idx=99,
             test_start_idx=101,  # Gap of 1
             horizon=3,           # Need gap of 3
-            gap=0,
+            extra_gap=0,
         )
 
         assert result.status == GateStatus.HALT
@@ -82,7 +82,7 @@ class TestBoundaryViolationDetection:
             train_end_idx=99,
             test_start_idx=103,  # Gap of 3
             horizon=2,           # Need gap of 2
-            gap=1,               # Additional gap of 1
+            extra_gap=1,               # Additional gap of 1
         )
 
         assert result.status == GateStatus.PASS
@@ -97,7 +97,7 @@ class TestBoundaryViolationDetection:
             train_end_idx=99,
             test_start_idx=103,  # Gap of 3
             horizon=2,
-            gap=2,               # Need horizon(2) + gap(2) = 4
+            extra_gap=2,               # Need horizon(2) + gap(2) = 4
         )
 
         assert result.status == GateStatus.HALT, (
@@ -155,7 +155,7 @@ class TestWalkForwardCVBoundaries:
         cv = WalkForwardCV(
             n_splits=5,
             window_type="expanding",
-            gap=2,
+            extra_gap=2,
         )
 
         for train_idx, test_idx in cv.split(X, y):
@@ -176,7 +176,7 @@ class TestWalkForwardCVBoundaries:
             n_splits=5,
             window_type="sliding",
             window_size=50,
-            gap=gap,
+            extra_gap=gap,
         )
 
         for train_idx, test_idx in cv.split(X, y):
@@ -214,13 +214,13 @@ class TestBoundaryMetrics:
             train_end_idx=99,
             test_start_idx=105,
             horizon=2,
-            gap=3,
+            extra_gap=3,
         )
 
         assert result.details["train_end_idx"] == 99
         assert result.details["test_start_idx"] == 105
         assert result.details["horizon"] == 2
-        assert result.details["gap"] == 3
+        assert result.details["extra_gap"] == 3
 
     def test_reports_actual_gap(self) -> None:
         """Gate should report the actual gap found."""
@@ -228,7 +228,7 @@ class TestBoundaryMetrics:
             train_end_idx=99,
             test_start_idx=105,
             horizon=2,
-            gap=1,
+            extra_gap=1,
         )
 
         # Actual gap is 105 - 99 - 1 = 5

@@ -340,15 +340,15 @@ def run_benchmark_suite(
     ComparisonReport
         Full comparison report with summary
 
-    Example
-    -------
+    Examples
+    --------
     >>> from temporalcv.benchmarks import create_synthetic_dataset
     >>> datasets = [create_synthetic_dataset(seed=i) for i in range(3)]
     >>> report = run_benchmark_suite(datasets, [NaiveAdapter()])
     >>> print(report.to_markdown())
 
-    Example with progress callback
-    ------------------------------
+    With progress callback:
+
     >>> def on_progress(current, total, name):
     ...     print(f"[{current}/{total}] Completed {name}")
     >>> report = run_benchmark_suite(

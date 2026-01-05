@@ -106,7 +106,7 @@ class TestCrossFitCVBenchmarks:
     ) -> None:
         """CrossFitCV with 5 folds."""
         X, y = medium_data
-        cv = CrossFitCV(n_splits=5, gap=5)
+        cv = CrossFitCV(n_splits=5, extra_gap=5)
 
         def split_all() -> list:
             return list(cv.split(X, y))
@@ -120,7 +120,7 @@ class TestCrossFitCVBenchmarks:
     ) -> None:
         """CrossFitCV with 10 folds."""
         X, y = medium_data
-        cv = CrossFitCV(n_splits=10, gap=5)
+        cv = CrossFitCV(n_splits=10, extra_gap=5)
 
         def split_all() -> list:
             return list(cv.split(X, y))

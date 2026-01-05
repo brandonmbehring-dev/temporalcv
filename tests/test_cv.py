@@ -160,7 +160,7 @@ class TestWalkForwardCV:
         assert cv.n_splits == 5
         assert cv.window_type == "expanding"
         assert cv.window_size is None
-        assert cv.gap == 0
+        assert cv.extra_gap == 0
         assert cv.test_size == 1
 
     def test_custom_initialization(self) -> None:
@@ -169,22 +169,22 @@ class TestWalkForwardCV:
             n_splits=10,
             window_type="sliding",
             window_size=50,
-            gap=2,
+            extra_gap=2,
             test_size=3,
         )
         assert cv.n_splits == 10
         assert cv.window_type == "sliding"
         assert cv.window_size == 50
-        assert cv.gap == 2
+        assert cv.extra_gap == 2
         assert cv.test_size == 3
 
     def test_repr(self) -> None:
         """__repr__ should be informative."""
-        cv = WalkForwardCV(n_splits=3, gap=2)
+        cv = WalkForwardCV(n_splits=3, extra_gap=2)
         repr_str = repr(cv)
         assert "WalkForwardCV" in repr_str
         assert "n_splits=3" in repr_str
-        assert "gap=2" in repr_str
+        assert "extra_gap=2" in repr_str
 
     def test_split_yields_correct_count(self, sample_data: tuple) -> None:
         """split() should yield n_splits tuples."""
@@ -252,7 +252,7 @@ class TestWalkForwardCV:
     def test_get_split_info(self, sample_data: tuple) -> None:
         """get_split_info() should return SplitInfo objects."""
         X, y = sample_data
-        cv = WalkForwardCV(n_splits=3, gap=2)
+        cv = WalkForwardCV(n_splits=3, extra_gap=2)
 
         infos = cv.get_split_info(X)
         assert len(infos) == 3
@@ -273,7 +273,7 @@ class TestGapEnforcement:
     def test_gap_enforced_between_splits(self, sample_data: tuple) -> None:
         """Gap should be maintained between train and test."""
         X, y = sample_data
-        cv = WalkForwardCV(n_splits=5, gap=3)
+        cv = WalkForwardCV(n_splits=5, extra_gap=3)
 
         for train, test in cv.split(X):
             # train[-1] + gap + 1 <= test[0]
@@ -281,18 +281,18 @@ class TestGapEnforcement:
             assert actual_gap >= 3, f"Gap {actual_gap} < required 3"
 
     def test_gap_zero_allowed(self, sample_data: tuple) -> None:
-        """gap=0 should work (adjacent train/test)."""
+        """extra_gap=0 should work (adjacent train/test)."""
         X, y = sample_data
-        cv = WalkForwardCV(n_splits=5, gap=0)
+        cv = WalkForwardCV(n_splits=5, extra_gap=0)
 
         for train, test in cv.split(X):
-            # With gap=0, test should start right after train
+            # With extra_gap=0, test should start right after train
             assert test[0] == train[-1] + 1
 
     def test_gap_prevents_leakage(self, sample_data: tuple) -> None:
         """Train indices should never include test indices."""
         X, y = sample_data
-        cv = WalkForwardCV(n_splits=5, gap=2)
+        cv = WalkForwardCV(n_splits=5, extra_gap=2)
 
         for train, test in cv.split(X):
             train_set = set(train)
@@ -303,7 +303,7 @@ class TestGapEnforcement:
     def test_large_gap(self, sample_data: tuple) -> None:
         """Large gap should still work."""
         X, y = sample_data
-        cv = WalkForwardCV(n_splits=3, gap=10)
+        cv = WalkForwardCV(n_splits=3, extra_gap=10)
 
         splits = list(cv.split(X))
         assert len(splits) == 3
@@ -410,7 +410,7 @@ class TestSklearnCompatibility:
     def test_cross_val_score_works(self, sample_data: tuple) -> None:
         """Should work with sklearn's cross_val_score."""
         X, y = sample_data
-        cv = WalkForwardCV(n_splits=5, gap=0)
+        cv = WalkForwardCV(n_splits=5, extra_gap=0)
 
         scores = cross_val_score(Ridge(alpha=1.0), X, y, cv=cv, scoring="r2")
 
@@ -420,7 +420,7 @@ class TestSklearnCompatibility:
     def test_cross_val_score_with_gap(self, sample_data: tuple) -> None:
         """cross_val_score should work with gap parameter."""
         X, y = sample_data
-        cv = WalkForwardCV(n_splits=3, gap=5)
+        cv = WalkForwardCV(n_splits=3, extra_gap=5)
 
         scores = cross_val_score(Ridge(alpha=1.0), X, y, cv=cv, scoring="r2")
 
@@ -471,7 +471,7 @@ class TestEdgeCases:
     def test_invalid_gap(self) -> None:
         """Should raise error for negative gap."""
         with pytest.raises(ValueError, match="gap must be >= 0"):
-            WalkForwardCV(gap=-1)
+            WalkForwardCV(extra_gap=-1)
 
     def test_invalid_test_size(self) -> None:
         """Should raise error for invalid test_size."""
@@ -539,14 +539,14 @@ class TestIntegration:
         from temporalcv.gates import GateStatus, gate_temporal_boundary
 
         X, y = sample_data
-        cv = WalkForwardCV(n_splits=5, gap=2)
+        cv = WalkForwardCV(n_splits=5, extra_gap=2)
 
         for train, test in cv.split(X):
             result = gate_temporal_boundary(
                 train_end_idx=int(train[-1]),
                 test_start_idx=int(test[0]),
                 horizon=2,
-                gap=0,
+                extra_gap=0,
             )
             assert result.status != GateStatus.HALT, (
                 f"Split failed temporal boundary: {result.message}"
@@ -596,71 +596,72 @@ class TestHorizonValidation:
     def test_horizon_with_sufficient_gap_passes(self) -> None:
         """Horizon with gap >= horizon should work fine."""
         # gap == horizon: valid
-        cv = WalkForwardCV(n_splits=3, horizon=3, gap=3)
+        cv = WalkForwardCV(n_splits=3, horizon=3, extra_gap=3)
         assert cv.horizon == 3
-        assert cv.gap == 3
+        assert cv.extra_gap == 3
 
         # gap > horizon: also valid
-        cv = WalkForwardCV(n_splits=3, horizon=2, gap=5)
+        cv = WalkForwardCV(n_splits=3, horizon=2, extra_gap=5)
         assert cv.horizon == 2
-        assert cv.gap == 5
+        assert cv.extra_gap == 5
 
-    def test_horizon_with_insufficient_gap_raises(self) -> None:
-        """Horizon with gap < horizon should raise ValueError."""
-        with pytest.raises(ValueError, match="gap.*must be >= horizon"):
-            WalkForwardCV(n_splits=3, horizon=3, gap=2)
+    def test_horizon_with_any_extra_gap_allowed(self) -> None:
+        """New semantics: extra_gap can be any value, total_separation = horizon + extra_gap."""
+        # extra_gap < horizon is now VALID
+        cv = WalkForwardCV(n_splits=3, horizon=3, extra_gap=2)
+        assert cv.horizon == 3
+        assert cv.extra_gap == 2
+        # Total separation will be 3 + 2 = 5
 
-        with pytest.raises(ValueError, match="gap.*must be >= horizon"):
-            WalkForwardCV(n_splits=3, horizon=5, gap=0)
+        cv = WalkForwardCV(n_splits=3, horizon=5, extra_gap=0)
+        assert cv.horizon == 5
+        assert cv.extra_gap == 0
+        # Total separation will be 5 + 0 = 5
 
     def test_horizon_none_allows_any_gap(self) -> None:
         """When horizon is None, any gap value is allowed."""
         # No horizon means no validation
-        cv = WalkForwardCV(n_splits=3, gap=0)
+        cv = WalkForwardCV(n_splits=3, extra_gap=0)
         assert cv.horizon is None
-        assert cv.gap == 0
+        assert cv.extra_gap == 0
 
-        cv = WalkForwardCV(n_splits=3, gap=10)
+        cv = WalkForwardCV(n_splits=3, extra_gap=10)
         assert cv.horizon is None
-        assert cv.gap == 10
+        assert cv.extra_gap == 10
 
-    def test_horizon_validation_error_message_is_helpful(self) -> None:
-        """Error message should explain how to fix the issue."""
-        with pytest.raises(ValueError) as exc_info:
-            WalkForwardCV(n_splits=3, horizon=4, gap=2)
-
-        error_msg = str(exc_info.value)
-        assert "gap (2)" in error_msg
-        assert "horizon (4)" in error_msg
-        assert "target leakage" in error_msg
-        assert "4-step forecasting" in error_msg
-        assert "gap >= 4" in error_msg
+    def test_horizon_with_extra_gap_validation_removed(self) -> None:
+        """New semantics: extra_gap < horizon is now ALLOWED (no validation error)."""
+        # This used to raise ValueError, but now it's valid
+        cv = WalkForwardCV(n_splits=3, horizon=4, extra_gap=2)
+        assert cv.horizon == 4
+        assert cv.extra_gap == 2
+        # Total separation will be 4 + 2 = 6
 
     def test_horizon_must_be_positive(self) -> None:
         """Horizon must be >= 1 if provided."""
         with pytest.raises(ValueError, match="horizon must be >= 1"):
-            WalkForwardCV(n_splits=3, horizon=0, gap=0)
+            WalkForwardCV(n_splits=3, horizon=0, extra_gap=0)
 
         with pytest.raises(ValueError, match="horizon must be >= 1"):
-            WalkForwardCV(n_splits=3, horizon=-1, gap=0)
+            WalkForwardCV(n_splits=3, horizon=-1, extra_gap=0)
 
     def test_horizon_is_stored_as_attribute(self) -> None:
         """Horizon should be accessible as instance attribute."""
-        cv = WalkForwardCV(n_splits=5, horizon=3, gap=3)
+        cv = WalkForwardCV(n_splits=5, horizon=3, extra_gap=3)
         assert hasattr(cv, "horizon")
         assert cv.horizon == 3
 
     def test_splits_work_with_horizon(self, sample_data: tuple) -> None:
         """CV should generate valid splits when horizon is set."""
         X, y = sample_data
-        cv = WalkForwardCV(n_splits=3, horizon=2, gap=2)
+        cv = WalkForwardCV(n_splits=3, horizon=2, extra_gap=2)
 
         splits = list(cv.split(X))
         assert len(splits) == 3
 
         for train, test in splits:
             # Gap is enforced
-            assert train[-1] + cv.gap < test[0]
+            assert train[-1] + cv.extra_gap < test[0]
 
 
 # =============================================================================
@@ -859,7 +860,7 @@ class TestWalkForwardEvaluate:
         X = np.random.randn(100, 3)
         y = X[:, 0] * 0.5 + np.random.randn(100) * 0.1
 
-        results = walk_forward_evaluate(Ridge(), X, y, n_splits=3, gap=2, test_size=5)
+        results = walk_forward_evaluate(Ridge(), X, y, n_splits=3, extra_gap=2, test_size=5)
 
         assert results.n_splits == 3
         assert results.total_samples == 15  # 3 * 5
@@ -875,13 +876,13 @@ class TestWalkForwardEvaluate:
         X = np.random.randn(100, 3)
         y = X[:, 0] * 0.5 + np.random.randn(100) * 0.1
 
-        cv = WalkForwardCV(n_splits=4, gap=1, test_size=3)
+        cv = WalkForwardCV(n_splits=4, extra_gap=1, test_size=3)
         results = walk_forward_evaluate(Ridge(), X, y, cv=cv)
 
         assert results.n_splits == 4
         assert results.total_samples == 12
         assert results.cv_config["n_splits"] == 4
-        assert results.cv_config["gap"] == 1
+        assert results.cv_config["extra_gap"] == 1
 
     def test_walk_forward_evaluate_sliding_window(self) -> None:
         """walk_forward_evaluate should work with sliding window."""
@@ -899,7 +900,7 @@ class TestWalkForwardEvaluate:
             n_splits=3,
             window_type="sliding",
             window_size=50,
-            gap=2,
+            extra_gap=2,
             test_size=10,
         )
 
@@ -916,7 +917,7 @@ class TestWalkForwardEvaluate:
         X = np.random.randn(100, 3)
         y = X[:, 0] * 0.5 + np.random.randn(100) * 0.1
 
-        results = walk_forward_evaluate(Ridge(), X, y, n_splits=3, gap=2, test_size=5)
+        results = walk_forward_evaluate(Ridge(), X, y, n_splits=3, extra_gap=2, test_size=5)
 
         for split in results.splits:
             assert split.train_start >= 0
@@ -1018,7 +1019,7 @@ class TestNestedWalkForwardCV:
             n_outer_splits=3,
             n_inner_splits=3,
             horizon=2,
-            gap=2,
+            extra_gap=2,
         )
 
         nested_cv.fit(X, y)
@@ -1038,13 +1039,13 @@ class TestNestedWalkForwardCV:
             n_outer_splits=3,
             n_inner_splits=3,
             horizon=3,
-            gap=3,  # Equal to horizon
+            extra_gap=3,  # Equal to horizon
         )
         nested_cv.fit(X, y)
         assert nested_cv.best_params_ is not None
 
-    def test_gap_defaults_to_horizon(self, nested_cv_data: tuple) -> None:
-        """Gap should default to horizon if not specified."""
+    def test_extra_gap_defaults_to_zero(self, nested_cv_data: tuple) -> None:
+        """New semantics: extra_gap defaults to 0 (not horizon)."""
         X, y = nested_cv_data
 
         nested_cv = NestedWalkForwardCV(
@@ -1053,22 +1054,30 @@ class TestNestedWalkForwardCV:
             n_outer_splits=3,
             n_inner_splits=3,
             horizon=4,
-            # gap not specified, should default to horizon=4
+            # extra_gap not specified, should default to 0
         )
 
-        assert nested_cv.gap == 4
+        assert nested_cv.extra_gap == 0
+        assert nested_cv.horizon == 4
+        # Total separation will be 4 + 0 = 4
 
-    def test_gap_less_than_horizon_warns(self) -> None:
-        """Gap < horizon should raise a warning."""
-        with pytest.warns(UserWarning, match="lookahead bias"):
-            NestedWalkForwardCV(
+    def test_extra_gap_less_than_horizon_allowed(self) -> None:
+        """New semantics: extra_gap < horizon is ALLOWED without warning."""
+        # This used to warn, but now it's valid without any warning
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")  # Treat warnings as errors
+            nested_cv = NestedWalkForwardCV(
                 estimator=Ridge(),
                 param_grid={"alpha": [0.1]},
                 n_outer_splits=3,
                 n_inner_splits=3,
                 horizon=5,
-                gap=2,  # Less than horizon
+                extra_gap=2,  # Less than horizon - now valid
             )
+        assert nested_cv.horizon == 5
+        assert nested_cv.extra_gap == 2
+        # Total separation will be 5 + 2 = 7
 
     def test_best_params_selection(self, nested_cv_data: tuple) -> None:
         """Best params should be from param_grid."""
@@ -1305,7 +1314,7 @@ class TestNestedWalkForwardCV:
             n_outer_splits=3,
             n_inner_splits=5,
             horizon=4,
-            gap=4,
+            extra_gap=4,
         )
         repr_str = repr(nested_cv)
         assert "NestedWalkForwardCV" in repr_str

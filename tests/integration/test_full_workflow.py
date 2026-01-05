@@ -155,7 +155,7 @@ class TestCVWithGateValidation:
         cv = WalkForwardCV(
             n_splits=5,
             window_type="expanding",
-            gap=cv_gap,
+            extra_gap=cv_gap,
             test_size=1,
         )
 
@@ -167,7 +167,7 @@ class TestCVWithGateValidation:
                 train_end_idx=int(max(train_idx)),
                 test_start_idx=int(min(test_idx)),
                 horizon=1,
-                gap=1,  # horizon(1) + gap(1) = 2, which CV guarantees
+                extra_gap=1,  # horizon(1) + gap(1) = 2, which CV guarantees
             )
             all_results.append(result)
 
@@ -194,7 +194,7 @@ class TestCVWithGateValidation:
             n_splits=3,
             window_type="sliding",
             window_size=50,
-            gap=cv_gap,
+            extra_gap=cv_gap,
             test_size=5,
         )
 
@@ -211,7 +211,7 @@ class TestCVWithGateValidation:
                 train_end_idx=int(max(train_idx)),
                 test_start_idx=int(min(test_idx)),
                 horizon=1,
-                gap=1,
+                extra_gap=1,
             )
             split_results.append(boundary_result)
 

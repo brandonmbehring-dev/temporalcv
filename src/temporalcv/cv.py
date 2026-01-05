@@ -1506,7 +1506,7 @@ class NestedWalkForwardCV:
         # Formula: total_separation = horizon + extra_gap
         if extra_gap is None:
             extra_gap = 0
-            if self.verbose >= 1:
+            if verbose >= 1:
                 warnings.warn(
                     f"extra_gap defaulting to 0. Total separation will be {horizon} (horizon only). "
                     f"For safety margin, consider extra_gap > 0.",
@@ -1714,7 +1714,7 @@ class NestedWalkForwardCV:
         outer_cv = WalkForwardCV(
             n_splits=self.n_outer_splits,
             horizon=self.horizon,
-            gap=self.gap,
+            extra_gap=self.extra_gap,
             window_type=self.window_type,
             window_size=self.window_size,
             test_size=1,
@@ -1925,7 +1925,7 @@ class NestedWalkForwardCV:
         return (
             f"NestedWalkForwardCV(search={search_type!r}, "
             f"n_outer={self.n_outer_splits}, n_inner={self.n_inner_splits}, "
-            f"horizon={self.horizon}, gap={self.gap})"
+            f"horizon={self.horizon}, extra_gap={self.extra_gap})"
         )
 
 

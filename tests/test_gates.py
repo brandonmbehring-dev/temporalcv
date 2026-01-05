@@ -643,7 +643,7 @@ class TestGateTemporalBoundary:
             train_end_idx=99,
             test_start_idx=102,
             horizon=2,
-            gap=0,
+            extra_gap=0,
         )
 
         assert result.status == GateStatus.PASS
@@ -654,7 +654,7 @@ class TestGateTemporalBoundary:
             train_end_idx=99,
             test_start_idx=100,
             horizon=2,
-            gap=0,
+            extra_gap=0,
         )
 
         assert result.status == GateStatus.HALT
@@ -666,7 +666,7 @@ class TestGateTemporalBoundary:
             train_end_idx=99,
             test_start_idx=102,
             horizon=2,
-            gap=2,  # Need 4 total
+            extra_gap=2,  # Need 4 total
         )
 
         assert result.status == GateStatus.HALT
@@ -677,13 +677,13 @@ class TestGateTemporalBoundary:
             train_end_idx=99,
             test_start_idx=104,
             horizon=2,
-            gap=1,
+            extra_gap=1,
         )
 
         assert result.details["train_end_idx"] == 99
         assert result.details["test_start_idx"] == 104
         assert result.details["horizon"] == 2
-        assert result.details["gap"] == 1
+        assert result.details["extra_gap"] == 1
 
 
 # =============================================================================

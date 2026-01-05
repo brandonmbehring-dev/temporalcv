@@ -54,7 +54,7 @@ class TestCVCoreInvariants:
         cv = WalkForwardCV(
             window_type=params["window_type"],
             window_size=params["window_size"],
-            gap=params["gap"],
+            extra_gap=params["gap"],
             test_size=params["test_size"],
         )
 
@@ -79,7 +79,7 @@ class TestCVCoreInvariants:
         cv = WalkForwardCV(
             window_type=params["window_type"],
             window_size=params["window_size"],
-            gap=gap,
+            extra_gap=gap,
             test_size=params["test_size"],
         )
 
@@ -104,7 +104,7 @@ class TestCVCoreInvariants:
         cv = WalkForwardCV(
             window_type=params["window_type"],
             window_size=params["window_size"],
-            gap=params["gap"],
+            extra_gap=params["gap"],
             test_size=params["test_size"],
         )
 
@@ -126,7 +126,7 @@ class TestCVCoreInvariants:
         cv = WalkForwardCV(
             window_type=params["window_type"],
             window_size=params["window_size"],
-            gap=params["gap"],
+            extra_gap=params["gap"],
             test_size=params["test_size"],
         )
 
@@ -156,7 +156,7 @@ class TestWindowTypeInvariants:
         cv = WalkForwardCV(
             window_type="sliding",
             window_size=window_size,
-            gap=params["gap"],
+            extra_gap=params["gap"],
             test_size=params["test_size"],
         )
 
@@ -181,7 +181,7 @@ class TestWindowTypeInvariants:
         cv = WalkForwardCV(
             window_type="expanding",
             window_size=params["window_size"],
-            gap=params["gap"],
+            extra_gap=params["gap"],
             test_size=params["test_size"],
         )
 
@@ -212,7 +212,7 @@ class TestTestSizeInvariants:
         cv = WalkForwardCV(
             window_type=params["window_type"],
             window_size=params["window_size"],
-            gap=params["gap"],
+            extra_gap=params["gap"],
             test_size=test_size,
         )
 
@@ -244,7 +244,7 @@ class TestSplitInfoInvariants:
         cv = WalkForwardCV(
             window_type=params["window_type"],
             window_size=params["window_size"],
-            gap=params["gap"],
+            extra_gap=params["gap"],
             test_size=params["test_size"],
         )
 

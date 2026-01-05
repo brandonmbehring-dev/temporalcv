@@ -14,8 +14,8 @@ Example
 >>> print(f"Best model: {result.best_model}")
 >>> print(f"MAE: {result.models[0].get_metric('mae'):.4f}")
 
-Available Classes
------------------
+.. rubric:: Available Classes
+
 ModelResult
     Result from a single model run
 ComparisonResult
@@ -29,8 +29,8 @@ NaiveAdapter
 SeasonalNaiveAdapter
     Seasonal naive baseline
 
-Available Functions
--------------------
+.. rubric:: Available Functions
+
 run_comparison
     Compare models on a single dataset
 run_benchmark_suite
@@ -40,8 +40,8 @@ compare_to_baseline
 compute_comparison_metrics
     Compute MAE, RMSE, MAPE, direction accuracy
 
-Optional Dependencies
----------------------
+.. rubric:: Optional Dependencies
+
 statsforecast : For StatsforecastAdapter
     pip install temporalcv[compare]
 """
