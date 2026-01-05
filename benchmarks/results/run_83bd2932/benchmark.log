@@ -1,0 +1,66 @@
+2025-12-31 10:01:57,148 - INFO - ============================================================
+2025-12-31 10:01:57,148 - INFO - M4/M5 Benchmark Suite
+2025-12-31 10:01:57,148 - INFO - ============================================================
+2025-12-31 10:01:57,148 - INFO - Output directory: benchmarks/results/run_83bd2932
+2025-12-31 10:01:57,148 - INFO - Sample size: 100 series/dataset
+2025-12-31 10:01:57,148 - INFO - Model set: all
+2025-12-31 10:01:57,148 - INFO - ------------------------------------------------------------
+2025-12-31 10:01:57,148 - INFO - Loading datasets...
+2025-12-31 10:02:01,900 - INFO - Loaded M4 yearly: 100 series, horizon=6
+2025-12-31 10:02:12,924 - INFO - Loaded M4 quarterly: 100 series, horizon=8
+2025-12-31 10:03:03,851 - INFO - Loaded M4 monthly: 100 series, horizon=18
+2025-12-31 10:03:05,595 - INFO - Loaded M4 weekly: 100 series, horizon=13
+2025-12-31 10:03:51,067 - INFO - Loaded M4 daily: 100 series, horizon=14
+2025-12-31 10:03:52,841 - INFO - Loaded M4 hourly: 100 series, horizon=48
+2025-12-31 10:03:52,841 - INFO - Loaded 6 datasets
+2025-12-31 10:03:53,013 - INFO - Using 9 adapters: ['Naive', 'SeasonalNaive_12', 'AutoARIMA', 'AutoETS', 'AutoTheta', 'CrostonClassic', 'ADIDA', 'IMAPA', 'HistoricAverage']
+2025-12-31 10:03:53,013 - INFO - ------------------------------------------------------------
+2025-12-31 10:03:53,013 - INFO - Running benchmark...
+2025-12-31 10:03:53,014 - WARNING - AutoARIMA failed: StatsforecastAdapter expects single series. Got shape (100, 15). Use per-series loop.
+2025-12-31 10:03:53,014 - WARNING - AutoETS failed: StatsforecastAdapter expects single series. Got shape (100, 15). Use per-series loop.
+2025-12-31 10:03:53,014 - WARNING - AutoTheta failed: StatsforecastAdapter expects single series. Got shape (100, 15). Use per-series loop.
+2025-12-31 10:03:53,014 - WARNING - CrostonClassic failed: StatsforecastAdapter expects single series. Got shape (100, 15). Use per-series loop.
+2025-12-31 10:03:53,014 - WARNING - ADIDA failed: StatsforecastAdapter expects single series. Got shape (100, 15). Use per-series loop.
+2025-12-31 10:03:53,014 - WARNING - IMAPA failed: StatsforecastAdapter expects single series. Got shape (100, 15). Use per-series loop.
+2025-12-31 10:03:53,014 - WARNING - HistoricAverage failed: StatsforecastAdapter expects single series. Got shape (100, 15). Use per-series loop.
+2025-12-31 10:03:53,015 - WARNING - AutoARIMA failed: StatsforecastAdapter expects single series. Got shape (100, 26). Use per-series loop.
+2025-12-31 10:03:53,015 - WARNING - AutoETS failed: StatsforecastAdapter expects single series. Got shape (100, 26). Use per-series loop.
+2025-12-31 10:03:53,015 - WARNING - AutoTheta failed: StatsforecastAdapter expects single series. Got shape (100, 26). Use per-series loop.
+2025-12-31 10:03:53,015 - WARNING - CrostonClassic failed: StatsforecastAdapter expects single series. Got shape (100, 26). Use per-series loop.
+2025-12-31 10:03:53,015 - WARNING - ADIDA failed: StatsforecastAdapter expects single series. Got shape (100, 26). Use per-series loop.
+2025-12-31 10:03:53,015 - WARNING - IMAPA failed: StatsforecastAdapter expects single series. Got shape (100, 26). Use per-series loop.
+2025-12-31 10:03:53,015 - WARNING - HistoricAverage failed: StatsforecastAdapter expects single series. Got shape (100, 26). Use per-series loop.
+2025-12-31 10:03:53,016 - WARNING - AutoARIMA failed: StatsforecastAdapter expects single series. Got shape (100, 66). Use per-series loop.
+2025-12-31 10:03:53,016 - WARNING - AutoETS failed: StatsforecastAdapter expects single series. Got shape (100, 66). Use per-series loop.
+2025-12-31 10:03:53,016 - WARNING - AutoTheta failed: StatsforecastAdapter expects single series. Got shape (100, 66). Use per-series loop.
+2025-12-31 10:03:53,016 - WARNING - CrostonClassic failed: StatsforecastAdapter expects single series. Got shape (100, 66). Use per-series loop.
+2025-12-31 10:03:53,016 - WARNING - ADIDA failed: StatsforecastAdapter expects single series. Got shape (100, 66). Use per-series loop.
+2025-12-31 10:03:53,016 - WARNING - IMAPA failed: StatsforecastAdapter expects single series. Got shape (100, 66). Use per-series loop.
+2025-12-31 10:03:53,016 - WARNING - HistoricAverage failed: StatsforecastAdapter expects single series. Got shape (100, 66). Use per-series loop.
+2025-12-31 10:03:53,017 - WARNING - AutoARIMA failed: StatsforecastAdapter expects single series. Got shape (100, 80). Use per-series loop.
+2025-12-31 10:03:53,017 - WARNING - AutoETS failed: StatsforecastAdapter expects single series. Got shape (100, 80). Use per-series loop.
+2025-12-31 10:03:53,017 - WARNING - AutoTheta failed: StatsforecastAdapter expects single series. Got shape (100, 80). Use per-series loop.
+2025-12-31 10:03:53,017 - WARNING - CrostonClassic failed: StatsforecastAdapter expects single series. Got shape (100, 80). Use per-series loop.
+2025-12-31 10:03:53,017 - WARNING - ADIDA failed: StatsforecastAdapter expects single series. Got shape (100, 80). Use per-series loop.
+2025-12-31 10:03:53,017 - WARNING - IMAPA failed: StatsforecastAdapter expects single series. Got shape (100, 80). Use per-series loop.
+2025-12-31 10:03:53,018 - WARNING - HistoricAverage failed: StatsforecastAdapter expects single series. Got shape (100, 80). Use per-series loop.
+2025-12-31 10:03:53,019 - WARNING - AutoARIMA failed: StatsforecastAdapter expects single series. Got shape (100, 113). Use per-series loop.
+2025-12-31 10:03:53,019 - WARNING - AutoETS failed: StatsforecastAdapter expects single series. Got shape (100, 113). Use per-series loop.
+2025-12-31 10:03:53,019 - WARNING - AutoTheta failed: StatsforecastAdapter expects single series. Got shape (100, 113). Use per-series loop.
+2025-12-31 10:03:53,019 - WARNING - CrostonClassic failed: StatsforecastAdapter expects single series. Got shape (100, 113). Use per-series loop.
+2025-12-31 10:03:53,019 - WARNING - ADIDA failed: StatsforecastAdapter expects single series. Got shape (100, 113). Use per-series loop.
+2025-12-31 10:03:53,019 - WARNING - IMAPA failed: StatsforecastAdapter expects single series. Got shape (100, 113). Use per-series loop.
+2025-12-31 10:03:53,019 - WARNING - HistoricAverage failed: StatsforecastAdapter expects single series. Got shape (100, 113). Use per-series loop.
+2025-12-31 10:03:53,020 - WARNING - AutoARIMA failed: StatsforecastAdapter expects single series. Got shape (100, 700). Use per-series loop.
+2025-12-31 10:03:53,020 - WARNING - AutoETS failed: StatsforecastAdapter expects single series. Got shape (100, 700). Use per-series loop.
+2025-12-31 10:03:53,020 - WARNING - AutoTheta failed: StatsforecastAdapter expects single series. Got shape (100, 700). Use per-series loop.
+2025-12-31 10:03:53,020 - WARNING - CrostonClassic failed: StatsforecastAdapter expects single series. Got shape (100, 700). Use per-series loop.
+2025-12-31 10:03:53,020 - WARNING - ADIDA failed: StatsforecastAdapter expects single series. Got shape (100, 700). Use per-series loop.
+2025-12-31 10:03:53,020 - WARNING - IMAPA failed: StatsforecastAdapter expects single series. Got shape (100, 700). Use per-series loop.
+2025-12-31 10:03:53,021 - WARNING - HistoricAverage failed: StatsforecastAdapter expects single series. Got shape (100, 700). Use per-series loop.
+2025-12-31 10:03:53,021 - INFO - Benchmark completed in 0.0 minutes
+2025-12-31 10:03:53,022 - INFO - ------------------------------------------------------------
+2025-12-31 10:03:53,022 - INFO - Saving results...
+2025-12-31 10:03:53,022 - INFO - ------------------------------------------------------------
+2025-12-31 10:03:53,022 - INFO - SUMMARY
+2025-12-31 10:03:53,022 - INFO - ------------------------------------------------------------

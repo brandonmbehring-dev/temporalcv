@@ -225,23 +225,25 @@ def demonstrate_leakage_detection():
     # Use Ridge regression (less prone to overfitting)
     model_clean = Ridge(alpha=1.0)
 
-    # Run shuffled target test with realistic threshold
+    # Run shuffled target test (permutation mode - default)
     # For high-persistence data, models WILL beat shuffled significantly
     # because lag features genuinely predict the target
+    # Note: With permutation mode, metric_value is the p-value
     result_clean = gate_shuffled_target(
         model=model_clean,
         X=X_clean,
         y=y_clean,
-        n_shuffles=10,
-        threshold=0.90,  # High threshold for comparison
+        n_shuffles=100,  # Need >=100 for statistical power in permutation mode
         random_state=42,
     )
 
-    improvement_clean = result_clean.metric_value
+    pvalue_clean = result_clean.metric_value  # p-value in permutation mode
+    improvement_clean = result_clean.details.get("improvement_ratio", 0.0)
     print(f"\nShuffled Target Test Result: {result_clean}")
     print(f"  - MAE (real target): {result_clean.details['mae_real']:.4f}")
     print(f"  - MAE (shuffled avg): {result_clean.details['mae_shuffled_avg']:.4f}")
-    print(f"  - Improvement over shuffled: {improvement_clean:.1%}")
+    print(f"  - P-value: {pvalue_clean:.4f}")
+    print(f"  - Improvement ratio: {improvement_clean:.1%}")
 
     # =========================================================================
     # Scenario 2: Leaky Features (Should show MUCH higher improvement)
@@ -261,16 +263,17 @@ def demonstrate_leakage_detection():
         model=model_leaky,
         X=X_leaky,
         y=y_leaky,
-        n_shuffles=10,
-        threshold=0.90,  # Same threshold
+        n_shuffles=100,  # Need >=100 for statistical power in permutation mode
         random_state=42,
     )
 
-    improvement_leaky = result_leaky.metric_value
+    pvalue_leaky = result_leaky.metric_value  # p-value in permutation mode
+    improvement_leaky = result_leaky.details.get("improvement_ratio", 0.0)
     print(f"\nShuffled Target Test Result: {result_leaky}")
     print(f"  - MAE (real target): {result_leaky.details['mae_real']:.4f}")
     print(f"  - MAE (shuffled avg): {result_leaky.details['mae_shuffled_avg']:.4f}")
-    print(f"  - Improvement over shuffled: {improvement_leaky:.1%}")
+    print(f"  - P-value: {pvalue_leaky:.4f}")
+    print(f"  - Improvement ratio: {improvement_leaky:.1%}")
 
     # =========================================================================
     # Compare the two scenarios
@@ -301,21 +304,27 @@ def demonstrate_leakage_detection():
     print("\nRunning gates with production thresholds...")
 
     # Compute baseline for suspicious improvement gate
-    persistence_preds = np.roll(y_clean, 1)
-    persistence_preds[0] = y_clean[0]
-    persistence_mae = np.mean(np.abs(y_clean - persistence_preds))
+    # Use train-test split for OUT-OF-SAMPLE evaluation
+    split_idx = int(len(y_clean) * 0.8)
+    X_train, X_test = X_clean[:split_idx], X_clean[split_idx:]
+    y_train, y_test = y_clean[:split_idx], y_clean[split_idx:]
 
-    model_clean.fit(X_clean, y_clean)
-    model_preds = model_clean.predict(X_clean)
-    model_mae = np.mean(np.abs(y_clean - model_preds))
+    # Persistence baseline on TEST data
+    persistence_preds = X_test[:, 0]  # First lag is y[t-1]
+    persistence_mae = np.mean(np.abs(y_test - persistence_preds))
+
+    # Model predictions on TEST data (out-of-sample)
+    model_clean.fit(X_train, y_train)
+    model_preds = model_clean.predict(X_test)
+    model_mae = np.mean(np.abs(y_test - model_preds))
 
     # Run multiple gates with production thresholds
+    # In permutation mode (default), gate HALTs if p-value < alpha (0.05)
     result_shuffled = gate_shuffled_target(
         model=Ridge(alpha=1.0),
         X=X_leaky,  # Test the LEAKY features
         y=y_leaky,
-        n_shuffles=10,
-        threshold=0.95,  # HALT if >95% improvement (extreme leakage)
+        n_shuffles=100,  # Need >=100 for statistical power in permutation mode
         random_state=42,
     )
 

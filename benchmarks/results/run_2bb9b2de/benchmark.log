@@ -1,0 +1,24 @@
+2025-12-31 10:05:11,595 - INFO - ============================================================
+2025-12-31 10:05:11,595 - INFO - M4/M5 Benchmark Suite
+2025-12-31 10:05:11,595 - INFO - ============================================================
+2025-12-31 10:05:11,595 - INFO - Output directory: benchmarks/results/run_2bb9b2de
+2025-12-31 10:05:11,595 - INFO - Sample size: 100 series/dataset
+2025-12-31 10:05:11,595 - INFO - Model set: all
+2025-12-31 10:05:11,595 - INFO - ------------------------------------------------------------
+2025-12-31 10:05:11,595 - INFO - Loading datasets...
+2025-12-31 10:05:16,389 - INFO - Loaded M4 yearly: 100 series, horizon=6
+2025-12-31 10:05:27,701 - INFO - Loaded M4 quarterly: 100 series, horizon=8
+2025-12-31 10:06:20,016 - INFO - Loaded M4 monthly: 100 series, horizon=18
+2025-12-31 10:06:21,776 - INFO - Loaded M4 weekly: 100 series, horizon=13
+2025-12-31 10:07:06,780 - INFO - Loaded M4 daily: 100 series, horizon=14
+2025-12-31 10:07:08,564 - INFO - Loaded M4 hourly: 100 series, horizon=48
+2025-12-31 10:07:08,564 - INFO - Loaded 6 datasets
+2025-12-31 10:07:08,734 - INFO - Using 9 adapters: ['Naive', 'SeasonalNaive_12', 'AutoARIMA_multi', 'AutoETS_multi', 'AutoTheta_multi', 'CrostonClassic_multi', 'ADIDA_multi', 'IMAPA_multi', 'HistoricAverage_multi']
+2025-12-31 10:07:08,734 - INFO - ------------------------------------------------------------
+2025-12-31 10:07:08,734 - INFO - Running benchmark...
+2025-12-31 10:10:44,971 - INFO - Benchmark completed in 3.6 minutes
+2025-12-31 10:10:44,971 - INFO - ------------------------------------------------------------
+2025-12-31 10:10:44,971 - INFO - Saving results...
+2025-12-31 10:10:44,980 - INFO - ------------------------------------------------------------
+2025-12-31 10:10:44,980 - INFO - SUMMARY
+2025-12-31 10:10:44,980 - INFO - ------------------------------------------------------------

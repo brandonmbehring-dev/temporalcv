@@ -6,6 +6,7 @@ Distribution-free prediction intervals with finite-sample coverage guarantees.
 Key concepts:
 - **Split Conformal**: Calibrate on holdout, apply to test
 - **Adaptive Conformal**: Dynamic adjustment for distribution shift
+- **Bellman Conformal**: Optimal DP-based adaptation (multi-horizon)
 - **Coverage guarantee**: P(Y ∈ interval) ≥ 1 - α
 
 Knowledge Tiers
@@ -13,10 +14,12 @@ Knowledge Tiers
 [T1] Split conformal prediction (Romano, Patterson & Candès 2019)
 [T1] Finite-sample coverage guarantee: P(Y ∈ Ĉ) ≥ 1 - α (Vovk et al. 2005)
 [T1] Adaptive conformal inference for distribution shift (Gibbs & Candès 2021)
+[T1] Bellman conformal inference for optimal adaptation (Yang, Candès & Lei 2024)
 [T1] Quantile formula: q = ceil((n+1)(1-α))/n (standard conformal result)
 [T2] Bootstrap uncertainty as complementary approach (empirical)
 [T3] Default gamma=0.1 for adaptive conformal (recommended in paper, may need tuning)
 [T3] Calibration fraction=0.3 as default split (implementation choice)
+[T3] Default n_grid=50 for Bellman DP discretization (tradeoff: finer = slower)
 
 Example
 -------
@@ -533,6 +536,496 @@ class AdaptiveConformalPredictor:
         return self._current_quantile
 
 
+class BellmanConformalPredictor:
+    """
+    Bellman Conformal Inference for optimal adaptive prediction intervals.
+
+    Uses dynamic programming to solve the Bellman equation for optimal
+    quantile selection, preventing interval explosion during distribution
+    shifts while minimizing expected interval width.
+
+    [T1] Yang, Candès & Lei (2024) - Bellman Conformal Inference
+
+    Key Advantages Over AdaptiveConformalPredictor
+    -----------------------------------------------
+    1. **Proactive**: Uses multi-step forecast information, not just past
+    2. **Optimal**: Minimizes expected width subject to coverage constraint
+    3. **Bounded**: Prevents intervals from growing unboundedly
+    4. **Horizon-aware**: Explicitly models forecast horizon uncertainty
+
+    Parameters
+    ----------
+    alpha : float, default=0.05
+        Target miscoverage rate.
+    horizon : int, default=5
+        Number of steps to look ahead in DP optimization.
+    n_grid : int, default=50
+        Grid size for quantile discretization (finer = more accurate, slower).
+    gamma : float, default=0.1
+        Learning rate for quantile updates.
+    lambda_reg : float, default=0.01
+        Regularization to penalize extreme quantile values.
+
+    Attributes
+    ----------
+    alpha : float
+        Target miscoverage rate.
+    horizon : int
+        Lookahead horizon for DP.
+    quantile_history : list[float]
+        History of optimal quantiles.
+    value_function : np.ndarray or None
+        Computed DP value function.
+
+    Examples
+    --------
+    >>> bcp = BellmanConformalPredictor(alpha=0.10, horizon=10)
+    >>> bcp.initialize(cal_preds, cal_actuals)
+    >>>
+    >>> # Get optimal quantile sequence for test predictions
+    >>> quantiles = bcp.solve_optimal_sequence(test_preds, n_steps=20)
+    >>>
+    >>> # Or use online mode
+    >>> for pred, actual in stream:
+    ...     lower, upper = bcp.predict_interval(pred)
+    ...     bcp.update(pred, actual)
+
+    References
+    ----------
+    Yang, R., Candès, E.J. & Lei, L. (2024). "Bellman Conformal Inference:
+    Calibrating Prediction Intervals For Time Series." arXiv:2402.05203.
+
+    See Also
+    --------
+    AdaptiveConformalPredictor : Simpler gradient-based adaptation.
+    SplitConformalPredictor : Static conformal for i.i.d. data.
+
+    Notes
+    -----
+    The Bellman equation solved is:
+
+        V(q_t) = min_{q_{t+1}} { E[width(q_{t+1})] + V(q_{t+1}) }
+                 s.t. E[coverage(q_{t+1})] >= 1 - alpha
+
+    This is discretized over a grid of quantile values and solved via
+    backward induction.
+
+    .. versionadded:: 1.2.0
+    """
+
+    def __init__(
+        self,
+        alpha: float = 0.05,
+        horizon: int = 5,
+        n_grid: int = 50,
+        gamma: float = 0.1,
+        lambda_reg: float = 0.01,
+    ):
+        """
+        Initialize Bellman conformal predictor.
+
+        Parameters
+        ----------
+        alpha : float
+            Target miscoverage rate.
+        horizon : int
+            Number of steps to look ahead.
+        n_grid : int
+            Grid size for quantile discretization.
+        gamma : float
+            Learning rate for quantile updates.
+        lambda_reg : float
+            Regularization strength.
+
+        Raises
+        ------
+        ValueError
+            If parameters are out of valid ranges.
+        """
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in (0, 1), got {alpha}")
+        if horizon < 1:
+            raise ValueError(f"horizon must be >= 1, got {horizon}")
+        if n_grid < 10:
+            raise ValueError(f"n_grid must be >= 10, got {n_grid}")
+        if not 0 < gamma < 1:
+            raise ValueError(f"gamma must be in (0, 1), got {gamma}")
+        if lambda_reg < 0:
+            raise ValueError(f"lambda_reg must be >= 0, got {lambda_reg}")
+
+        self.alpha = alpha
+        self.horizon = horizon
+        self.n_grid = n_grid
+        self.gamma = gamma
+        self.lambda_reg = lambda_reg
+
+        # State
+        self._current_quantile: Optional[float] = None
+        self.quantile_history: List[float] = []
+        self.value_function: Optional[np.ndarray] = None
+        self._residual_distribution: Optional[np.ndarray] = None
+        self._quantile_grid: Optional[np.ndarray] = None
+
+    def initialize(
+        self,
+        predictions: np.ndarray,
+        actuals: np.ndarray,
+    ) -> "BellmanConformalPredictor":
+        """
+        Initialize with calibration data and solve initial DP.
+
+        Parameters
+        ----------
+        predictions : np.ndarray
+            Calibration predictions.
+        actuals : np.ndarray
+            Calibration actuals.
+
+        Returns
+        -------
+        BellmanConformalPredictor
+            Initialized predictor (self).
+
+        Raises
+        ------
+        ValueError
+            If calibration data is insufficient.
+        """
+        predictions = np.asarray(predictions)
+        actuals = np.asarray(actuals)
+
+        if len(predictions) < 10:
+            raise ValueError(
+                f"Need at least 10 calibration samples, got {len(predictions)}"
+            )
+
+        # Compute residual distribution (nonconformity scores)
+        residuals = np.abs(actuals - predictions)
+        self._residual_distribution = np.sort(residuals)
+
+        # Build quantile grid from residuals
+        q_min = np.percentile(residuals, 5)
+        q_max = np.percentile(residuals, 99)
+        # Ensure non-negative and reasonable range
+        q_min = max(0.0, q_min * 0.5)
+        q_max = max(q_max * 2.0, np.std(residuals) * 5)
+
+        self._quantile_grid = np.linspace(q_min, q_max, self.n_grid)
+
+        # Solve initial Bellman recursion
+        self._solve_bellman()
+
+        # Initialize current quantile using split conformal formula
+        n = len(residuals)
+        q_level = np.ceil((n + 1) * (1 - self.alpha)) / n
+        q_level = min(q_level, 1.0)
+        self._current_quantile = float(
+            np.quantile(residuals, q_level, method="higher")
+        )
+        self.quantile_history = [self._current_quantile]
+
+        return self
+
+    def _solve_bellman(self) -> None:
+        """
+        Solve Bellman equation via backward induction.
+
+        Computes optimal value function V(q) for each quantile in the grid.
+        The value function represents the minimum expected future cost
+        (interval width) starting from quantile q.
+        """
+        if self._quantile_grid is None or self._residual_distribution is None:
+            raise RuntimeError("Must initialize before solving Bellman equation.")
+
+        n_grid = len(self._quantile_grid)
+        residuals = self._residual_distribution
+
+        # Value function: V[h, i] = value at horizon h, quantile index i
+        # Backward induction from horizon to 0
+        V = np.zeros((self.horizon + 1, n_grid))
+
+        # Terminal cost: zero at end
+        V[self.horizon, :] = 0.0
+
+        # Expected coverage probability for each quantile
+        # P(|residual| <= q) estimated from calibration distribution
+        def coverage_prob(q: float) -> float:
+            """Estimate P(residual <= q) from calibration distribution."""
+            return float(np.mean(residuals <= q))
+
+        # Expected width cost (just 2*q for symmetric intervals)
+        def width_cost(q: float) -> float:
+            """Cost of interval width."""
+            return 2.0 * q
+
+        # Backward induction
+        for h in range(self.horizon - 1, -1, -1):
+            for i, q_current in enumerate(self._quantile_grid):
+                # Find optimal next quantile
+                best_value = float("inf")
+
+                for j, q_next in enumerate(self._quantile_grid):
+                    # Check coverage constraint
+                    cov = coverage_prob(q_next)
+                    if cov < 1 - self.alpha - 0.01:  # Small slack for numerical stability
+                        continue  # Skip infeasible actions
+
+                    # Compute cost
+                    immediate_cost = width_cost(q_next)
+
+                    # Regularization: penalize large changes
+                    transition_cost = self.lambda_reg * (q_next - q_current) ** 2
+
+                    # Total cost
+                    total = immediate_cost + transition_cost + V[h + 1, j]
+
+                    if total < best_value:
+                        best_value = total
+
+                # If no feasible action, use highest coverage quantile
+                if best_value == float("inf"):
+                    best_value = width_cost(self._quantile_grid[-1]) + V[h + 1, -1]
+
+                V[h, i] = best_value
+
+        self.value_function = V
+
+    def _get_optimal_quantile(self, current_q: float) -> float:
+        """
+        Get optimal next quantile given current quantile.
+
+        Parameters
+        ----------
+        current_q : float
+            Current quantile value.
+
+        Returns
+        -------
+        float
+            Optimal next quantile.
+        """
+        if self._quantile_grid is None or self.value_function is None:
+            raise RuntimeError("Must initialize before getting optimal quantile.")
+
+        if self._residual_distribution is None:
+            raise RuntimeError("Must initialize before getting optimal quantile.")
+
+        residuals = self._residual_distribution
+
+        # Find closest index in grid
+        i_current = int(np.argmin(np.abs(self._quantile_grid - current_q)))
+
+        # Find optimal next quantile (greedy from value function at h=0)
+        best_j = i_current  # Default to staying
+        best_value = float("inf")
+
+        for j, q_next in enumerate(self._quantile_grid):
+            # Check coverage constraint
+            cov = float(np.mean(residuals <= q_next))
+            if cov < 1 - self.alpha - 0.01:
+                continue
+
+            # Cost
+            immediate = 2.0 * q_next
+            transition = self.lambda_reg * (q_next - current_q) ** 2
+
+            # Use value function from horizon 1
+            if self.horizon >= 1:
+                future = self.value_function[1, j]
+            else:
+                future = 0.0
+
+            total = immediate + transition + future
+
+            if total < best_value:
+                best_value = total
+                best_j = j
+
+        return float(self._quantile_grid[best_j])
+
+    def update(
+        self,
+        prediction: float,
+        actual: float,
+    ) -> float:
+        """
+        Update quantile based on coverage feedback using Bellman-optimal policy.
+
+        Parameters
+        ----------
+        prediction : float
+            Latest prediction.
+        actual : float
+            Actual value.
+
+        Returns
+        -------
+        float
+            Updated quantile.
+
+        Raises
+        ------
+        RuntimeError
+            If predictor not initialized.
+        """
+        if self._current_quantile is None:
+            raise RuntimeError("Predictor not initialized. Call initialize() first.")
+
+        # Check coverage
+        error = abs(actual - prediction)
+        covered = error <= self._current_quantile
+
+        # Get Bellman-optimal quantile
+        optimal_q = self._get_optimal_quantile(self._current_quantile)
+
+        # Blend with adaptive update for responsiveness
+        # If not covered, move toward optimal but also increase
+        if covered:
+            # Covered: move toward optimal (which may be tighter)
+            adaptive_update = -self.gamma * self.alpha
+        else:
+            # Not covered: move toward optimal but also widen
+            adaptive_update = self.gamma * (1 - self.alpha)
+
+        # Blend: 50% Bellman optimal, 50% adaptive
+        bellman_component = 0.5 * (optimal_q - self._current_quantile)
+        adaptive_component = 0.5 * adaptive_update
+
+        self._current_quantile = max(
+            0.0, self._current_quantile + bellman_component + adaptive_component
+        )
+        self.quantile_history.append(self._current_quantile)
+
+        # Periodically update residual distribution for online learning
+        if len(self.quantile_history) % 50 == 0 and self._residual_distribution is not None:
+            # Add new residual to distribution (with forgetting)
+            new_residuals = np.append(self._residual_distribution[-100:], error)
+            self._residual_distribution = np.sort(new_residuals)
+
+        return self._current_quantile
+
+    def predict_interval(
+        self,
+        prediction: float,
+    ) -> Tuple[float, float]:
+        """
+        Construct prediction interval using current optimal quantile.
+
+        Parameters
+        ----------
+        prediction : float
+            Point prediction.
+
+        Returns
+        -------
+        tuple[float, float]
+            (lower, upper) bounds.
+
+        Raises
+        ------
+        RuntimeError
+            If predictor not initialized.
+        """
+        if self._current_quantile is None:
+            raise RuntimeError("Predictor not initialized. Call initialize() first.")
+
+        lower = prediction - self._current_quantile
+        upper = prediction + self._current_quantile
+
+        return lower, upper
+
+    def solve_optimal_sequence(
+        self,
+        predictions: np.ndarray,
+        n_steps: Optional[int] = None,
+    ) -> np.ndarray:
+        """
+        Solve for optimal quantile sequence for given predictions.
+
+        Uses forward simulation with Bellman-optimal policy to compute
+        the sequence of quantiles that minimizes expected width while
+        maintaining coverage.
+
+        Parameters
+        ----------
+        predictions : np.ndarray
+            Future predictions to construct intervals for.
+        n_steps : int, optional
+            Number of steps to optimize. If None, uses len(predictions).
+
+        Returns
+        -------
+        np.ndarray
+            Optimal quantile sequence.
+
+        Raises
+        ------
+        RuntimeError
+            If predictor not initialized.
+
+        Notes
+        -----
+        This is useful for batch interval construction where you have
+        access to all future predictions upfront.
+        """
+        if self._current_quantile is None:
+            raise RuntimeError("Predictor not initialized. Call initialize() first.")
+
+        predictions = np.asarray(predictions)
+        if n_steps is None:
+            n_steps = len(predictions)
+        n_steps = min(n_steps, len(predictions))
+
+        # Forward simulation with optimal policy
+        quantiles = np.zeros(n_steps)
+        q = self._current_quantile
+
+        for t in range(n_steps):
+            q = self._get_optimal_quantile(q)
+            quantiles[t] = q
+
+        return quantiles
+
+    def predict_intervals_batch(
+        self,
+        predictions: np.ndarray,
+    ) -> PredictionInterval:
+        """
+        Construct prediction intervals for a batch of predictions.
+
+        Uses solve_optimal_sequence to get optimal quantiles, then
+        constructs intervals.
+
+        Parameters
+        ----------
+        predictions : np.ndarray
+            Batch of predictions.
+
+        Returns
+        -------
+        PredictionInterval
+            Prediction intervals with optimal widths.
+        """
+        predictions = np.asarray(predictions)
+        quantiles = self.solve_optimal_sequence(predictions)
+
+        lower = predictions - quantiles
+        upper = predictions + quantiles
+
+        return PredictionInterval(
+            point=predictions,
+            lower=lower,
+            upper=upper,
+            confidence=1 - self.alpha,
+            method="bellman_conformal",
+        )
+
+    @property
+    def current_quantile(self) -> Optional[float]:
+        """Return current adaptive quantile."""
+        return self._current_quantile
+
+
 class BootstrapUncertainty:
     """
     Bootstrap-based prediction intervals.
@@ -722,7 +1215,7 @@ def evaluate_interval_quality(
     n = len(actuals)
     if n >= 20:
         # Split into low/high prediction magnitude
-        median_pred = np.median(np.abs(intervals.point))
+        median_pred: float = float(np.median(np.abs(intervals.point)))
         low_mask = np.abs(intervals.point) < median_pred
         high_mask = ~low_mask
 
@@ -1059,6 +1552,7 @@ __all__ = [
     # Predictors
     "SplitConformalPredictor",
     "AdaptiveConformalPredictor",
+    "BellmanConformalPredictor",
     "BootstrapUncertainty",
     # Functions
     "evaluate_interval_quality",

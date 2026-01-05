@@ -1,0 +1,277 @@
+{
+  "metadata": {
+    "run_id": "a2e42c15",
+    "timestamp": "2025-12-31T15:07:15.200729+00:00",
+    "temporalcv_version": "0.1.0",
+    "python_version": "3.13.7",
+    "platform": "Linux",
+    "cpu_count": 128
+  },
+  "report": {
+    "results": [
+      {
+        "dataset_name": "m4_quarterly",
+        "models": [
+          {
+            "model_name": "Naive",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 613.1002433822467,
+              "rmse": 1452.9541014258364,
+              "mape": 15.749229457708843,
+              "direction_accuracy": 0.13642052565707133
+            },
+            "runtime_seconds": 3.5536999348551035e-05,
+            "model_params": {}
+          },
+          {
+            "model_name": "SeasonalNaive_12",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 859.0440194861436,
+              "rmse": 1722.9001261232854,
+              "mape": 21.353940613997143,
+              "direction_accuracy": 0.6808510638297872
+            },
+            "runtime_seconds": 0.00042065599700435996,
+            "model_params": {
+              "season_length": 12
+            }
+          },
+          {
+            "model_name": "AutoARIMA_multi",
+            "package": "statsforecast",
+            "metrics": {
+              "mae": 675.8951698296124,
+              "rmse": 1611.3807367590555,
+              "mape": 17.769388809108545,
+              "direction_accuracy": 0.6082603254067585
+            },
+            "runtime_seconds": 1.6357877000118606,
+            "model_params": {
+              "model": "AutoARIMA",
+              "season_length": 12,
+              "frequency": "W",
+              "n_jobs": 8,
+              "base_adapter": "AutoARIMA"
+            }
+          },
+          {
+            "model_name": "AutoETS_multi",
+            "package": "statsforecast",
+            "metrics": {
+              "mae": 636.8784960448825,
+              "rmse": 1541.199573549249,
+              "mape": 16.585110166113644,
+              "direction_accuracy": 0.43929912390488113
+            },
+            "runtime_seconds": 0.47992573500960134,
+            "model_params": {
+              "model": "AutoETS",
+              "season_length": 12,
+              "frequency": "W",
+              "n_jobs": 8,
+              "base_adapter": "AutoETS"
+            }
+          },
+          {
+            "model_name": "AutoTheta_multi",
+            "package": "statsforecast",
+            "metrics": {
+              "mae": 611.523505994872,
+              "rmse": 1440.0773238077238,
+              "mape": 16.44653759566902,
+              "direction_accuracy": 0.6082603254067585
+            },
+            "runtime_seconds": 0.14796431802096777,
+            "model_params": {
+              "model": "AutoTheta",
+              "season_length": 12,
+              "frequency": "W",
+              "n_jobs": 8,
+              "base_adapter": "AutoTheta"
+            }
+          },
+          {
+            "model_name": "CrostonClassic_multi",
+            "package": "statsforecast",
+            "metrics": {
+              "mae": 786.6834858834321,
+              "rmse": 1635.7726307748173,
+              "mape": 18.899013013270004,
+              "direction_accuracy": 0.13516896120150187
+            },
+            "runtime_seconds": 0.06298861600225791,
+            "model_params": {
+              "model": "CrostonClassic",
+              "season_length": 1,
+              "frequency": "W",
+              "n_jobs": 8,
+              "base_adapter": "CrostonClassic"
+            }
+          },
+          {
+            "model_name": "ADIDA_multi",
+            "package": "statsforecast",
+            "metrics": {
+              "mae": 660.3799199636959,
+              "rmse": 1496.779234880448,
+              "mape": 16.291160468161063,
+              "direction_accuracy": 0.13516896120150187
+            },
+            "runtime_seconds": 0.07323187499423511,
+            "model_params": {
+              "model": "ADIDA",
+              "season_length": 1,
+              "frequency": "W",
+              "n_jobs": 8,
+              "base_adapter": "ADIDA"
+            }
+          },
+          {
+            "model_name": "IMAPA_multi",
+            "package": "statsforecast",
+            "metrics": {
+              "mae": 660.3799199636959,
+              "rmse": 1496.779234880448,
+              "mape": 16.291160468161063,
+              "direction_accuracy": 0.13516896120150187
+            },
+            "runtime_seconds": 0.06593283600523137,
+            "model_params": {
+              "model": "IMAPA",
+              "season_length": 1,
+              "frequency": "W",
+              "n_jobs": 8,
+              "base_adapter": "IMAPA"
+            }
+          },
+          {
+            "model_name": "HistoricAverage_multi",
+            "package": "statsforecast",
+            "metrics": {
+              "mae": 903.0084530428434,
+              "rmse": 1779.6781606265454,
+              "mape": 21.851978302701372,
+              "direction_accuracy": 0.13141426783479349
+            },
+            "runtime_seconds": 0.052284445002442226,
+            "model_params": {
+              "model": "HistoricAverage",
+              "season_length": 1,
+              "frequency": "W",
+              "n_jobs": 8,
+              "base_adapter": "HistoricAverage"
+            }
+          }
+        ],
+        "primary_metric": "mae",
+        "best_model": "AutoTheta_multi",
+        "statistical_tests": {
+          "Naive": {
+            "statistic": -0.049684654706981815,
+            "p_value": 0.9603861022814169,
+            "significant": false
+          },
+          "SeasonalNaive_12": {
+            "statistic": -4.2844341249840205,
+            "p_value": 2.05529434653684e-05,
+            "significant": true
+          },
+          "AutoARIMA_multi": {
+            "statistic": -1.3419646624154595,
+            "p_value": 0.17998867264670526,
+            "significant": false
+          },
+          "AutoETS_multi": {
+            "statistic": -0.6969372058121268,
+            "p_value": 0.48604480861496757,
+            "significant": false
+          },
+          "CrostonClassic_multi": {
+            "statistic": -2.8820810230527183,
+            "p_value": 0.0040565062932047535,
+            "significant": true
+          },
+          "ADIDA_multi": {
+            "statistic": -1.3674934705774593,
+            "p_value": 0.1718552182126334,
+            "significant": false
+          },
+          "IMAPA_multi": {
+            "statistic": -1.3674934705774593,
+            "p_value": 0.1718552182126334,
+            "significant": false
+          },
+          "HistoricAverage_multi": {
+            "statistic": -3.8343458596944258,
+            "p_value": 0.00013580371980759232,
+            "significant": true
+          }
+        }
+      }
+    ],
+    "summary": {
+      "n_datasets": 1,
+      "wins_by_model": {
+        "AutoTheta_multi": 1
+      },
+      "mean_metrics_by_model": {
+        "Naive": {
+          "mae": 613.1002433822467,
+          "rmse": 1452.9541014258364,
+          "mape": 15.749229457708843,
+          "direction_accuracy": 0.13642052565707133
+        },
+        "SeasonalNaive_12": {
+          "mae": 859.0440194861436,
+          "rmse": 1722.9001261232854,
+          "mape": 21.353940613997143,
+          "direction_accuracy": 0.6808510638297872
+        },
+        "AutoARIMA_multi": {
+          "mae": 675.8951698296124,
+          "rmse": 1611.3807367590555,
+          "mape": 17.769388809108545,
+          "direction_accuracy": 0.6082603254067585
+        },
+        "AutoETS_multi": {
+          "mae": 636.8784960448825,
+          "rmse": 1541.199573549249,
+          "mape": 16.585110166113644,
+          "direction_accuracy": 0.43929912390488113
+        },
+        "AutoTheta_multi": {
+          "mae": 611.523505994872,
+          "rmse": 1440.0773238077238,
+          "mape": 16.44653759566902,
+          "direction_accuracy": 0.6082603254067585
+        },
+        "CrostonClassic_multi": {
+          "mae": 786.6834858834321,
+          "rmse": 1635.7726307748173,
+          "mape": 18.899013013270004,
+          "direction_accuracy": 0.13516896120150187
+        },
+        "ADIDA_multi": {
+          "mae": 660.3799199636959,
+          "rmse": 1496.779234880448,
+          "mape": 16.291160468161063,
+          "direction_accuracy": 0.13516896120150187
+        },
+        "IMAPA_multi": {
+          "mae": 660.3799199636959,
+          "rmse": 1496.779234880448,
+          "mape": 16.291160468161063,
+          "direction_accuracy": 0.13516896120150187
+        },
+        "HistoricAverage_multi": {
+          "mae": 903.0084530428434,
+          "rmse": 1779.6781606265454,
+          "mape": 21.851978302701372,
+          "direction_accuracy": 0.13141426783479349
+        }
+      }
+    }
+  }
+}

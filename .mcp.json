@@ -10,7 +10,7 @@
       "description": "Direct filesystem access to temporalcv project"
     },
     "research-kb": {
-      "command": "python",
+      "command": "/home/brandon_behring/Claude/research-kb/venv/bin/python",
       "args": ["-m", "research_kb_mcp.server"],
       "cwd": "/home/brandon_behring/Claude/research-kb",
       "description": "Search statistical/ML literature - 120 papers + 76 textbooks with FTS+vector+graph"

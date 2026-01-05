@@ -147,12 +147,12 @@ def detect_changepoints_variance(
     # Use robust baseline: median absolute deviation of first differences
     # This is not affected by the level shift itself
     diffs = np.diff(arr)
-    baseline_mad = np.median(np.abs(diffs - np.median(diffs)))
+    baseline_mad: float = float(np.median(np.abs(diffs - np.median(diffs))))
     # Convert MAD to approximate std: std ≈ MAD * 1.4826
     baseline_std = baseline_mad * 1.4826
 
     if baseline_std < 1e-10:
-        baseline_std = np.std(arr)  # Fallback for constant series
+        baseline_std = float(np.std(arr))  # Fallback for constant series
     if baseline_std < 1e-10:
         # Truly constant series - no changepoints
         return ChangepointResult(
@@ -485,7 +485,7 @@ def classify_regimes_from_changepoints(
             high_thresh = overall_val * 1.5
 
     # Assign regime labels
-    regimes = np.empty(n, dtype=object)
+    regimes: np.ndarray = np.empty(n, dtype=object)
     for i, (start, end) in enumerate(zip(cp_indices[:-1], cp_indices[1:])):
         val = segment_values[i]
         if val < low_thresh:
@@ -549,7 +549,7 @@ def create_regime_indicators(
     cp_indices = [cp.index for cp in cp_list]
 
     # Periods since last changepoint
-    periods_since = np.zeros(n, dtype=int)
+    periods_since: np.ndarray = np.zeros(n, dtype=int)
     last_cp = -1  # Before series start
     for i in range(n):
         if i in cp_indices:

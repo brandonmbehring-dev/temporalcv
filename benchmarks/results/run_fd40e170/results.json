@@ -1,0 +1,84 @@
+{
+  "metadata": {
+    "run_id": "d067d222",
+    "timestamp": "2025-12-31T14:43:42.535310+00:00",
+    "temporalcv_version": "0.1.0",
+    "python_version": "3.13.7",
+    "platform": "Linux",
+    "cpu_count": 128,
+    "models": [
+      "Naive",
+      "SeasonalNaive_12"
+    ],
+    "datasets": [
+      "m4_monthly"
+    ],
+    "total_runtime_seconds": 0.0013482609938364476,
+    "sample_size": 10,
+    "model_set": "baseline"
+  },
+  "report": {
+    "results": [
+      {
+        "dataset_name": "m4_monthly",
+        "models": [
+          {
+            "model_name": "Naive",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 582.3092777777778,
+              "rmse": 1008.487222715566,
+              "mape": 24.374408065745275,
+              "direction_accuracy": 0.1005586592178771
+            },
+            "runtime_seconds": 3.702001413330436e-05,
+            "model_params": {}
+          },
+          {
+            "model_name": "SeasonalNaive_12",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 796.2258333333333,
+              "rmse": 1263.2884954820186,
+              "mape": 20.62931156114929,
+              "direction_accuracy": 0.5698324022346368
+            },
+            "runtime_seconds": 4.7128996811807156e-05,
+            "model_params": {
+              "season_length": 12
+            }
+          }
+        ],
+        "primary_metric": "mae",
+        "best_model": "Naive",
+        "statistical_tests": {
+          "SeasonalNaive_12": {
+            "statistic": -1.1829655510681838,
+            "p_value": 0.23839161809037868,
+            "significant": false
+          }
+        }
+      }
+    ],
+    "summary": {
+      "n_datasets": 1,
+      "wins_by_model": {
+        "Naive": 1
+      },
+      "mean_metrics_by_model": {
+        "Naive": {
+          "mae": 582.3092777777778,
+          "rmse": 1008.487222715566,
+          "mape": 24.374408065745275,
+          "direction_accuracy": 0.1005586592178771
+        },
+        "SeasonalNaive_12": {
+          "mae": 796.2258333333333,
+          "rmse": 1263.2884954820186,
+          "mape": 20.62931156114929,
+          "direction_accuracy": 0.5698324022346368
+        }
+      }
+    }
+  }
+}

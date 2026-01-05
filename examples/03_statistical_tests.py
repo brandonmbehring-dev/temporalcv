@@ -82,16 +82,21 @@ def generate_ar1_with_forecasts(
     X = np.column_stack([y[n_lags - lag : -lag] for lag in range(1, n_lags + 1)])
     actual = y[n_lags:]
 
-    # Persistence baseline: predict y[t] = y[t-1]
-    persistence_preds = X[:, 0]  # First lag is y[t-1]
-
-    # Ridge model predictions (using walk-forward)
+    # Train-test split: only evaluate on out-of-sample data
     train_size = len(actual) // 2
-    model = Ridge(alpha=1.0)
-    model.fit(X[:train_size], actual[:train_size])
-    model_preds = model.predict(X)
+    X_train, X_test = X[:train_size], X[train_size:]
+    y_train, y_test = actual[:train_size], actual[train_size:]
 
-    return actual, persistence_preds, model_preds
+    # Persistence baseline: predict y[t] = y[t-1] (on TEST data only)
+    persistence_preds = X_test[:, 0]  # First lag is y[t-1]
+
+    # Ridge model predictions (on TEST data only - out-of-sample)
+    model = Ridge(alpha=1.0)
+    model.fit(X_train, y_train)
+    model_preds = model.predict(X_test)
+
+    # Return only test data for fair comparison
+    return y_test, persistence_preds, model_preds
 
 
 # =============================================================================

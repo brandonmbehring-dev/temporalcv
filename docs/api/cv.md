@@ -45,7 +45,8 @@ class WalkForwardCV(BaseCrossValidator):
         n_splits: int = 5,
         window_type: Literal["expanding", "sliding"] = "expanding",
         window_size: Optional[int] = None,
-        gap: int = 0,
+        horizon: Optional[int] = None,
+        extra_gap: int = 0,
         test_size: int = 1,
     )
 ```
@@ -57,7 +58,8 @@ class WalkForwardCV(BaseCrossValidator):
 | `n_splits` | `int` | `5` | Number of CV folds |
 | `window_type` | `str` | `"expanding"` | `"expanding"` or `"sliding"` |
 | `window_size` | `int` | `None` | Window size (required for sliding) |
-| `gap` | `int` | `0` | Gap between train and test (set ≥ h for h-step forecasts) |
+| `horizon` | `int` | `None` | Forecast horizon (minimum required separation for h-step forecasts) |
+| `extra_gap` | `int` | `0` | Additional separation beyond horizon (total = horizon + extra_gap) |
 | `test_size` | `int` | `1` | Samples in each test fold |
 
 **Window Types**:
@@ -89,7 +91,7 @@ def split(
 **Example**:
 
 ```python
-cv = WalkForwardCV(n_splits=5, window_type="sliding", window_size=100, gap=2)
+cv = WalkForwardCV(n_splits=5, window_type="sliding", window_size=100, horizon=2, extra_gap=0)
 
 for train_idx, test_idx in cv.split(X):
     X_train, X_test = X[train_idx], X[test_idx]
@@ -133,13 +135,13 @@ def get_split_info(self, X: ArrayLike) -> List[SplitInfo]
 **Example**:
 
 ```python
-cv = WalkForwardCV(n_splits=3, gap=2)
+cv = WalkForwardCV(n_splits=3, horizon=2, extra_gap=0)
 
 for info in cv.get_split_info(X):
     print(f"Split {info.split_idx}:")
     print(f"  Train: [{info.train_start}, {info.train_end}]")
     print(f"  Test:  [{info.test_start}, {info.test_end}]")
-    print(f"  Gap: {info.gap}")
+    print(f"  Gap: {info.gap}")  # Total gap = horizon + extra_gap
 ```
 
 ---
@@ -153,7 +155,7 @@ from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn.linear_model import Ridge
 from temporalcv import WalkForwardCV
 
-cv = WalkForwardCV(n_splits=5, window_type="expanding", gap=2)
+cv = WalkForwardCV(n_splits=5, window_type="expanding", horizon=2, extra_gap=0)
 
 # cross_val_score
 scores = cross_val_score(
@@ -171,31 +173,188 @@ search.fit(X, y)
 
 ## Gap Enforcement
 
-For h-step ahead forecasts, set `gap >= h - 1`:
+For h-step ahead forecasts, set `horizon=h`:
 
 ```python
-# For 2-step forecasts
+# For 2-step forecasts: horizon=2
 cv = WalkForwardCV(
     n_splits=5,
     window_type="sliding",
     window_size=100,
-    gap=2,  # Ensures no leakage
+    horizon=2,      # Minimum required separation for 2-step forecasts
+    extra_gap=0,    # Optional: additional safety margin (default: 0)
     test_size=1
 )
 
 for train_idx, test_idx in cv.split(X):
-    # Guaranteed: train_idx[-1] + gap < test_idx[0]
-    assert train_idx[-1] + cv.gap < test_idx[0]
+    # Guaranteed: train_idx[-1] + total_gap < test_idx[0]
+    # where total_gap = horizon + extra_gap
+    total_gap = (cv.horizon or 0) + cv.extra_gap
+    assert train_idx[-1] + total_gap < test_idx[0]
 ```
+
+**Gap rule** [T1]: For h-step ahead forecasting, `total_separation = horizon + extra_gap` must be at least `h`.
+
+Per Bergmeir & Benitez (2012): temporal separation must equal or exceed forecast horizon.
 
 **Why gap matters**:
 
 ```
 h=2 forecast: y[t+2] = f(y[t], y[t-1], ...)
 
-Without gap:
-  - Train ends at t=99, test starts at t=100
-  - Test prediction uses y[99] (last training observation)
-  - For h=1: OK
-  - For h=2: LEAKAGE (y[99] is within horizon window)
+Without gap (horizon=None, extra_gap=0):
+  - Train ends at t=99, test starts at t=100 (gap=0)
+  - Test prediction y[100] uses features from y[99], y[98], ...
+  - For h=1: OK (predicting one step ahead)
+  - For h=2: LEAKAGE (y[100] target overlaps training features)
+
+With horizon=2, extra_gap=0:
+  - Train ends at t=99, test starts at t=102 (total_gap=2)
+  - Test prediction y[102] uses features from y[101], y[100], ...
+  - No overlap with training targets (safe for h=2 forecasts)
 ```
+
+---
+
+## Nested Cross-Validation
+
+### `NestedWalkForwardCV`
+
+Nested walk-forward CV for hyperparameter tuning with temporal integrity.
+
+```python
+class NestedWalkForwardCV:
+    def __init__(
+        self,
+        estimator,
+        param_grid: Dict[str, List] = None,           # For grid search
+        param_distributions: Dict[str, Any] = None,   # For random search
+        *,
+        n_iter: int = None,           # Required for random search
+        n_outer_splits: int = 3,
+        n_inner_splits: int = 5,
+        horizon: int = 1,
+        extra_gap: int = None,        # Defaults to 0
+        window_type: str = "expanding",
+        scoring: str = "neg_mean_squared_error",
+        refit: bool = True,
+        random_state: int = None,
+    )
+```
+
+**Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `estimator` | sklearn estimator | - | Model with fit/predict methods |
+| `param_grid` | `Dict[str, List]` | `None` | Parameters for grid search |
+| `param_distributions` | `Dict[str, Any]` | `None` | Distributions for random search |
+| `n_iter` | `int` | `None` | Iterations for random search |
+| `n_outer_splits` | `int` | `3` | Outer folds (performance estimation) |
+| `n_inner_splits` | `int` | `5` | Inner folds (hyperparameter selection) |
+| `horizon` | `int` | `1` | Forecast horizon (minimum required separation) |
+| `extra_gap` | `int` | `0` | Additional separation beyond horizon (total = horizon + extra_gap) |
+| `refit` | `bool` | `True` | Refit on all data with best params |
+
+**Attributes** (after `fit()`):
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `best_params_` | `Dict` | Best hyperparameters found |
+| `best_estimator_` | estimator | Model refitted with best_params_ |
+| `outer_scores_` | `np.ndarray` | Unbiased scores per outer fold |
+| `mean_outer_score_` | `float` | Mean of outer scores |
+| `std_outer_score_` | `float` | Std of outer scores |
+| `params_stability_` | `float` | Fraction agreeing with best_params_ |
+
+---
+
+### Example: Grid Search
+
+```python
+from temporalcv import NestedWalkForwardCV
+from sklearn.linear_model import Ridge
+
+nested_cv = NestedWalkForwardCV(
+    estimator=Ridge(),
+    param_grid={"alpha": [0.01, 0.1, 1.0, 10.0]},
+    n_outer_splits=3,
+    n_inner_splits=5,
+    horizon=4,
+    scoring="neg_mean_squared_error",
+)
+
+nested_cv.fit(X, y)
+
+print(f"Best alpha: {nested_cv.best_params_['alpha']}")
+print(f"Score: {nested_cv.mean_outer_score_:.4f} ± {nested_cv.std_outer_score_:.4f}")
+print(f"Stability: {nested_cv.params_stability_:.1%}")
+
+# Predict with refitted model
+predictions = nested_cv.predict(X_new)
+```
+
+---
+
+### Example: Randomized Search
+
+```python
+from scipy.stats import loguniform
+
+nested_cv = NestedWalkForwardCV(
+    estimator=Ridge(),
+    param_distributions={"alpha": loguniform(1e-3, 1e2)},
+    n_iter=20,
+    n_outer_splits=3,
+    random_state=42,
+)
+
+nested_cv.fit(X, y)
+```
+
+---
+
+### When to Use Nested CV vs Single CV
+
+| Use Case | Recommendation |
+|----------|----------------|
+| Fixed hyperparameters | Single `WalkForwardCV` |
+| Few hyperparameters, low impact | Single CV with default params |
+| Many hyperparameters, high impact | Nested CV (avoids optimistic bias) |
+| Publication/rigorous validation | Nested CV (unbiased estimates) |
+
+---
+
+### `NestedCVResult`
+
+Structured result from nested CV.
+
+```python
+@dataclass
+class NestedCVResult:
+    best_params: Dict[str, Any]        # Optimal parameters
+    outer_scores: np.ndarray           # Per-fold scores
+    mean_outer_score: float            # Mean score
+    std_outer_score: float             # Std of scores
+    n_outer_splits: int
+    n_inner_splits: int
+    scoring: str
+    best_params_per_fold: List[Dict]   # Per-fold selections
+    params_stability: float            # Consistency metric
+```
+
+Access via `nested_cv.get_result()`.
+
+---
+
+## References
+
+**[T1] Time Series Cross-Validation**:
+
+- Bergmeir, C. & Benítez, J.M. (2012). "On the use of cross-validation for time series predictor evaluation." *Information Sciences*, 191, 192-213. [DOI: 10.1016/j.ins.2011.12.028](https://doi.org/10.1016/j.ins.2011.12.028)
+
+- Tashman, L.J. (2000). "Out-of-sample tests of forecasting accuracy: An analysis and review." *International Journal of Forecasting*, 16(4), 437-450. [DOI: 10.1016/S0169-2070(00)00065-0](https://doi.org/10.1016/S0169-2070(00)00065-0)
+
+**[T1] Nested Cross-Validation**:
+
+- Varma, S. & Simon, R. (2006). "Bias in error estimation when using cross-validation for model selection." *BMC Bioinformatics*, 7(1), 91. [DOI: 10.1186/1471-2105-7-91](https://doi.org/10.1186/1471-2105-7-91)

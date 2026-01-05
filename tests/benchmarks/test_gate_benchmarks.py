@@ -109,7 +109,7 @@ class TestSyntheticAR1GateBenchmarks:
 
         def run_gate() -> object:
             return gate_synthetic_ar1(
-                model=model, n=200, phi=0.6, sigma=1.0, random_state=42
+                model=model, n_samples=200, phi=0.6, sigma=1.0, random_state=42
             )
 
         result = benchmark(run_gate)
@@ -121,7 +121,7 @@ class TestSyntheticAR1GateBenchmarks:
 
         def run_gate() -> object:
             return gate_synthetic_ar1(
-                model=model, n=500, phi=0.6, sigma=1.0, random_state=42
+                model=model, n_samples=500, phi=0.6, sigma=1.0, random_state=42
             )
 
         result = benchmark(run_gate)
@@ -144,12 +144,15 @@ class TestSuspiciousImprovementGateBenchmarks:
     ) -> None:
         """Suspicious improvement gate."""
         predictions, actuals = predictions_actuals
+        # Compute MAE for model and baseline
+        model_mae = float(np.mean(np.abs(predictions - actuals)))
+        persistence_baseline = np.roll(actuals, 1)
+        baseline_mae = float(np.mean(np.abs(persistence_baseline - actuals)))
 
         def run_gate() -> object:
             return gate_suspicious_improvement(
-                predictions=predictions,
-                actuals=actuals,
-                persistence_baseline=np.roll(actuals, 1),
+                model_metric=model_mae,
+                baseline_metric=baseline_mae,
             )
 
         result = benchmark(run_gate)
@@ -159,19 +162,13 @@ class TestSuspiciousImprovementGateBenchmarks:
 class TestTemporalBoundaryGateBenchmarks:
     """Benchmarks for temporal boundary gate."""
 
-    @pytest.fixture
-    def horizon_results(self) -> dict[int, float]:
-        """MAE results by horizon."""
-        return {1: 0.5, 2: 0.55, 3: 0.6, 4: 0.65, 5: 0.7}
-
-    def test_temporal_boundary(
-        self, benchmark, horizon_results: dict[int, float]
-    ) -> None:
-        """Temporal boundary gate."""
+    def test_temporal_boundary(self, benchmark) -> None:
+        """Temporal boundary gate with index-based validation."""
 
         def run_gate() -> object:
+            # Validate proper gap enforcement: train_end=99, test_start=100, horizon=1
             return gate_temporal_boundary(
-                horizon_results=horizon_results, threshold=2.0
+                train_end_idx=99, test_start_idx=100, horizon=1, gap=0
             )
 
         result = benchmark(run_gate)
@@ -234,16 +231,21 @@ class TestRunGatesBenchmarks:
         y = X @ np.array([1.0, 0.5, -0.3, 0.2, 0.1]) + rng.standard_normal(200) * 0.5
         model = DummyModel()
 
+        # Compute MAE metrics for suspicious improvement gate
+        predictions = y + rng.standard_normal(200) * 0.1
+        model_mae = float(np.mean(np.abs(predictions - y)))
+        persistence_baseline = np.roll(y, 1)
+        baseline_mae = float(np.mean(np.abs(persistence_baseline - y)))
+
         # Pre-compute gates
         gates = [
             gate_shuffled_target(model=model, X=X, y=y, n_shuffles=10, random_state=42),
             gate_suspicious_improvement(
-                predictions=y + rng.standard_normal(200) * 0.1,
-                actuals=y,
-                persistence_baseline=np.roll(y, 1),
+                model_metric=model_mae,
+                baseline_metric=baseline_mae,
             ),
             gate_temporal_boundary(
-                horizon_results={1: 0.5, 2: 0.55, 3: 0.6}, threshold=2.0
+                train_end_idx=99, test_start_idx=100, horizon=1, gap=0
             ),
         ]
         return gates

@@ -211,6 +211,10 @@ def gate_shuffled_target(
     method: Literal["effect_size", "permutation"] = "permutation",
     alpha: float = 0.05,
     strict: bool = False,
+    bootstrap_ci: bool = False,
+    n_bootstrap: int = 100,
+    bootstrap_alpha: float = 0.05,
+    bootstrap_block_length: Union[int, Literal["auto"]] = "auto",
 ) -> GateResult:
     """
     Shuffled target test: definitive leakage detection.
@@ -269,6 +273,15 @@ def gate_shuffled_target(
     strict : bool, default=False
         If True and method="permutation", override n_shuffles to max(n_shuffles, 199)
         for p-value resolution of 0.005. Recommended for publication.
+    bootstrap_ci : bool, default=False
+        If True, compute block bootstrap confidence interval for MAE.
+        Results added to details dict as ci_lower, ci_upper, etc.
+    n_bootstrap : int, default=100
+        Number of bootstrap replications for CI.
+    bootstrap_alpha : float, default=0.05
+        Significance level for CI (1 - alpha CI).
+    bootstrap_block_length : int or "auto", default="auto"
+        Block length for bootstrap. "auto" uses n^(1/3) per Kunsch (1989).
 
     Returns
     -------
@@ -430,14 +443,17 @@ def gate_shuffled_target(
     cv = WalkForwardCV(
         n_splits=n_cv_splits,
         window_type="expanding",
-        gap=0,  # No gap needed for leakage detection
+        extra_gap=0,  # No extra_gap needed for leakage detection
         test_size=max(1, n // (n_cv_splits + 1)),  # Reasonable test size
     )
 
-    def compute_cv_mae(
+    def compute_cv_mae_with_errors(
         X_data: np.ndarray, y_data: np.ndarray, model_instance: FitPredictModel
-    ) -> float:
-        """Compute out-of-sample MAE using walk-forward CV."""
+    ) -> tuple[float, np.ndarray]:
+        """Compute out-of-sample MAE using walk-forward CV.
+
+        Returns both MAE and raw errors array for bootstrap CI.
+        """
         all_errors: List[float] = []
         for train_idx, test_idx in cv.split(X_data, y_data):
             # Clone model for each fold to prevent state leakage
@@ -452,10 +468,12 @@ def gate_shuffled_target(
             preds = np.asarray(fold_model.predict(X_data[test_idx]))
             errors = np.abs(y_data[test_idx] - preds)
             all_errors.extend(errors.tolist())
-        return float(np.mean(all_errors)) if all_errors else 0.0
+        errors_arr = np.array(all_errors) if all_errors else np.array([])
+        mae = float(np.mean(errors_arr)) if len(errors_arr) > 0 else 0.0
+        return mae, errors_arr
 
     # Compute out-of-sample MAE on real target
-    mae_real = compute_cv_mae(X, y, model)
+    mae_real, errors_real = compute_cv_mae_with_errors(X, y, model)
 
     # Compute out-of-sample MAE on shuffled targets
     shuffled_maes: List[float] = []
@@ -473,7 +491,7 @@ def gate_shuffled_target(
         except (ImportError, TypeError):
             shuffle_model = model
 
-        mae_shuffled = compute_cv_mae(X, y_shuffled, shuffle_model)
+        mae_shuffled, _ = compute_cv_mae_with_errors(X, y_shuffled, shuffle_model)
         shuffled_maes.append(mae_shuffled)
 
     mae_shuffled_avg = float(np.mean(shuffled_maes))
@@ -516,6 +534,26 @@ def gate_shuffled_target(
         "permutation": permutation,
         "block_size": computed_block_size if permutation == "block" else None,
     }
+
+    # Compute bootstrap CI for MAE if requested
+    if bootstrap_ci and len(errors_real) >= 2:
+        from temporalcv.inference.block_bootstrap_ci import bootstrap_ci_mae
+
+        ci_result = bootstrap_ci_mae(
+            errors_real,
+            n_bootstrap=n_bootstrap,
+            block_length=bootstrap_block_length,
+            alpha=bootstrap_alpha,
+            random_state=random_state,
+        )
+        details.update({
+            "ci_lower": ci_result.ci_lower,
+            "ci_upper": ci_result.ci_upper,
+            "ci_alpha": ci_result.alpha,
+            "bootstrap_std": ci_result.std_error,
+            "n_bootstrap": ci_result.n_bootstrap,
+            "bootstrap_block_length": ci_result.block_length,
+        })
 
     # Decision logic depends on method
     if method == "permutation":
@@ -570,6 +608,11 @@ def gate_synthetic_ar1(
     tolerance: float = 1.5,
     n_cv_splits: int = 3,
     random_state: Optional[int] = None,
+    *,
+    bootstrap_ci: bool = False,
+    n_bootstrap: int = 100,
+    bootstrap_alpha: float = 0.05,
+    bootstrap_block_length: Union[int, Literal["auto"]] = "auto",
 ) -> GateResult:
     """
     Synthetic AR(1) test: theoretical bound verification.
@@ -601,6 +644,15 @@ def gate_synthetic_ar1(
         Number of walk-forward CV splits for out-of-sample evaluation.
     random_state : int, optional
         Random seed for reproducibility
+    bootstrap_ci : bool, default=False
+        If True, compute block bootstrap confidence interval for MAE.
+        Results added to details dict as ci_lower, ci_upper, etc.
+    n_bootstrap : int, default=100
+        Number of bootstrap replications for CI.
+    bootstrap_alpha : float, default=0.05
+        Significance level for CI (1 - alpha CI).
+    bootstrap_block_length : int or "auto", default="auto"
+        Block length for bootstrap. "auto" uses n^(1/3) per Kunsch (1989).
 
     Returns
     -------
@@ -660,19 +712,33 @@ def gate_synthetic_ar1(
     cv = WalkForwardCV(
         n_splits=n_cv_splits,
         window_type="expanding",
-        gap=0,
+        extra_gap=0,
         test_size=max(1, n // (n_cv_splits + 1)),
     )
 
     # Compute out-of-sample MAE using walk-forward CV
+    # Clone model per fold to avoid state contamination
+    def _clone_model(model: Any) -> Any:
+        """Clone model if possible, otherwise return original."""
+        try:
+            from sklearn.base import clone
+            return clone(model)
+        except (ImportError, TypeError):
+            # ImportError: sklearn not available
+            # TypeError: model doesn't support cloning (e.g., mock objects)
+            return model
+
     all_errors: List[float] = []
     for train_idx, test_idx in cv.split(X, y):
-        model.fit(X[train_idx], y[train_idx])
-        preds = np.asarray(model.predict(X[test_idx]))
+        # Clone model for each fold to ensure independence
+        fold_model = _clone_model(model)
+        fold_model.fit(X[train_idx], y[train_idx])
+        preds = np.asarray(fold_model.predict(X[test_idx]))
         errors = np.abs(y[test_idx] - preds)
         all_errors.extend(errors.tolist())
 
-    model_mae = float(np.mean(all_errors)) if all_errors else 0.0
+    errors_arr = np.array(all_errors) if all_errors else np.array([])
+    model_mae = float(np.mean(errors_arr)) if len(errors_arr) > 0 else 0.0
 
     # Theoretical optimal MAE for AR(1) 1-step forecast
     # Optimal predictor is phi * y_{t-1}, error is sigma * epsilon
@@ -691,6 +757,26 @@ def gate_synthetic_ar1(
         "n_cv_splits": n_cv_splits,
         "evaluation_method": "walk_forward_cv",
     }
+
+    # Compute bootstrap CI for MAE if requested
+    if bootstrap_ci and len(errors_arr) >= 2:
+        from temporalcv.inference.block_bootstrap_ci import bootstrap_ci_mae
+
+        ci_result = bootstrap_ci_mae(
+            errors_arr,
+            n_bootstrap=n_bootstrap,
+            block_length=bootstrap_block_length,
+            alpha=bootstrap_alpha,
+            random_state=random_state,
+        )
+        details.update({
+            "ci_lower": ci_result.ci_lower,
+            "ci_upper": ci_result.ci_upper,
+            "ci_alpha": ci_result.alpha,
+            "bootstrap_std": ci_result.std_error,
+            "n_bootstrap": ci_result.n_bootstrap,
+            "bootstrap_block_length": ci_result.block_length,
+        })
 
     if ratio < 1 / tolerance:
         return GateResult(
@@ -813,12 +899,12 @@ def gate_temporal_boundary(
     train_end_idx: int,
     test_start_idx: int,
     horizon: int,
-    gap: int = 0,
+    extra_gap: int = 0,
 ) -> GateResult:
     """
     Verify temporal boundary enforcement.
 
-    Ensures proper gap between training end and test start for h-step forecasts.
+    Ensures proper separation between training end and test start for h-step forecasts.
 
     Parameters
     ----------
@@ -828,8 +914,8 @@ def gate_temporal_boundary(
         First index of test data
     horizon : int
         Forecast horizon (h)
-    gap : int, default=0
-        Additional gap beyond horizon requirement
+    extra_gap : int, default=0
+        Additional separation beyond horizon requirement
 
     Returns
     -------
@@ -841,20 +927,20 @@ def gate_temporal_boundary(
     For h-step ahead forecasting, the last training observation should be
     at least h periods before the first test observation to prevent leakage.
 
-    Required: test_start_idx >= train_end_idx + horizon + gap
+    Required: test_start_idx >= train_end_idx + horizon + extra_gap
 
     See Also
     --------
-    WalkForwardCV : CV class that enforces gap automatically.
+    WalkForwardCV : CV class that enforces separation automatically.
     """
-    required_gap = horizon + gap
+    required_gap = horizon + extra_gap
     actual_gap = test_start_idx - train_end_idx - 1
 
     details = {
         "train_end_idx": train_end_idx,
         "test_start_idx": test_start_idx,
         "horizon": horizon,
-        "gap": gap,
+        "extra_gap": extra_gap,
         "required_gap": required_gap,
         "actual_gap": actual_gap,
     }
@@ -867,7 +953,7 @@ def gate_temporal_boundary(
             metric_value=actual_gap,
             threshold=required_gap,
             details=details,
-            recommendation=f"Increase gap between train and test. Need {required_gap - actual_gap} more periods.",
+            recommendation=f"Increase separation between train and test. Need {required_gap - actual_gap} more periods.",
         )
 
     return GateResult(

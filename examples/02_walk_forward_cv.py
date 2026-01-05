@@ -171,7 +171,7 @@ def demonstrate_walk_forward_cv():
     cv_expanding = WalkForwardCV(
         n_splits=5,
         window_type="expanding",
-        gap=0,  # No gap (for single-step)
+        extra_gap=0,  # No extra gap (for single-step)
         test_size=12,  # Test on 12 observations per fold
     )
 
@@ -211,7 +211,7 @@ def demonstrate_walk_forward_cv():
 
     # Demonstrate the issue
     print("\n--- WITHOUT Gap (WRONG for h-step) ---")
-    cv_no_gap = WalkForwardCV(n_splits=3, gap=0, test_size=horizon)
+    cv_no_gap = WalkForwardCV(n_splits=3, extra_gap=0, test_size=horizon)
 
     for info in cv_no_gap.get_split_info(X):
         # Check temporal boundary
@@ -219,7 +219,7 @@ def demonstrate_walk_forward_cv():
             train_end_idx=info.train_end,
             test_start_idx=info.test_start,
             horizon=horizon,
-            gap=0,
+            extra_gap=0,
         )
         status = "OK" if result.status.value == "PASS" else "LEAKAGE!"
         print(
@@ -229,14 +229,14 @@ def demonstrate_walk_forward_cv():
         )
 
     print("\n--- WITH Gap >= Horizon (CORRECT) ---")
-    cv_with_gap = WalkForwardCV(n_splits=3, gap=horizon, test_size=horizon)
+    cv_with_gap = WalkForwardCV(n_splits=3, horizon=horizon, extra_gap=0, test_size=horizon)
 
     for info in cv_with_gap.get_split_info(X):
         result = gate_temporal_boundary(
             train_end_idx=info.train_end,
             test_start_idx=info.test_start,
             horizon=horizon,
-            gap=0,  # We already have gap in CV
+            extra_gap=0,  # We already have horizon set in CV
         )
         status = "OK" if result.status.value == "PASS" else "LEAKAGE!"
         print(
@@ -258,7 +258,7 @@ def demonstrate_walk_forward_cv():
         n_splits=5,
         window_type="expanding",
         window_size=window_size,  # Minimum initial size
-        gap=0,
+        extra_gap=0,
         test_size=12,
     )
 
@@ -266,7 +266,7 @@ def demonstrate_walk_forward_cv():
         n_splits=5,
         window_type="sliding",
         window_size=window_size,  # Fixed size
-        gap=0,
+        extra_gap=0,
         test_size=12,
     )
 
@@ -325,7 +325,7 @@ def demonstrate_walk_forward_cv():
     from sklearn.model_selection import cross_val_score
     from temporalcv import WalkForwardCV
 
-    cv = WalkForwardCV(n_splits=5, gap=12)
+    cv = WalkForwardCV(n_splits=5, horizon=12, extra_gap=0)
     scores = cross_val_score(model, X, y, cv=cv, scoring='neg_mean_absolute_error')
     """)
 
@@ -340,9 +340,9 @@ def demonstrate_walk_forward_cv():
    - Temporal ordering must be preserved
    - Training set must come before test set chronologically
 
-2. SET gap >= horizon for h-step forecasting
-   - For 12-month ahead forecasts, gap should be at least 12
-   - This prevents target leakage when y[t] depends on future values
+2. SET horizon=h for h-step forecasting (extra_gap optional for safety margin)
+   - For 12-month ahead forecasts, use horizon=12, extra_gap=0 (minimum safe)
+   - Add extra_gap > 0 for additional temporal separation if desired
 
 3. CHOOSE window type based on your data:
    - Expanding: Use all history (good for stable processes)

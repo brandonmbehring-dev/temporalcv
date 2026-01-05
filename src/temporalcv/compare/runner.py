@@ -20,7 +20,8 @@ from __future__ import annotations
 import logging
 import time
 import warnings
-from typing import Any, Dict, List, Literal, Optional, Protocol, Tuple
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Literal, Optional, Protocol, Tuple
 
 import numpy as np
 
@@ -302,6 +303,8 @@ def run_benchmark_suite(
     primary_metric: str = "mae",
     include_dm_test: bool = True,
     aggregation_mode: Literal["flatten", "per_series_mean", "per_series_median"] = "flatten",
+    progress_callback: Optional[Callable[[int, int, str], None]] = None,
+    checkpoint_dir: Optional[Path] = None,
 ) -> ComparisonReport:
     """
     Run model comparison across multiple datasets.
@@ -321,6 +324,16 @@ def run_benchmark_suite(
         See ``run_comparison`` for details.
 
         .. versionadded:: 1.0.0
+    progress_callback : callable, optional
+        Callback function called after each dataset completes.
+        Signature: ``callback(current: int, total: int, dataset_name: str)``
+
+        .. versionadded:: 1.0.0
+    checkpoint_dir : Path, optional
+        Directory to save checkpoints after each dataset.
+        Enables resumption of interrupted runs via ``load_checkpoint()``.
+
+        .. versionadded:: 1.0.0
 
     Returns
     -------
@@ -333,15 +346,44 @@ def run_benchmark_suite(
     >>> datasets = [create_synthetic_dataset(seed=i) for i in range(3)]
     >>> report = run_benchmark_suite(datasets, [NaiveAdapter()])
     >>> print(report.to_markdown())
+
+    Example with progress callback
+    ------------------------------
+    >>> def on_progress(current, total, name):
+    ...     print(f"[{current}/{total}] Completed {name}")
+    >>> report = run_benchmark_suite(
+    ...     datasets, adapters, progress_callback=on_progress
+    ... )
     """
     if not datasets:
         raise ValueError("datasets list cannot be empty")
     if not adapters:
         raise ValueError("adapters list cannot be empty")
 
-    results: List[ComparisonResult] = []
+    # Import checkpoint functions if needed
+    if checkpoint_dir is not None:
+        from temporalcv.compare.results import load_checkpoint, save_checkpoint
 
-    for dataset in datasets:
+        checkpoint_dir = Path(checkpoint_dir)
+
+    results: List[ComparisonResult] = []
+    total = len(datasets)
+
+    for idx, dataset in enumerate(datasets):
+        dataset_name = dataset.metadata.name
+
+        # Check for existing checkpoint
+        if checkpoint_dir is not None:
+            safe_name = dataset_name.replace("/", "_").replace(" ", "_").lower()
+            checkpoint_path = checkpoint_dir / f"{safe_name}.json"
+            cached_result = load_checkpoint(checkpoint_path)
+            if cached_result is not None:
+                logger.info("Loaded checkpoint for %s", dataset_name)
+                results.append(cached_result)
+                if progress_callback:
+                    progress_callback(idx + 1, total, f"{dataset_name} (cached)")
+                continue
+
         try:
             result = run_comparison(
                 dataset=dataset,
@@ -351,9 +393,19 @@ def run_benchmark_suite(
                 aggregation_mode=aggregation_mode,
             )
             results.append(result)
+
+            # Save checkpoint
+            if checkpoint_dir is not None:
+                save_checkpoint(result, checkpoint_dir, dataset_name)
+                logger.debug("Saved checkpoint for %s", dataset_name)
+
         except Exception as e:
-            logger.warning("Failed on dataset %s: %s", dataset.metadata.name, e)
+            logger.warning("Failed on dataset %s: %s", dataset_name, e)
             continue
+
+        # Call progress callback
+        if progress_callback:
+            progress_callback(idx + 1, total, dataset_name)
 
     if not results:
         raise ValueError("All datasets failed to produce results")

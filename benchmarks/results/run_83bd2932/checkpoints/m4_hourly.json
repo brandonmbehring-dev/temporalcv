@@ -1,0 +1,74 @@
+{
+  "metadata": {
+    "run_id": "92a11d64",
+    "timestamp": "2025-12-31T15:03:53.021617+00:00",
+    "temporalcv_version": "0.1.0",
+    "python_version": "3.13.7",
+    "platform": "Linux",
+    "cpu_count": 128
+  },
+  "report": {
+    "results": [
+      {
+        "dataset_name": "m4_hourly",
+        "models": [
+          {
+            "model_name": "Naive",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 1737.9074166666667,
+              "rmse": 10603.511687234015,
+              "mape": 40.51982716794375,
+              "direction_accuracy": 0.038966451344030005
+            },
+            "runtime_seconds": 1.3234996004030108e-05,
+            "model_params": {}
+          },
+          {
+            "model_name": "SeasonalNaive_12",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 2064.9481666666666,
+              "rmse": 14596.894281373836,
+              "mape": 92.13032132432014,
+              "direction_accuracy": 0.5294853094394666
+            },
+            "runtime_seconds": 0.0009951629908755422,
+            "model_params": {
+              "season_length": 12
+            }
+          }
+        ],
+        "primary_metric": "mae",
+        "best_model": "Naive",
+        "statistical_tests": {
+          "SeasonalNaive_12": {
+            "statistic": -1.9171054978156956,
+            "p_value": 0.055283840743423296,
+            "significant": false
+          }
+        }
+      }
+    ],
+    "summary": {
+      "n_datasets": 1,
+      "wins_by_model": {
+        "Naive": 1
+      },
+      "mean_metrics_by_model": {
+        "Naive": {
+          "mae": 1737.9074166666667,
+          "rmse": 10603.511687234015,
+          "mape": 40.51982716794375,
+          "direction_accuracy": 0.038966451344030005
+        },
+        "SeasonalNaive_12": {
+          "mae": 2064.9481666666666,
+          "rmse": 14596.894281373836,
+          "mape": 92.13032132432014,
+          "direction_accuracy": 0.5294853094394666
+        }
+      }
+    }
+  }
+}

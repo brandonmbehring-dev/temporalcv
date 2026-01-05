@@ -130,8 +130,10 @@ class TestScaledMetricBenchmarks:
     ) -> None:
         """MASE with n=2000."""
         predictions, actuals, _ = time_series_data
+        # Precompute naive MAE (random walk: use lag-1 naive)
+        naive_mae = float(np.mean(np.abs(np.diff(actuals))))
         result = benchmark(
-            lambda: compute_mase(predictions, actuals, seasonal_period=1)
+            lambda: compute_mase(predictions, actuals, naive_mae)
         )
         assert result >= 0
 
@@ -192,7 +194,7 @@ class TestQuantileMetricBenchmarks:
         """Pinball loss with n=2000."""
         predictions, actuals = quantile_data
         result = benchmark(
-            lambda: compute_pinball_loss(predictions, actuals, quantile=0.5)
+            lambda: compute_pinball_loss(actuals, predictions, tau=0.5)
         )
         assert result >= 0
 
@@ -202,7 +204,7 @@ class TestQuantileMetricBenchmarks:
         """Interval score with n=2000."""
         lower, upper, actuals = interval_data
         result = benchmark(
-            lambda: compute_interval_score(lower, upper, actuals, alpha=0.05)
+            lambda: compute_interval_score(actuals, lower, upper, alpha=0.05)
         )
         assert result >= 0
 
@@ -211,7 +213,7 @@ class TestQuantileMetricBenchmarks:
     ) -> None:
         """CRPS with n=500, 100 ensemble members."""
         ensemble, actuals = ensemble_data
-        result = benchmark(lambda: compute_crps(ensemble, actuals))
+        result = benchmark(lambda: compute_crps(actuals, ensemble))
         assert result >= 0
 
 
@@ -228,7 +230,7 @@ class TestFinancialMetricBenchmarks:
     def test_sharpe_ratio(self, benchmark, returns_data: np.ndarray) -> None:
         """Sharpe ratio with 5 years of daily returns."""
         result = benchmark(
-            lambda: compute_sharpe_ratio(returns_data, periods_per_year=252)
+            lambda: compute_sharpe_ratio(returns_data, annualization=252.0)
         )
         assert isinstance(result, float)
 
@@ -258,7 +260,7 @@ class TestAsymmetricLossBenchmarks:
         """LinEx loss with n=5000."""
         predictions, actuals = prediction_data
         result = benchmark(
-            lambda: compute_linex_loss(predictions, actuals, alpha=0.5)
+            lambda: compute_linex_loss(predictions, actuals, a=0.5)
         )
         assert result >= 0
 

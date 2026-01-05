@@ -22,11 +22,9 @@ Quick Example
    from temporalcv.gates import gate_shuffled_target
 
    # Run leakage detection gates
-   report = run_gates(
-       model=my_model,
-       X=X, y=y,
-       gates=[gate_shuffled_target(n_shuffles=5)]
-   )
+   # Note: n_shuffles>=100 required for statistical power in permutation mode
+   gate_result = gate_shuffled_target(my_model, X, y, n_shuffles=100)
+   report = run_gates([gate_result])
    if report.status == "HALT":
        raise ValueError(f"Leakage detected: {report.failures}")
 
@@ -91,6 +89,12 @@ Installation
    knowledge/mathematical_foundations
    knowledge/assumptions
    knowledge/notation
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Help
+
+   troubleshooting
 
 Indices and tables
 ==================

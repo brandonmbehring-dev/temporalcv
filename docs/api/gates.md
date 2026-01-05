@@ -76,9 +76,21 @@ def gate_shuffled_target(
     model: FitPredictModel,
     X: ArrayLike,
     y: ArrayLike,
-    n_shuffles: int = 5,
+    n_shuffles: Optional[int] = None,
     threshold: float = 0.05,
+    n_cv_splits: int = 3,
+    permutation: Literal["iid", "block"] = "block",
+    block_size: Union[int, Literal["auto"]] = "auto",
     random_state: Optional[int] = None,
+    *,
+    method: Literal["effect_size", "permutation"] = "permutation",
+    alpha: float = 0.05,
+    strict: bool = False,
+    # Bootstrap CI parameters
+    bootstrap_ci: bool = False,
+    n_bootstrap: int = 100,
+    bootstrap_alpha: float = 0.05,
+    bootstrap_block_length: Union[int, Literal["auto"]] = "auto",
 ) -> GateResult
 ```
 
@@ -89,9 +101,28 @@ def gate_shuffled_target(
 | `model` | `FitPredictModel` | required | Model with `fit(X, y)` and `predict(X)` methods |
 | `X` | `ArrayLike` | required | Feature matrix (n_samples, n_features) |
 | `y` | `ArrayLike` | required | Target vector (n_samples,) |
-| `n_shuffles` | `int` | `5` | Number of shuffled targets to average over |
-| `threshold` | `float` | `0.05` | Maximum allowed improvement ratio (5%) |
+| `n_shuffles` | `int` | `None` | Number of shuffles. Defaults to 100 for permutation mode, 5 for effect_size mode |
+| `threshold` | `float` | `0.05` | Maximum allowed improvement ratio (effect_size mode only) |
+| `n_cv_splits` | `int` | `3` | Number of CV splits for evaluation |
+| `permutation` | `str` | `"block"` | Shuffle type: "iid" (random) or "block" (preserves autocorrelation) |
+| `block_size` | `int\|"auto"` | `"auto"` | Block size for block permutation |
 | `random_state` | `int` | `None` | Random seed for reproducibility |
+| `method` | `str` | `"permutation"` | Decision method: "permutation" (p-value) or "effect_size" (improvement ratio) |
+| `alpha` | `float` | `0.05` | Significance level for permutation mode (HALT if p < alpha) |
+| `strict` | `bool` | `False` | If True, use strict inequality for p-value comparison |
+| `bootstrap_ci` | `bool` | `False` | Enable block bootstrap confidence intervals |
+| `n_bootstrap` | `int` | `100` | Number of bootstrap replications |
+| `bootstrap_alpha` | `float` | `0.05` | Significance level for CI (0.05 = 95% CI) |
+| `bootstrap_block_length` | `int\|"auto"` | `"auto"` | Block length for MBB; "auto" uses n^(1/3) |
+
+**Methods**:
+
+| Method | `metric_value` | HALT condition |
+|--------|----------------|----------------|
+| `"permutation"` | p-value | `pvalue < alpha` |
+| `"effect_size"` | improvement ratio | `improvement > threshold` |
+
+**Important**: For permutation mode, use `n_shuffles >= 100` for adequate statistical power. With small n_shuffles, the minimum achievable p-value is 1/(n_shuffles+1), which may prevent HALT even for blatant leakage.
 
 **Returns**: `GateResult` with status HALT if model beats shuffled baseline
 
@@ -100,6 +131,16 @@ def gate_shuffled_target(
 - `mae_shuffled_avg`: Mean MAE on shuffled targets
 - `mae_shuffled_all`: List of all shuffled MAEs
 - `n_shuffles`: Number of shuffles performed
+- `improvement_ratio`: 1 - mae_real/mae_shuffled_avg
+- `pvalue`: p-value from permutation test (permutation mode only)
+
+**Additional fields when `bootstrap_ci=True`**:
+- `ci_lower`: Lower bound of confidence interval for MAE
+- `ci_upper`: Upper bound of confidence interval for MAE
+- `ci_alpha`: Significance level used (e.g., 0.05)
+- `bootstrap_std`: Bootstrap standard error
+- `n_bootstrap`: Number of bootstrap samples
+- `bootstrap_block_length`: Block length used
 
 ---
 
@@ -116,6 +157,11 @@ def gate_synthetic_ar1(
     n_lags: int = 5,
     tolerance: float = 1.5,
     random_state: Optional[int] = None,
+    # Bootstrap CI parameters
+    bootstrap_ci: bool = False,
+    n_bootstrap: int = 100,
+    bootstrap_alpha: float = 0.05,
+    bootstrap_block_length: Union[int, Literal["auto"]] = "auto",
 ) -> GateResult
 ```
 
@@ -130,8 +176,20 @@ def gate_synthetic_ar1(
 | `n_lags` | `int` | `5` | Lag features to create |
 | `tolerance` | `float` | `1.5` | How much better model can be than theoretical |
 | `random_state` | `int` | `None` | Random seed |
+| `bootstrap_ci` | `bool` | `False` | Enable block bootstrap confidence intervals |
+| `n_bootstrap` | `int` | `100` | Number of bootstrap replications |
+| `bootstrap_alpha` | `float` | `0.05` | Significance level for CI (0.05 = 95% CI) |
+| `bootstrap_block_length` | `int\|"auto"` | `"auto"` | Block length for MBB; "auto" uses n^(1/3) |
 
 **Returns**: `GateResult` with status HALT if model beats theoretical by too much
+
+**Details dict when `bootstrap_ci=True`**:
+- `ci_lower`: Lower bound of CI for model MAE
+- `ci_upper`: Upper bound of CI for model MAE
+- `ci_alpha`: Significance level used
+- `bootstrap_std`: Bootstrap standard error
+- `n_bootstrap`: Number of bootstrap samples
+- `bootstrap_block_length`: Block length used
 
 **Theoretical bound**: MAE_optimal = σ × √(2/π) ≈ 0.798 × σ
 
@@ -232,3 +290,62 @@ if report.status == "HALT":
     for failure in report.failures:
         print(f"  - {failure.name}: {failure.recommendation}")
 ```
+
+---
+
+## Bootstrap Confidence Intervals
+
+Gates that support `bootstrap_ci=True` provide uncertainty quantification for their metrics using Moving Block Bootstrap (Kunsch 1989). This preserves temporal dependence while computing confidence intervals.
+
+### Usage Example
+
+```python
+from temporalcv.gates import gate_shuffled_target
+
+result = gate_shuffled_target(
+    model=my_model,
+    X=X_train,
+    y=y_train,
+    bootstrap_ci=True,
+    n_bootstrap=200,
+    bootstrap_alpha=0.05,  # 95% CI
+    random_state=42,
+)
+
+# Access CI from details
+print(f"MAE: {result.details['mae_real']:.3f}")
+print(f"95% CI: [{result.details['ci_lower']:.3f}, {result.details['ci_upper']:.3f}]")
+print(f"SE: {result.details['bootstrap_std']:.3f}")
+```
+
+### When to Use
+
+- **Reporting results**: Provides uncertainty bounds for publication
+- **Comparing models**: Check if CIs overlap before declaring winner
+- **Small samples**: When asymptotic inference is unreliable
+
+### Block Length Selection
+
+The `"auto"` setting uses the asymptotically optimal n^(1/3) rule. Override when:
+- Multi-step forecasting: `block_length = max(horizon, n^(1/3))`
+- Known autocorrelation structure: Match to decorrelation time
+
+---
+
+## References
+
+**[T1] Permutation Testing**:
+
+- Phipson, B. & Smyth, G.K. (2010). "Permutation P-values Should Never Be Zero: Calculating Exact P-values When Permutations Are Randomly Drawn." *Statistical Applications in Genetics and Molecular Biology*, 9(1), Article 39. [DOI: 10.2202/1544-6115.1585](https://doi.org/10.2202/1544-6115.1585)
+
+**[T1] Block Bootstrap for Time Series**:
+
+- Künsch, H.R. (1989). "The Jackknife and the Bootstrap for General Stationary Observations." *The Annals of Statistics*, 17(3), 1217-1241. [DOI: 10.1214/aos/1176347265](https://doi.org/10.1214/aos/1176347265)
+
+**[T1] Optimal Block Length Selection**:
+
+- Politis, D.N. & Romano, J.P. (1994). "The Stationary Bootstrap." *Journal of the American Statistical Association*, 89(428), 1303-1313.
+
+**[T1] Theoretical AR(1) Bounds**:
+
+- MAE of N(0, σ) = σ√(2/π) ≈ 0.798σ: Standard result from order statistics. For AR(1) with innovation variance σ², the 1-step forecast error is σ·ε_t, hence MAE = E[|σ·ε|] = σ·√(2/π) when ε ~ N(0,1).

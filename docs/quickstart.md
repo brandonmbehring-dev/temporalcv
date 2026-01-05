@@ -48,12 +48,13 @@ from temporalcv.gates import gate_shuffled_target, gate_suspicious_improvement
 # Create a simple model
 model = Ridge(alpha=1.0)
 
-# Run the shuffled target test
+# Run the shuffled target test (permutation mode - default)
+# n_shuffles>=100 required for statistical power in permutation mode
 shuffled_result = gate_shuffled_target(
     model=model,
     X=X,
     y=y,
-    n_shuffles=5,
+    n_shuffles=100,
     random_state=42
 )
 
@@ -79,7 +80,8 @@ cv = WalkForwardCV(
     n_splits=5,
     window_type="sliding",
     window_size=100,  # 100 observations per training window
-    gap=2,            # 2-period gap (for h=2 forecasts)
+    horizon=2,        # Minimum separation for 2-step forecasts
+    extra_gap=0,      # Optional: additional safety margin (default: 0)
     test_size=1       # 1 test period per split
 )
 
@@ -170,13 +172,18 @@ print(f"Coverage on test: {intervals.coverage(y[cal_end:]):.1%}")
 ```python
 from temporalcv import compute_move_threshold, compute_move_conditional_metrics
 
-# Compute threshold from TRAINING data only (critical!)
-threshold = compute_move_threshold(y[:train_end], percentile=70)
+# Compute threshold from TRAINING CHANGES only (critical!)
+train_changes = np.diff(y[:train_end])
+threshold = compute_move_threshold(train_changes, percentile=70)
 
-# Evaluate on test
+# IMPORTANT: MC-SS works on CHANGES, not levels
+# Convert predictions and actuals to changes
+pred_changes = np.diff(test_preds)
+actual_changes = np.diff(y[cal_end:])
+
 mc_result = compute_move_conditional_metrics(
-    predictions=test_preds,
-    actuals=y[cal_end:],
+    predictions=pred_changes,
+    actuals=actual_changes,
     threshold=threshold
 )
 
@@ -221,7 +228,7 @@ gate_result = gate_shuffled_target(model, X, y, random_state=42)
 assert gate_result.status.name != "HALT", "Leakage detected!"
 
 # 3. Walk-forward evaluation
-cv = WalkForwardCV(n_splits=5, window_type="sliding", window_size=150, gap=2)
+cv = WalkForwardCV(n_splits=5, window_type="sliding", window_size=150, horizon=2, extra_gap=0)
 predictions_all, actuals_all = [], []
 
 for train_idx, test_idx in cv.split(X):

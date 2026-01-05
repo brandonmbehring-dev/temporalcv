@@ -55,7 +55,7 @@ def _stationary_bootstrap_indices(
     np.ndarray
         Bootstrap indices of length n
     """
-    indices = np.empty(n, dtype=np.int64)
+    indices: np.ndarray = np.empty(n, dtype=np.int64)
     i: int = start_idx
 
     for j in range(n):

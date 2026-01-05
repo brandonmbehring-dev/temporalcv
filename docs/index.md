@@ -38,7 +38,8 @@ if report.status == "HALT":
 cv = WalkForwardCV(
     window_type="sliding",
     window_size=104,
-    gap=2,  # Enforces gap >= horizon
+    horizon=2,      # Minimum separation for 2-step forecasts
+    extra_gap=0,    # Optional safety margin (default: 0)
     test_size=1
 )
 

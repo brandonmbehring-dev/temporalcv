@@ -112,7 +112,8 @@ class TestCrossFitCVBenchmarks:
             return list(cv.split(X, y))
 
         result = benchmark(split_all)
-        assert len(result) == 5
+        # CrossFitCV yields n_splits - 1 pairs (fold 0 has no training data)
+        assert len(result) == 4
 
     def test_crossfit_10_folds(
         self, benchmark, medium_data: tuple[np.ndarray, np.ndarray]
@@ -125,7 +126,8 @@ class TestCrossFitCVBenchmarks:
             return list(cv.split(X, y))
 
         result = benchmark(split_all)
-        assert len(result) == 10
+        # CrossFitCV yields n_splits - 1 pairs (fold 0 has no training data)
+        assert len(result) == 9
 
 
 class TestPurgedKFoldBenchmarks:

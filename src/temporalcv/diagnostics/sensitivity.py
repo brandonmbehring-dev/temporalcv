@@ -166,7 +166,7 @@ def gap_sensitivity_analysis(
                 n_splits=n_splits,
                 window_type=window_type,
                 window_size=window_size,
-                gap=gap,
+                extra_gap=gap,
                 test_size=1,
             )
 

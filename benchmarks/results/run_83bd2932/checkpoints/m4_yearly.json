@@ -1,0 +1,74 @@
+{
+  "metadata": {
+    "run_id": "719f03e8",
+    "timestamp": "2025-12-31T15:03:53.014730+00:00",
+    "temporalcv_version": "0.1.0",
+    "python_version": "3.13.7",
+    "platform": "Linux",
+    "cpu_count": 128
+  },
+  "report": {
+    "results": [
+      {
+        "dataset_name": "m4_yearly",
+        "models": [
+          {
+            "model_name": "Naive",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 725.770611243768,
+              "rmse": 1347.6729074129605,
+              "mape": 17.642499228615634,
+              "direction_accuracy": 0.15525876460767946
+            },
+            "runtime_seconds": 4.341299063526094e-05,
+            "model_params": {}
+          },
+          {
+            "model_name": "SeasonalNaive_12",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 1646.2866219659131,
+              "rmse": 2398.445807940866,
+              "mape": 44.268307658111624,
+              "direction_accuracy": 0.7045075125208681
+            },
+            "runtime_seconds": 0.00020339401089586318,
+            "model_params": {
+              "season_length": 12
+            }
+          }
+        ],
+        "primary_metric": "mae",
+        "best_model": "Naive",
+        "statistical_tests": {
+          "SeasonalNaive_12": {
+            "statistic": -10.116228320839657,
+            "p_value": 0.0,
+            "significant": true
+          }
+        }
+      }
+    ],
+    "summary": {
+      "n_datasets": 1,
+      "wins_by_model": {
+        "Naive": 1
+      },
+      "mean_metrics_by_model": {
+        "Naive": {
+          "mae": 725.770611243768,
+          "rmse": 1347.6729074129605,
+          "mape": 17.642499228615634,
+          "direction_accuracy": 0.15525876460767946
+        },
+        "SeasonalNaive_12": {
+          "mae": 1646.2866219659131,
+          "rmse": 2398.445807940866,
+          "mape": 44.268307658111624,
+          "direction_accuracy": 0.7045075125208681
+        }
+      }
+    }
+  }
+}

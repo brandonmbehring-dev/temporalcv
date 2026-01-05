@@ -131,7 +131,7 @@ def walk_forward_predict(
         n_splits=n_splits,
         window_type="expanding",
         test_size=test_size,
-        gap=0,
+        extra_gap=0,
     )
 
     all_preds = []

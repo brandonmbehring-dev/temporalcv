@@ -535,7 +535,7 @@ def compute_pr_auc(
     precision_extended = np.concatenate([[baseline], precision])
 
     # Use trapezoidal integration (recall is ascending, so positive result)
-    pr_auc = float(np.trapz(precision_extended, recall_extended))
+    pr_auc = float(np.trapezoid(precision_extended, recall_extended))
 
     # Precision at 50% recall
     recall_50_idx = np.argmin(np.abs(recall - 0.5))

@@ -1,0 +1,44 @@
+2025-12-31 09:57:00,738 - INFO - ============================================================
+2025-12-31 09:57:00,738 - INFO - M4/M5 Benchmark Suite
+2025-12-31 09:57:00,738 - INFO - ============================================================
+2025-12-31 09:57:00,738 - INFO - Output directory: benchmarks/results/run_00b8ab66
+2025-12-31 09:57:00,738 - INFO - Sample size: 100 series/dataset
+2025-12-31 09:57:00,738 - INFO - Model set: baseline
+2025-12-31 09:57:00,738 - INFO - ------------------------------------------------------------
+2025-12-31 09:57:00,738 - INFO - Loading datasets...
+2025-12-31 09:57:02,882 - ERROR - ERROR, something went wrong downloading data
+2025-12-31 09:57:02,882 - INFO - Successfully downloaded Yearly-train.csv, 25355736, bytes.
+2025-12-31 09:57:03,223 - ERROR - ERROR, something went wrong downloading data
+2025-12-31 09:57:03,223 - INFO - Successfully downloaded Yearly-test.csv, 1486434, bytes.
+2025-12-31 09:57:10,494 - INFO - Loaded M4 yearly: 100 series, horizon=6
+2025-12-31 09:57:13,316 - ERROR - ERROR, something went wrong downloading data
+2025-12-31 09:57:13,316 - INFO - Successfully downloaded Quarterly-train.csv, 38788547, bytes.
+2025-12-31 09:57:13,749 - ERROR - ERROR, something went wrong downloading data
+2025-12-31 09:57:13,749 - INFO - Successfully downloaded Quarterly-test.csv, 1971754, bytes.
+2025-12-31 09:57:28,723 - INFO - Loaded M4 quarterly: 100 series, horizon=8
+2025-12-31 09:58:20,740 - INFO - Loaded M4 monthly: 100 series, horizon=18
+2025-12-31 09:58:21,343 - ERROR - ERROR, something went wrong downloading data
+2025-12-31 09:58:21,343 - INFO - Successfully downloaded Weekly-train.csv, 4015067, bytes.
+2025-12-31 09:58:21,460 - ERROR - ERROR, something went wrong downloading data
+2025-12-31 09:58:21,460 - INFO - Successfully downloaded Weekly-test.csv, 44247, bytes.
+2025-12-31 09:58:23,682 - INFO - Loaded M4 weekly: 100 series, horizon=13
+2025-12-31 09:58:34,239 - ERROR - ERROR, something went wrong downloading data
+2025-12-31 09:58:34,239 - INFO - Successfully downloaded Daily-train.csv, 95765153, bytes.
+2025-12-31 09:58:34,386 - ERROR - ERROR, something went wrong downloading data
+2025-12-31 09:58:34,386 - INFO - Successfully downloaded Daily-test.csv, 576459, bytes.
+2025-12-31 09:59:32,528 - INFO - Loaded M4 daily: 100 series, horizon=14
+2025-12-31 09:59:32,889 - ERROR - ERROR, something went wrong downloading data
+2025-12-31 09:59:32,889 - INFO - Successfully downloaded Hourly-train.csv, 2347115, bytes.
+2025-12-31 09:59:33,011 - ERROR - ERROR, something went wrong downloading data
+2025-12-31 09:59:33,011 - INFO - Successfully downloaded Hourly-test.csv, 132820, bytes.
+2025-12-31 09:59:35,088 - INFO - Loaded M4 hourly: 100 series, horizon=48
+2025-12-31 09:59:35,089 - INFO - Loaded 6 datasets
+2025-12-31 09:59:35,091 - INFO - Using 2 adapters: ['Naive', 'SeasonalNaive_12']
+2025-12-31 09:59:35,091 - INFO - ------------------------------------------------------------
+2025-12-31 09:59:35,091 - INFO - Running benchmark...
+2025-12-31 09:59:35,099 - INFO - Benchmark completed in 0.0 minutes
+2025-12-31 09:59:35,099 - INFO - ------------------------------------------------------------
+2025-12-31 09:59:35,099 - INFO - Saving results...
+2025-12-31 09:59:35,099 - INFO - ------------------------------------------------------------
+2025-12-31 09:59:35,099 - INFO - SUMMARY
+2025-12-31 09:59:35,099 - INFO - ------------------------------------------------------------

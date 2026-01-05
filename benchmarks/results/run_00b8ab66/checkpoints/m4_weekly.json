@@ -1,0 +1,74 @@
+{
+  "metadata": {
+    "run_id": "2a1aabd0",
+    "timestamp": "2025-12-31T14:59:35.096195+00:00",
+    "temporalcv_version": "0.1.0",
+    "python_version": "3.13.7",
+    "platform": "Linux",
+    "cpu_count": 128
+  },
+  "report": {
+    "results": [
+      {
+        "dataset_name": "m4_weekly",
+        "models": [
+          {
+            "model_name": "Naive",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 288.66158395769224,
+              "rmse": 765.0890097677284,
+              "mape": 10.317316860638218,
+              "direction_accuracy": 0.0800615858352579
+            },
+            "runtime_seconds": 1.3165001291781664e-05,
+            "model_params": {}
+          },
+          {
+            "model_name": "SeasonalNaive_12",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 456.20764692923075,
+              "rmse": 968.7154735557842,
+              "mape": 15.660529665160503,
+              "direction_accuracy": 0.5365665896843725
+            },
+            "runtime_seconds": 0.0002956289972644299,
+            "model_params": {
+              "season_length": 12
+            }
+          }
+        ],
+        "primary_metric": "mae",
+        "best_model": "Naive",
+        "statistical_tests": {
+          "SeasonalNaive_12": {
+            "statistic": -6.04517994704825,
+            "p_value": 1.9472572443390845e-09,
+            "significant": true
+          }
+        }
+      }
+    ],
+    "summary": {
+      "n_datasets": 1,
+      "wins_by_model": {
+        "Naive": 1
+      },
+      "mean_metrics_by_model": {
+        "Naive": {
+          "mae": 288.66158395769224,
+          "rmse": 765.0890097677284,
+          "mape": 10.317316860638218,
+          "direction_accuracy": 0.0800615858352579
+        },
+        "SeasonalNaive_12": {
+          "mae": 456.20764692923075,
+          "rmse": 968.7154735557842,
+          "mape": 15.660529665160503,
+          "direction_accuracy": 0.5365665896843725
+        }
+      }
+    }
+  }
+}

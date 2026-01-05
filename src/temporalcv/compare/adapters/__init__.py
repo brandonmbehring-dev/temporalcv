@@ -20,11 +20,17 @@ from temporalcv.compare.base import (
     NaiveAdapter,
     SeasonalNaiveAdapter,
 )
+from temporalcv.compare.adapters.multi_series import (
+    MultiSeriesAdapter,
+    ProgressAdapter,
+)
 
 __all__ = [
     "ForecastAdapter",
     "NaiveAdapter",
     "SeasonalNaiveAdapter",
+    "MultiSeriesAdapter",
+    "ProgressAdapter",
 ]
 
 # Conditional imports for optional dependencies

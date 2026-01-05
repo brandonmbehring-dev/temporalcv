@@ -17,7 +17,12 @@ import pytest
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import cross_val_score
 
-from temporalcv.cv import SplitInfo, WalkForwardCV
+from temporalcv.cv import (
+    NestedCVResult,
+    NestedWalkForwardCV,
+    SplitInfo,
+    WalkForwardCV,
+)
 
 
 # =============================================================================
@@ -961,3 +966,476 @@ class TestSplitInfoWithDates:
 
         with pytest.raises(AttributeError):
             info.split_idx = 1  # type: ignore[misc]
+
+
+# =============================================================================
+# NestedWalkForwardCV Tests
+# =============================================================================
+
+
+class TestNestedWalkForwardCV:
+    """
+    Tests for NestedWalkForwardCV.
+
+    [T1] Tests nested CV following Bergmeir & Benítez (2012), Varma & Simon (2006).
+    """
+
+    @pytest.fixture
+    def nested_cv_data(self) -> tuple[np.ndarray, np.ndarray]:
+        """Generate data for nested CV testing."""
+        rng = np.random.default_rng(42)
+        n = 500  # Need more data for nested CV
+        X = rng.standard_normal((n, 5))
+        # Simple linear relationship for predictable behavior
+        y = 0.5 * X[:, 0] + 0.3 * X[:, 1] + rng.standard_normal(n) * 0.2
+        return X, y
+
+    def test_basic_nested_cv(self, nested_cv_data: tuple) -> None:
+        """NestedWalkForwardCV should run without error."""
+        X, y = nested_cv_data
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.01, 0.1, 1.0]},
+            n_outer_splits=3,
+            n_inner_splits=3,
+            horizon=1,
+        )
+
+        nested_cv.fit(X, y)
+
+        assert nested_cv.best_params_ is not None
+        assert "alpha" in nested_cv.best_params_
+        assert len(nested_cv.outer_scores_) == 3
+
+    def test_temporal_ordering_preserved(self, nested_cv_data: tuple) -> None:
+        """Inner/outer loops should maintain temporal ordering."""
+        X, y = nested_cv_data
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1, 1.0]},
+            n_outer_splits=3,
+            n_inner_splits=3,
+            horizon=2,
+            gap=2,
+        )
+
+        nested_cv.fit(X, y)
+
+        # Check that outer CV results contain valid inner CV info
+        assert len(nested_cv.best_params_per_fold_) == 3
+        assert nested_cv.cv_results_ is not None
+
+    def test_gap_enforcement_both_levels(self, nested_cv_data: tuple) -> None:
+        """Gap >= horizon should be enforced in both loops."""
+        X, y = nested_cv_data
+
+        # This should work: gap >= horizon
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1, 1.0]},
+            n_outer_splits=3,
+            n_inner_splits=3,
+            horizon=3,
+            gap=3,  # Equal to horizon
+        )
+        nested_cv.fit(X, y)
+        assert nested_cv.best_params_ is not None
+
+    def test_gap_defaults_to_horizon(self, nested_cv_data: tuple) -> None:
+        """Gap should default to horizon if not specified."""
+        X, y = nested_cv_data
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1]},
+            n_outer_splits=3,
+            n_inner_splits=3,
+            horizon=4,
+            # gap not specified, should default to horizon=4
+        )
+
+        assert nested_cv.gap == 4
+
+    def test_gap_less_than_horizon_warns(self) -> None:
+        """Gap < horizon should raise a warning."""
+        with pytest.warns(UserWarning, match="lookahead bias"):
+            NestedWalkForwardCV(
+                estimator=Ridge(),
+                param_grid={"alpha": [0.1]},
+                n_outer_splits=3,
+                n_inner_splits=3,
+                horizon=5,
+                gap=2,  # Less than horizon
+            )
+
+    def test_best_params_selection(self, nested_cv_data: tuple) -> None:
+        """Best params should be from param_grid."""
+        X, y = nested_cv_data
+
+        param_grid = {"alpha": [0.001, 0.01, 0.1, 1.0, 10.0]}
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid=param_grid,
+            n_outer_splits=3,
+            n_inner_splits=3,
+            horizon=1,
+        )
+
+        nested_cv.fit(X, y)
+
+        assert nested_cv.best_params_["alpha"] in param_grid["alpha"]
+
+    def test_outer_scores_unbiased(self, nested_cv_data: tuple) -> None:
+        """Outer scores should come from held-out data only."""
+        X, y = nested_cv_data
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1, 1.0]},
+            n_outer_splits=3,
+            n_inner_splits=3,
+            horizon=1,
+        )
+
+        nested_cv.fit(X, y)
+
+        # Outer scores should be negative (neg_mean_squared_error)
+        assert all(s < 0 for s in nested_cv.outer_scores_)
+        # Should have one score per outer fold
+        assert len(nested_cv.outer_scores_) == 3
+
+    def test_params_stability(self, nested_cv_data: tuple) -> None:
+        """params_stability should measure consistency across folds."""
+        X, y = nested_cv_data
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1, 1.0]},  # Only 2 options
+            n_outer_splits=3,
+            n_inner_splits=3,
+            horizon=1,
+        )
+
+        nested_cv.fit(X, y)
+
+        # Stability should be between 0 and 1
+        assert 0 <= nested_cv.params_stability_ <= 1
+
+    def test_sklearn_estimator_compatibility(self, nested_cv_data: tuple) -> None:
+        """Should work with various sklearn estimators."""
+        from sklearn.linear_model import Lasso
+
+        X, y = nested_cv_data
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Lasso(max_iter=1000),
+            param_grid={"alpha": [0.01, 0.1]},
+            n_outer_splits=3,
+            n_inner_splits=3,
+            horizon=1,
+        )
+
+        nested_cv.fit(X, y)
+        assert nested_cv.best_params_ is not None
+
+    def test_custom_scoring_function(self, nested_cv_data: tuple) -> None:
+        """Custom scoring functions should work."""
+        X, y = nested_cv_data
+
+        def custom_neg_mae(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+            return -float(np.mean(np.abs(y_true - y_pred)))
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1, 1.0]},
+            n_outer_splits=3,
+            n_inner_splits=3,
+            horizon=1,
+            scoring=custom_neg_mae,
+        )
+
+        nested_cv.fit(X, y)
+        assert nested_cv.best_params_ is not None
+
+    def test_string_scoring(self, nested_cv_data: tuple) -> None:
+        """String scoring options should work."""
+        X, y = nested_cv_data
+
+        for scoring in ["neg_mean_squared_error", "neg_mean_absolute_error", "r2"]:
+            nested_cv = NestedWalkForwardCV(
+                estimator=Ridge(),
+                param_grid={"alpha": [0.1]},
+                n_outer_splits=2,
+                n_inner_splits=2,
+                horizon=1,
+                scoring=scoring,
+            )
+            nested_cv.fit(X, y)
+            assert nested_cv.best_params_ is not None
+
+    def test_refit_option(self, nested_cv_data: tuple) -> None:
+        """refit=True should provide best_estimator_."""
+        X, y = nested_cv_data
+
+        # With refit=True (default)
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1, 1.0]},
+            n_outer_splits=3,
+            n_inner_splits=3,
+            refit=True,
+        )
+        nested_cv.fit(X, y)
+        assert nested_cv.best_estimator_ is not None
+
+        # With refit=False
+        nested_cv_no_refit = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1, 1.0]},
+            n_outer_splits=3,
+            n_inner_splits=3,
+            refit=False,
+        )
+        nested_cv_no_refit.fit(X, y)
+        with pytest.raises(RuntimeError, match="refit=True"):
+            _ = nested_cv_no_refit.best_estimator_
+
+    def test_predict_requires_refit(self, nested_cv_data: tuple) -> None:
+        """predict() should require refit=True."""
+        X, y = nested_cv_data
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1]},
+            n_outer_splits=2,
+            n_inner_splits=2,
+            refit=False,
+        )
+        nested_cv.fit(X, y)
+
+        with pytest.raises(RuntimeError, match="refit=True"):
+            nested_cv.predict(X[:10])
+
+    def test_predict_with_refit(self, nested_cv_data: tuple) -> None:
+        """predict() should work when refit=True."""
+        X, y = nested_cv_data
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1, 1.0]},
+            n_outer_splits=3,
+            n_inner_splits=3,
+            refit=True,
+        )
+        nested_cv.fit(X, y)
+
+        preds = nested_cv.predict(X[:10])
+        assert len(preds) == 10
+
+    def test_expanding_vs_sliding(self, nested_cv_data: tuple) -> None:
+        """Both window types should work."""
+        X, y = nested_cv_data
+
+        # Expanding (default)
+        nested_cv_exp = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1]},
+            n_outer_splits=2,
+            n_inner_splits=2,
+            window_type="expanding",
+        )
+        nested_cv_exp.fit(X, y)
+        assert nested_cv_exp.best_params_ is not None
+
+        # Sliding
+        nested_cv_slide = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1]},
+            n_outer_splits=2,
+            n_inner_splits=2,
+            window_type="sliding",
+            window_size=100,
+        )
+        nested_cv_slide.fit(X, y)
+        assert nested_cv_slide.best_params_ is not None
+
+    def test_verbose_output(self, nested_cv_data: tuple, capsys: pytest.CaptureFixture) -> None:
+        """verbose=1 should print progress."""
+        X, y = nested_cv_data
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1]},
+            n_outer_splits=2,
+            n_inner_splits=2,
+            verbose=1,
+        )
+        nested_cv.fit(X, y)
+
+        captured = capsys.readouterr()
+        assert "NestedWalkForwardCV" in captured.out
+        assert "Outer fold" in captured.out
+
+    def test_get_result_method(self, nested_cv_data: tuple) -> None:
+        """get_result() should return NestedCVResult."""
+        X, y = nested_cv_data
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1, 1.0]},
+            n_outer_splits=3,
+            n_inner_splits=3,
+        )
+        nested_cv.fit(X, y)
+
+        result = nested_cv.get_result()
+        assert isinstance(result, NestedCVResult)
+        assert result.best_params == nested_cv.best_params_
+        assert result.n_outer_splits == 3
+        assert result.n_inner_splits == 3
+        assert result.params_stability == nested_cv.params_stability_
+
+    def test_repr(self) -> None:
+        """__repr__ should be informative."""
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1]},
+            n_outer_splits=3,
+            n_inner_splits=5,
+            horizon=4,
+            gap=4,
+        )
+        repr_str = repr(nested_cv)
+        assert "NestedWalkForwardCV" in repr_str
+        assert "grid" in repr_str
+        assert "n_outer=3" in repr_str
+        assert "n_inner=5" in repr_str
+
+    def test_randomized_search(self, nested_cv_data: tuple) -> None:
+        """param_distributions with n_iter should work."""
+        X, y = nested_cv_data
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_distributions={"alpha": [0.001, 0.01, 0.1, 1.0, 10.0]},
+            n_iter=5,
+            n_outer_splits=2,
+            n_inner_splits=2,
+            random_state=42,
+        )
+        nested_cv.fit(X, y)
+
+        assert nested_cv.best_params_ is not None
+        assert "random" in repr(nested_cv)
+
+    def test_randomized_search_requires_n_iter(self) -> None:
+        """param_distributions without n_iter should raise."""
+        with pytest.raises(ValueError, match="n_iter is required"):
+            NestedWalkForwardCV(
+                estimator=Ridge(),
+                param_distributions={"alpha": [0.1, 1.0]},
+                # n_iter missing
+            )
+
+    def test_cannot_specify_both_grid_and_distributions(self) -> None:
+        """Cannot use both param_grid and param_distributions."""
+        with pytest.raises(ValueError, match="Cannot specify both"):
+            NestedWalkForwardCV(
+                estimator=Ridge(),
+                param_grid={"alpha": [0.1]},
+                param_distributions={"alpha": [0.1]},
+                n_iter=5,
+            )
+
+    def test_must_specify_one_search_type(self) -> None:
+        """Must specify param_grid or param_distributions."""
+        with pytest.raises(ValueError, match="Either param_grid or"):
+            NestedWalkForwardCV(
+                estimator=Ridge(),
+                # Neither param_grid nor param_distributions
+            )
+
+    def test_input_validation_n_outer_splits(self) -> None:
+        """n_outer_splits must be >= 2."""
+        with pytest.raises(ValueError, match="n_outer_splits must be >= 2"):
+            NestedWalkForwardCV(
+                estimator=Ridge(),
+                param_grid={"alpha": [0.1]},
+                n_outer_splits=1,
+            )
+
+    def test_input_validation_n_inner_splits(self) -> None:
+        """n_inner_splits must be >= 2."""
+        with pytest.raises(ValueError, match="n_inner_splits must be >= 2"):
+            NestedWalkForwardCV(
+                estimator=Ridge(),
+                param_grid={"alpha": [0.1]},
+                n_inner_splits=1,
+            )
+
+    def test_input_validation_horizon(self) -> None:
+        """horizon must be >= 1."""
+        with pytest.raises(ValueError, match="horizon must be >= 1"):
+            NestedWalkForwardCV(
+                estimator=Ridge(),
+                param_grid={"alpha": [0.1]},
+                horizon=0,
+            )
+
+    def test_cv_results_structure(self, nested_cv_data: tuple) -> None:
+        """cv_results_ should have expected structure."""
+        X, y = nested_cv_data
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1, 1.0]},
+            n_outer_splits=3,
+            n_inner_splits=3,
+        )
+        nested_cv.fit(X, y)
+
+        cv_results = nested_cv.cv_results_
+        assert "mean_outer_score" in cv_results
+        assert "std_outer_score" in cv_results
+        assert "outer_scores" in cv_results
+        assert "best_params_per_fold" in cv_results
+        assert "params_stability" in cv_results
+        assert "param_combinations" in cv_results
+
+    def test_properties_before_fit_raise(self) -> None:
+        """Accessing properties before fit() should raise."""
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1]},
+        )
+
+        with pytest.raises(RuntimeError, match="Call fit"):
+            _ = nested_cv.best_params_
+
+        with pytest.raises(RuntimeError, match="Call fit"):
+            _ = nested_cv.cv_results_
+
+        with pytest.raises(RuntimeError, match="Call fit"):
+            _ = nested_cv.outer_scores_
+
+    def test_mean_std_outer_score(self, nested_cv_data: tuple) -> None:
+        """mean_outer_score_ and std_outer_score_ should be computed correctly."""
+        X, y = nested_cv_data
+
+        nested_cv = NestedWalkForwardCV(
+            estimator=Ridge(),
+            param_grid={"alpha": [0.1]},
+            n_outer_splits=3,
+            n_inner_splits=3,
+        )
+        nested_cv.fit(X, y)
+
+        # Verify mean/std match outer_scores
+        assert nested_cv.mean_outer_score_ == pytest.approx(
+            np.mean(nested_cv.outer_scores_), rel=1e-10
+        )
+        assert nested_cv.std_outer_score_ == pytest.approx(
+            np.std(nested_cv.outer_scores_), rel=1e-10
+        )

@@ -1,0 +1,296 @@
+{
+  "metadata": {
+    "run_id": "53064972",
+    "timestamp": "2025-12-31T15:03:53.022093+00:00",
+    "temporalcv_version": "0.1.0",
+    "python_version": "3.13.7",
+    "platform": "Linux",
+    "cpu_count": 128,
+    "models": [
+      "Naive",
+      "SeasonalNaive_12",
+      "AutoARIMA",
+      "AutoETS",
+      "AutoTheta",
+      "CrostonClassic",
+      "ADIDA",
+      "IMAPA",
+      "HistoricAverage"
+    ],
+    "datasets": [
+      "m4_yearly",
+      "m4_quarterly",
+      "m4_monthly",
+      "m4_weekly",
+      "m4_daily",
+      "m4_hourly"
+    ],
+    "total_runtime_seconds": 0.008443322993116453,
+    "sample_size": 100,
+    "model_set": "all"
+  },
+  "report": {
+    "results": [
+      {
+        "dataset_name": "m4_yearly",
+        "models": [
+          {
+            "model_name": "Naive",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 725.770611243768,
+              "rmse": 1347.6729074129605,
+              "mape": 17.642499228615634,
+              "direction_accuracy": 0.15525876460767946
+            },
+            "runtime_seconds": 4.341299063526094e-05,
+            "model_params": {}
+          },
+          {
+            "model_name": "SeasonalNaive_12",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 1646.2866219659131,
+              "rmse": 2398.445807940866,
+              "mape": 44.268307658111624,
+              "direction_accuracy": 0.7045075125208681
+            },
+            "runtime_seconds": 0.00020339401089586318,
+            "model_params": {
+              "season_length": 12
+            }
+          }
+        ],
+        "primary_metric": "mae",
+        "best_model": "Naive",
+        "statistical_tests": {
+          "SeasonalNaive_12": {
+            "statistic": -10.116228320839657,
+            "p_value": 0.0,
+            "significant": true
+          }
+        }
+      },
+      {
+        "dataset_name": "m4_quarterly",
+        "models": [
+          {
+            "model_name": "Naive",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 613.1002433822467,
+              "rmse": 1452.9541014258364,
+              "mape": 15.749229457708843,
+              "direction_accuracy": 0.13642052565707133
+            },
+            "runtime_seconds": 1.5900004655122757e-05,
+            "model_params": {}
+          },
+          {
+            "model_name": "SeasonalNaive_12",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 859.0440194861436,
+              "rmse": 1722.9001261232854,
+              "mape": 21.353940613997143,
+              "direction_accuracy": 0.6808510638297872
+            },
+            "runtime_seconds": 0.0002294739824719727,
+            "model_params": {
+              "season_length": 12
+            }
+          }
+        ],
+        "primary_metric": "mae",
+        "best_model": "Naive",
+        "statistical_tests": {
+          "SeasonalNaive_12": {
+            "statistic": -4.749568662845395,
+            "p_value": 2.4162089862223013e-06,
+            "significant": true
+          }
+        }
+      },
+      {
+        "dataset_name": "m4_monthly",
+        "models": [
+          {
+            "model_name": "Naive",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 337.5796162914223,
+              "rmse": 576.4476576481946,
+              "mape": 15.1729931497357,
+              "direction_accuracy": 0.08893829905503058
+            },
+            "runtime_seconds": 1.3504992239177227e-05,
+            "model_params": {}
+          },
+          {
+            "model_name": "SeasonalNaive_12",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 389.26967363880425,
+              "rmse": 660.3353102041684,
+              "mape": 16.39831155735878,
+              "direction_accuracy": 0.5736520289049472
+            },
+            "runtime_seconds": 0.00040986499516293406,
+            "model_params": {
+              "season_length": 12
+            }
+          }
+        ],
+        "primary_metric": "mae",
+        "best_model": "Naive",
+        "statistical_tests": {
+          "SeasonalNaive_12": {
+            "statistic": -2.9018779541599637,
+            "p_value": 0.003754451128132441,
+            "significant": true
+          }
+        }
+      },
+      {
+        "dataset_name": "m4_weekly",
+        "models": [
+          {
+            "model_name": "Naive",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 288.66158395769224,
+              "rmse": 765.0890097677284,
+              "mape": 10.317316860638218,
+              "direction_accuracy": 0.0800615858352579
+            },
+            "runtime_seconds": 1.3005017535760999e-05,
+            "model_params": {}
+          },
+          {
+            "model_name": "SeasonalNaive_12",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 456.20764692923075,
+              "rmse": 968.7154735557842,
+              "mape": 15.660529665160503,
+              "direction_accuracy": 0.5365665896843725
+            },
+            "runtime_seconds": 0.000310166971758008,
+            "model_params": {
+              "season_length": 12
+            }
+          }
+        ],
+        "primary_metric": "mae",
+        "best_model": "Naive",
+        "statistical_tests": {
+          "SeasonalNaive_12": {
+            "statistic": -6.04517994704825,
+            "p_value": 1.9472572443390845e-09,
+            "significant": true
+          }
+        }
+      },
+      {
+        "dataset_name": "m4_daily",
+        "models": [
+          {
+            "model_name": "Naive",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 172.58252418036972,
+              "rmse": 333.60171958918846,
+              "mape": 6.087786104505682,
+              "direction_accuracy": 0.10221586847748391
+            },
+            "runtime_seconds": 1.3836019206792116e-05,
+            "model_params": {}
+          },
+          {
+            "model_name": "SeasonalNaive_12",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 230.78551665413343,
+              "rmse": 449.4139062887421,
+              "mape": 7.977739361170684,
+              "direction_accuracy": 0.5203716940671909
+            },
+            "runtime_seconds": 0.0003336409863550216,
+            "model_params": {
+              "season_length": 12
+            }
+          }
+        ],
+        "primary_metric": "mae",
+        "best_model": "Naive",
+        "statistical_tests": {
+          "SeasonalNaive_12": {
+            "statistic": -4.970235743915188,
+            "p_value": 7.512663111608475e-07,
+            "significant": true
+          }
+        }
+      },
+      {
+        "dataset_name": "m4_hourly",
+        "models": [
+          {
+            "model_name": "Naive",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 1737.9074166666667,
+              "rmse": 10603.511687234015,
+              "mape": 40.51982716794375,
+              "direction_accuracy": 0.038966451344030005
+            },
+            "runtime_seconds": 1.3234996004030108e-05,
+            "model_params": {}
+          },
+          {
+            "model_name": "SeasonalNaive_12",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 2064.9481666666666,
+              "rmse": 14596.894281373836,
+              "mape": 92.13032132432014,
+              "direction_accuracy": 0.5294853094394666
+            },
+            "runtime_seconds": 0.0009951629908755422,
+            "model_params": {
+              "season_length": 12
+            }
+          }
+        ],
+        "primary_metric": "mae",
+        "best_model": "Naive",
+        "statistical_tests": {
+          "SeasonalNaive_12": {
+            "statistic": -1.9171054978156956,
+            "p_value": 0.055283840743423296,
+            "significant": false
+          }
+        }
+      }
+    ],
+    "summary": {
+      "n_datasets": 6,
+      "wins_by_model": {
+        "Naive": 6
+      },
+      "mean_metrics_by_model": {
+        "Naive": {
+          "mae": 645.9336659536943,
+          "rmse": 2513.2128471796536,
+          "mape": 17.581608661524637,
+          "direction_accuracy": 0.10031024916275887
+        },
+        "SeasonalNaive_12": {
+          "mae": 941.090274223482,
+          "rmse": 3466.11748424778,
+          "mape": 32.964858363353144,
+          "direction_accuracy": 0.5909056997411054
+        }
+      }
+    }
+  }
+}

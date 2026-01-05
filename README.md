@@ -92,6 +92,22 @@ temporalcv provides **validation gates** that catch these bugs before they corru
 
 ---
 
+## Comparison vs sklearn TimeSeriesSplit
+
+| Feature | temporalcv | sklearn | Winner |
+|---------|------------|---------|--------|
+| Gap Enforcement | ✅ Native | ✅ v1.0+ | Both |
+| Window Types | Expanding + Sliding | Expanding only | **temporalcv** |
+| Leakage Detection | 3 validation gates | None | **temporalcv** |
+| Statistical Tests | DM, PT, HAC | None | **temporalcv** |
+| Conformal Prediction | Split + Adaptive | External (MAPIE) | **temporalcv** |
+| Financial CV | Purging + Embargo | None | **temporalcv** |
+| Split Speed | ~0.035 ms | ~0.012 ms | sklearn |
+
+**Key Insight**: sklearn's `TimeSeriesSplit` handles basic temporal splits well. temporalcv adds the validation layer that catches bugs *before* they corrupt your results.
+
+---
+
 ## Installation
 
 ```bash
@@ -113,8 +129,9 @@ from temporalcv.gates import gate_shuffled_target, gate_suspicious_improvement
 
 # Validate your model doesn't have leakage
 # Step 1: Compute gate results
+# Note: n_shuffles>=100 required for statistical power in permutation mode (default)
 gate_results = [
-    gate_shuffled_target(my_model, X, y, n_shuffles=5),
+    gate_shuffled_target(my_model, X, y, n_shuffles=100),
     gate_suspicious_improvement(model_mae, persistence_mae, threshold=0.20),
 ]
 
@@ -128,7 +145,8 @@ if report.status == "HALT":
 cv = WalkForwardCV(
     window_type="sliding",
     window_size=104,
-    gap=2,  # Enforces gap >= horizon
+    horizon=2,  # Minimum required separation for 2-step forecasting
+    extra_gap=0,  # Optional: add safety margin (default: 0)
     test_size=1
 )
 
@@ -180,6 +198,47 @@ Real-world case studies demonstrating key features:
 
 ---
 
+## Benchmark Comparison
+
+### Feature Matrix
+
+| Feature | temporalcv | sklearn | sktime | Darts |
+|---------|------------|---------|--------|-------|
+| **Gap enforcement** | ✅ Built-in | ❌ Manual | ❌ Manual | ❌ Manual |
+| **Leakage detection** | ✅ Gates | ❌ None | ❌ None | ❌ None |
+| **Horizon validation** | ✅ Warnings | ❌ None | ❌ None | ❌ None |
+| **Statistical tests (DM)** | ✅ HAC variance | ❌ None | ✅ Basic | ❌ None |
+| **Conformal prediction** | ✅ Adaptive | ❌ None | ❌ None | ✅ Split |
+| **sklearn compatible** | ✅ Full | ✅ Native | ✅ Full | ❌ Partial |
+
+### Why Not Just sklearn's TimeSeriesSplit?
+
+```python
+from sklearn.model_selection import TimeSeriesSplit
+
+# sklearn: No gap, no horizon validation
+cv = TimeSeriesSplit(n_splits=5)  # Target leakage possible for h>1
+
+# temporalcv: Gap enforcement + validation
+from temporalcv import WalkForwardCV
+cv = WalkForwardCV(n_splits=5, horizon=2, extra_gap=0)  # total_separation = horizon + extra_gap
+```
+
+### Benchmark Runner
+
+Compare models across datasets:
+
+```python
+from temporalcv.benchmarks import create_synthetic_dataset
+from temporalcv.compare import run_benchmark_suite, NaiveAdapter
+
+datasets = [create_synthetic_dataset(seed=i) for i in range(3)]
+report = run_benchmark_suite(datasets, [NaiveAdapter()], include_dm_test=True)
+print(report.to_markdown())
+```
+
+---
+
 ## Documentation
 
 ### Getting Started
@@ -204,6 +263,25 @@ Real-world case studies demonstrating key features:
 ### Internal
 - [Planning Documentation](docs/plans/INDEX.md)
 - [Ecosystem Gap Analysis](docs/plans/reference/ecosystem_gaps.md)
+
+---
+
+## Citation
+
+If you use temporalcv in your research, please cite:
+
+```bibtex
+@software{temporalcv2025,
+  author       = {Behring, Brandon},
+  title        = {temporalcv: Temporal cross-validation with leakage protection},
+  year         = {2025},
+  publisher    = {GitHub},
+  url          = {https://github.com/brandonmbehring-dev/temporalcv},
+  version      = {1.0.0}
+}
+```
+
+See [CITATION.cff](CITATION.cff) for additional citation formats.
 
 ---
 

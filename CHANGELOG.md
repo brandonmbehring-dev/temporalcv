@@ -9,6 +9,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+---
+
+## [1.1.0] - 2026-01-01
+
+Statistical extensions and enhanced features (implemented, documented retroactively).
+
+### Added
+
+#### Statistical Tests
+- `variance_method="self_normalized"` for `dm_test()` — bandwidth-free DM test (Shao 2010)
+- `gw_test()` — Giacomini-White conditional predictive ability test (GW 2006)
+- `cw_test()` — Clark-West nested model comparison test (CW 2007)
+
+#### Multi-Horizon Analysis
+- `compare_horizons()` — two-model comparison across forecast horizons
+- `compare_models_horizons()` — multi-model comparison with best-per-horizon
+- `MultiHorizonResult` dataclass with `degradation_pattern`, `significant_horizons`
+
+#### Nested Cross-Validation
+- `NestedWalkForwardCV` — unbiased hyperparameter selection (Bergmeir 2012)
+- Voting-based parameter selection with `params_stability` metric
+- Both grid search and randomized search modes
+
+#### Block Bootstrap CI
+- `bootstrap_ci=True` parameter for `gate_shuffled_target()` and `gate_synthetic_ar1()`
+- Returns `ci_lower`, `ci_upper`, `bootstrap_std` in gate details
+- Moving block bootstrap preserving temporal dependence (Kunsch 1989)
+
+#### Conformal Diagnostics
+- `CoverageDiagnostics` dataclass for coverage analysis
+- `compute_coverage_diagnostics()` — by time window and regime
+
+#### Documentation
+- Model cards for `WalkForwardCV` and `gate_shuffled_target` (docs/model_cards/)
+
+### Technical Notes
+
+**Test Count**: 1,698 tests (up from 1,453)
+
+**Note**: These features were implemented during v1.0.0-rc1 development but not documented in CHANGELOG until this retroactive update.
+
+---
+
+## [1.2.0] - 2026-01-01
+
+Advanced statistical tests and conformal prediction methods.
+
+### Added
+
+#### Multiple Comparison Tests
+- `reality_check_test()` — White's Reality Check for data snooping (White 2000)
+- `spa_test()` — Hansen's Superior Predictive Ability test with 3 p-values (Hansen 2005)
+- `RealityCheckResult`, `SPATestResult` dataclasses
+
+#### Forecast Encompassing
+- `forecast_encompassing_test()` — pairwise encompassing test (Harvey et al. 1998)
+- `forecast_encompassing_bidirectional()` — returns recommendation: use_a/use_b/combine/equivalent
+- `EncompassingTestResult`, `BidirectionalEncompassingResult` dataclasses
+
+#### Bellman Conformal Inference
+- `BellmanConformalPredictor` — DP-based optimal prediction intervals (Yang, Candès & Lei 2024)
+- Multi-step forecast handling with bounded interval widths
+- `initialize()`, `predict_interval()`, `predict_intervals_batch()` methods
+
+#### Research-kb Integration
+- MCP-based integration hooks documented in CLAUDE.md
+- Example usage for querying methodological background
+
+### Technical Notes
+
+**Test Count**: 1,741 tests (up from 1,698)
+
+**Note**: v1.2.0 features implemented 2025-12-31, documented retroactively.
+
+---
+
 ## [1.0.0-rc1] - 2025-12-26
 
 Release candidate 1 for v1.0.0 - statistical rigor improvements and API stabilization.
@@ -342,6 +418,9 @@ Major metrics expansion release with comprehensive evaluation toolkit.
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.2.0 | 2026-01-01 | RC/SPA tests, Encompassing, Bellman Conformal, research-kb hooks |
+| 1.1.0 | 2026-01-01 | Statistical extensions (GW, CW, self-normalized DM), NestedCV, bootstrap CI |
+| 1.0.0-rc1 | 2025-12-26 | Release candidate (two-mode shuffled target, strict get_n_splits) |
 | 0.4.0 | 2025-12-24 | Hardening (benchmarks, Windows CI, reproducibility, property tests) |
 | 0.3.0 | 2025-12-24 | Capability gaps (stationarity, financial CV, guardrails) |
 | 0.2.0 | 2025-12-24 | Major metrics expansion (40+ new functions) |

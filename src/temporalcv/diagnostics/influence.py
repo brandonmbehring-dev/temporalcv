@@ -205,7 +205,7 @@ def compute_dm_influence(
         block_indices.append((start, end))
 
         # Leave-block-out: compute DM without this block
-        mask = np.ones(n, dtype=bool)
+        mask: np.ndarray = np.ones(n, dtype=bool)
         mask[start:end] = False
         d_without = d[mask]
 

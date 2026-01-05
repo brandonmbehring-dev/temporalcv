@@ -80,17 +80,34 @@ def create_features(series: np.ndarray, n_lags: int = 5):
 # =============================================================================
 
 
-def compute_mase(actual: np.ndarray, predicted: np.ndarray) -> float:
+def compute_mase(
+    actual: np.ndarray, predicted: np.ndarray, train_data: np.ndarray = None
+) -> float:
     """
-    Mean Absolute Scaled Error.
+    Mean Absolute Scaled Error (Hyndman & Koehler 2006).
 
     MASE < 1: Better than naive baseline
     MASE = 1: Same as naive
     MASE > 1: Worse than naive
+
+    Parameters
+    ----------
+    actual : np.ndarray
+        Test set actual values
+    predicted : np.ndarray
+        Model predictions on test set
+    train_data : np.ndarray, optional
+        Training data for computing naive baseline scale.
+        If None, uses actual (test data) for backward compatibility,
+        but this is NOT recommended per MASE definition.
     """
     mae = np.mean(np.abs(actual - predicted))
-    # Naive baseline MAE (in-sample)
-    naive_mae = np.mean(np.abs(np.diff(actual)))
+    # Naive baseline MAE should be computed from TRAINING data per MASE definition
+    if train_data is not None:
+        naive_mae = np.mean(np.abs(np.diff(train_data)))
+    else:
+        # Fallback: compute from test data (not recommended)
+        naive_mae = np.mean(np.abs(np.diff(actual)))
     return mae / naive_mae if naive_mae > 0 else np.inf
 
 
@@ -176,7 +193,8 @@ def demonstrate_high_persistence():
         preds = model.predict(X_test)
 
         mae = np.mean(np.abs(y_test - preds))
-        mase = compute_mase(y_test, preds)
+        # Pass y_train for MASE denominator per Hyndman & Koehler 2006
+        mase = compute_mase(y_test, preds, train_data=y_train)
         mc_ss = compute_mc_ss_ratio(y_test, preds)
         dir_acc = compute_directional_accuracy(y_test, preds)
 

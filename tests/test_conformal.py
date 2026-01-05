@@ -19,6 +19,8 @@ from temporalcv.conformal import (
     BootstrapUncertainty,
     evaluate_interval_quality,
     walk_forward_conformal,
+    CoverageDiagnostics,
+    compute_coverage_diagnostics,
 )
 
 
@@ -793,3 +795,527 @@ class TestConformalIntegration:
 
         # Quantile should increase to adapt
         assert acp.current_quantile > initial_quantile
+
+
+# =============================================================================
+# Coverage Diagnostics Tests
+# =============================================================================
+
+
+class TestCoverageDiagnostics:
+    """Test detailed coverage diagnostics for conformal prediction intervals."""
+
+    def test_basic_diagnostics(self, calibration_test_split) -> None:
+        """compute_coverage_diagnostics should return correct type and fields."""
+        preds_cal, y_cal, preds_test, y_test = calibration_test_split
+
+        conformal = SplitConformalPredictor(alpha=0.10)
+        conformal.calibrate(preds_cal, y_cal)
+        intervals = conformal.predict_interval(preds_test)
+
+        diag = compute_coverage_diagnostics(intervals, y_test)
+
+        assert isinstance(diag, CoverageDiagnostics)
+        assert 0.0 <= diag.overall_coverage <= 1.0
+        assert diag.target_coverage == 0.90
+        assert diag.n_observations == len(y_test)
+
+    def test_overall_coverage_calculation(self) -> None:
+        """overall_coverage should be fraction of actuals within intervals."""
+        point = np.arange(10, dtype=float)
+        # Wide intervals: all 10 points covered
+        lower = point - 10
+        upper = point + 10
+
+        interval = PredictionInterval(
+            point=point,
+            lower=lower,
+            upper=upper,
+            confidence=0.95,
+            method="test",
+        )
+
+        actuals = point  # Exactly at center
+        diag = compute_coverage_diagnostics(interval, actuals)
+
+        assert diag.overall_coverage == pytest.approx(1.0, rel=0.01)
+
+    def test_coverage_gap_calculation(self) -> None:
+        """coverage_gap should be target - empirical."""
+        point = np.arange(100, dtype=float)
+        lower = point - 0.1  # Very narrow intervals
+        upper = point + 0.1
+
+        interval = PredictionInterval(
+            point=point,
+            lower=lower,
+            upper=upper,
+            confidence=0.95,  # Target = 0.95
+            method="test",
+        )
+
+        # All actuals within bounds = 100% coverage
+        actuals = point
+        diag = compute_coverage_diagnostics(interval, actuals)
+
+        # gap = target - empirical = 0.95 - 1.0 = -0.05
+        assert diag.coverage_gap == pytest.approx(-0.05, rel=0.01)
+        assert diag.undercoverage_warning is False  # Not undercovered
+
+    def test_undercoverage_warning_triggered(self) -> None:
+        """undercoverage_warning should be True when gap > threshold."""
+        point = np.arange(100, dtype=float)
+        lower = point - 0.001  # Extremely narrow intervals
+        upper = point + 0.001
+
+        interval = PredictionInterval(
+            point=point,
+            lower=lower,
+            upper=upper,
+            confidence=0.95,
+            method="test",
+        )
+
+        # Half the actuals outside bounds (50% coverage vs 95% target)
+        rng = np.random.default_rng(42)
+        actuals = point + rng.normal(0, 1.0, 100)
+
+        diag = compute_coverage_diagnostics(
+            interval, actuals, undercoverage_threshold=0.05
+        )
+
+        # Should warn: coverage << 95%
+        assert diag.undercoverage_warning is True
+        assert diag.coverage_gap > 0.05
+
+    def test_coverage_by_window(self) -> None:
+        """coverage_by_window should compute coverage in rolling windows."""
+        n = 100
+        point = np.arange(n, dtype=float)
+        lower = point - 1
+        upper = point + 1
+
+        interval = PredictionInterval(
+            point=point,
+            lower=lower,
+            upper=upper,
+            confidence=0.95,
+            method="test",
+        )
+
+        actuals = point  # All covered
+        diag = compute_coverage_diagnostics(interval, actuals, window_size=50)
+
+        # Should have 2 windows
+        assert len(diag.coverage_by_window) == 2
+        for window_name, cov in diag.coverage_by_window.items():
+            assert cov == pytest.approx(1.0, rel=0.01)
+
+    def test_coverage_by_regime(self) -> None:
+        """coverage_by_regime should compute per-regime coverage."""
+        n = 100
+        point = np.arange(n, dtype=float)
+        lower = point - 1
+        upper = point + 1
+
+        interval = PredictionInterval(
+            point=point,
+            lower=lower,
+            upper=upper,
+            confidence=0.95,
+            method="test",
+        )
+
+        actuals = point  # All covered
+        regimes = np.array(["low"] * 50 + ["high"] * 50)
+
+        diag = compute_coverage_diagnostics(interval, actuals, regimes=regimes)
+
+        assert diag.coverage_by_regime is not None
+        assert "low" in diag.coverage_by_regime
+        assert "high" in diag.coverage_by_regime
+        assert diag.coverage_by_regime["low"] == pytest.approx(1.0, rel=0.01)
+        assert diag.coverage_by_regime["high"] == pytest.approx(1.0, rel=0.01)
+
+    def test_length_mismatch_raises(self) -> None:
+        """Should raise ValueError if intervals and actuals have different lengths."""
+        interval = PredictionInterval(
+            point=np.zeros(10),
+            lower=-np.ones(10),
+            upper=np.ones(10),
+            confidence=0.95,
+            method="test",
+        )
+
+        actuals = np.zeros(20)  # Different length
+
+        with pytest.raises(ValueError, match="doesn't match"):
+            compute_coverage_diagnostics(interval, actuals)
+
+    def test_regime_length_mismatch_raises(self) -> None:
+        """Should raise ValueError if regimes has wrong length."""
+        interval = PredictionInterval(
+            point=np.zeros(10),
+            lower=-np.ones(10),
+            upper=np.ones(10),
+            confidence=0.95,
+            method="test",
+        )
+
+        actuals = np.zeros(10)
+        regimes = np.array(["a"] * 5)  # Wrong length
+
+        with pytest.raises(ValueError, match="doesn't match"):
+            compute_coverage_diagnostics(interval, actuals, regimes=regimes)
+
+    def test_n_observations_correct(self) -> None:
+        """n_observations should match input length."""
+        for n in [10, 50, 100, 200]:
+            interval = PredictionInterval(
+                point=np.zeros(n),
+                lower=-np.ones(n),
+                upper=np.ones(n),
+                confidence=0.95,
+                method="test",
+            )
+            actuals = np.zeros(n)
+
+            diag = compute_coverage_diagnostics(interval, actuals)
+            assert diag.n_observations == n
+
+    def test_target_coverage_from_interval(self) -> None:
+        """target_coverage should use interval.confidence if not specified."""
+        interval = PredictionInterval(
+            point=np.zeros(50),
+            lower=-np.ones(50),
+            upper=np.ones(50),
+            confidence=0.80,  # 80% confidence
+            method="test",
+        )
+        actuals = np.zeros(50)
+
+        diag = compute_coverage_diagnostics(interval, actuals)
+        assert diag.target_coverage == 0.80
+
+    def test_explicit_target_coverage_override(self) -> None:
+        """Explicit target_coverage should override interval.confidence."""
+        interval = PredictionInterval(
+            point=np.zeros(50),
+            lower=-np.ones(50),
+            upper=np.ones(50),
+            confidence=0.80,
+            method="test",
+        )
+        actuals = np.zeros(50)
+
+        diag = compute_coverage_diagnostics(
+            interval, actuals, target_coverage=0.95
+        )
+        assert diag.target_coverage == 0.95
+
+
+# =============================================================================
+# Bellman Conformal Inference Tests (Yang, Candès & Lei 2024)
+# =============================================================================
+
+
+class TestBellmanConformalPredictor:
+    """Tests for BellmanConformalPredictor."""
+
+    def test_initialization(self) -> None:
+        """BellmanConformalPredictor should initialize correctly."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        bcp = BellmanConformalPredictor(alpha=0.10, horizon=5, n_grid=30)
+
+        assert bcp.alpha == 0.10
+        assert bcp.horizon == 5
+        assert bcp.n_grid == 30
+        assert bcp.current_quantile is None
+
+    def test_invalid_alpha_raises(self) -> None:
+        """Should raise ValueError for invalid alpha."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        with pytest.raises(ValueError, match="alpha"):
+            BellmanConformalPredictor(alpha=0.0)
+
+        with pytest.raises(ValueError, match="alpha"):
+            BellmanConformalPredictor(alpha=1.0)
+
+    def test_invalid_horizon_raises(self) -> None:
+        """Should raise ValueError for invalid horizon."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        with pytest.raises(ValueError, match="horizon"):
+            BellmanConformalPredictor(horizon=0)
+
+    def test_invalid_n_grid_raises(self) -> None:
+        """Should raise ValueError for invalid n_grid."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        with pytest.raises(ValueError, match="n_grid"):
+            BellmanConformalPredictor(n_grid=5)
+
+    def test_calibration(self) -> None:
+        """Should calibrate with valid data."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        rng = np.random.default_rng(42)
+        predictions = rng.normal(0, 1, 50)
+        actuals = predictions + rng.normal(0, 0.3, 50)
+
+        bcp = BellmanConformalPredictor(alpha=0.10)
+        bcp.initialize(predictions, actuals)
+
+        assert bcp.current_quantile is not None
+        assert bcp.current_quantile > 0
+        assert bcp.value_function is not None
+        assert len(bcp.quantile_history) == 1
+
+    def test_calibration_insufficient_data_raises(self) -> None:
+        """Should raise with insufficient calibration data."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        predictions = np.zeros(5)
+        actuals = np.zeros(5)
+
+        bcp = BellmanConformalPredictor()
+
+        with pytest.raises(ValueError, match="at least"):
+            bcp.initialize(predictions, actuals)
+
+    def test_predict_interval_before_init_raises(self) -> None:
+        """Should raise if predict_interval called before initialize."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        bcp = BellmanConformalPredictor()
+
+        with pytest.raises(RuntimeError, match="not initialized"):
+            bcp.predict_interval(0.0)
+
+    def test_predict_interval_single(self) -> None:
+        """Should produce valid single prediction interval."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        rng = np.random.default_rng(42)
+        predictions = rng.normal(0, 1, 50)
+        actuals = predictions + rng.normal(0, 0.3, 50)
+
+        bcp = BellmanConformalPredictor(alpha=0.10)
+        bcp.initialize(predictions, actuals)
+
+        lower, upper = bcp.predict_interval(0.0)
+
+        assert lower < 0.0 < upper
+        assert upper - lower > 0  # Non-zero width
+
+    def test_update_changes_quantile(self) -> None:
+        """Update should modify current quantile."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        rng = np.random.default_rng(42)
+        predictions = rng.normal(0, 1, 50)
+        actuals = predictions + rng.normal(0, 0.3, 50)
+
+        bcp = BellmanConformalPredictor(alpha=0.10, gamma=0.2)
+        bcp.initialize(predictions, actuals)
+
+        initial_quantile = bcp.current_quantile
+
+        # Update multiple times with large errors (should widen)
+        for _ in range(10):
+            bcp.update(0.0, 10.0)  # Large error
+
+        # Quantile should have changed
+        assert len(bcp.quantile_history) == 11
+        # With large errors, quantile should increase
+        assert bcp.current_quantile != initial_quantile
+
+    def test_solve_optimal_sequence(self) -> None:
+        """solve_optimal_sequence should return valid quantile sequence."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        rng = np.random.default_rng(42)
+        predictions = rng.normal(0, 1, 50)
+        actuals = predictions + rng.normal(0, 0.3, 50)
+
+        bcp = BellmanConformalPredictor(alpha=0.10, horizon=5)
+        bcp.initialize(predictions, actuals)
+
+        test_preds = rng.normal(0, 1, 20)
+        quantiles = bcp.solve_optimal_sequence(test_preds)
+
+        assert len(quantiles) == 20
+        assert np.all(quantiles > 0)  # All positive
+
+    def test_predict_intervals_batch(self) -> None:
+        """predict_intervals_batch should return PredictionInterval."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        rng = np.random.default_rng(42)
+        predictions = rng.normal(0, 1, 50)
+        actuals = predictions + rng.normal(0, 0.3, 50)
+
+        bcp = BellmanConformalPredictor(alpha=0.10)
+        bcp.initialize(predictions, actuals)
+
+        test_preds = rng.normal(0, 1, 20)
+        intervals = bcp.predict_intervals_batch(test_preds)
+
+        assert isinstance(intervals, PredictionInterval)
+        assert len(intervals.point) == 20
+        assert len(intervals.lower) == 20
+        assert len(intervals.upper) == 20
+        assert intervals.method == "bellman_conformal"
+        assert np.all(intervals.upper > intervals.lower)
+
+    def test_coverage_maintained(self) -> None:
+        """Coverage should be approximately maintained."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        rng = np.random.default_rng(42)
+        n = 100
+        alpha = 0.10
+
+        # Generate data with known noise level
+        predictions = rng.normal(0, 1, n)
+        actuals = predictions + rng.normal(0, 0.3, n)
+
+        # Calibrate on first half
+        bcp = BellmanConformalPredictor(alpha=alpha, horizon=5)
+        bcp.initialize(predictions[:50], actuals[:50])
+
+        # Test on second half
+        intervals = bcp.predict_intervals_batch(predictions[50:])
+        coverage = intervals.coverage(actuals[50:])
+
+        # Coverage should be reasonable (>= 1 - alpha - slack)
+        assert coverage >= 0.75, f"Coverage {coverage:.2f} too low"
+
+    def test_bellman_equation_solved(self) -> None:
+        """Value function should be computed via backward induction."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        rng = np.random.default_rng(42)
+        predictions = rng.normal(0, 1, 50)
+        actuals = predictions + rng.normal(0, 0.3, 50)
+
+        bcp = BellmanConformalPredictor(alpha=0.10, horizon=5, n_grid=20)
+        bcp.initialize(predictions, actuals)
+
+        # Value function should have shape (horizon+1, n_grid)
+        assert bcp.value_function.shape == (6, 20)
+        # Terminal cost should be zero
+        assert np.all(bcp.value_function[5, :] == 0.0)
+
+    def test_quantile_grid_built(self) -> None:
+        """Quantile grid should be built from calibration data."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        rng = np.random.default_rng(42)
+        predictions = rng.normal(0, 1, 50)
+        actuals = predictions + rng.normal(0, 0.3, 50)
+
+        bcp = BellmanConformalPredictor(n_grid=30)
+        bcp.initialize(predictions, actuals)
+
+        assert bcp._quantile_grid is not None
+        assert len(bcp._quantile_grid) == 30
+        assert np.all(bcp._quantile_grid >= 0)  # Non-negative
+
+    def test_reproducibility(self) -> None:
+        """Same data should give same results."""
+        from temporalcv.conformal import BellmanConformalPredictor
+
+        rng = np.random.default_rng(42)
+        predictions = rng.normal(0, 1, 50)
+        actuals = predictions + rng.normal(0, 0.3, 50)
+
+        bcp1 = BellmanConformalPredictor(alpha=0.10, horizon=5)
+        bcp1.initialize(predictions, actuals)
+
+        bcp2 = BellmanConformalPredictor(alpha=0.10, horizon=5)
+        bcp2.initialize(predictions, actuals)
+
+        assert bcp1.current_quantile == bcp2.current_quantile
+        assert np.allclose(bcp1.value_function, bcp2.value_function)
+
+
+class TestBellmanVsAdaptiveComparison:
+    """Compare Bellman and Adaptive conformal methods."""
+
+    def test_both_maintain_coverage(self) -> None:
+        """Both methods should maintain reasonable coverage."""
+        from temporalcv.conformal import (
+            AdaptiveConformalPredictor,
+            BellmanConformalPredictor,
+        )
+
+        rng = np.random.default_rng(42)
+        n = 150
+        alpha = 0.10
+
+        predictions = rng.normal(0, 1, n)
+        actuals = predictions + rng.normal(0, 0.3, n)
+
+        # Bellman
+        bcp = BellmanConformalPredictor(alpha=alpha)
+        bcp.initialize(predictions[:50], actuals[:50])
+
+        # Adaptive
+        acp = AdaptiveConformalPredictor(alpha=alpha)
+        acp.initialize(predictions[:50], actuals[:50])
+
+        # Simulate online updates for both
+        bellman_covered = 0
+        adaptive_covered = 0
+
+        for i in range(50, n):
+            pred = predictions[i]
+            actual = actuals[i]
+
+            # Bellman
+            b_lower, b_upper = bcp.predict_interval(pred)
+            if b_lower <= actual <= b_upper:
+                bellman_covered += 1
+            bcp.update(pred, actual)
+
+            # Adaptive
+            a_lower, a_upper = acp.predict_interval(pred)
+            if a_lower <= actual <= a_upper:
+                adaptive_covered += 1
+            acp.update(pred, actual)
+
+        bellman_coverage = bellman_covered / (n - 50)
+        adaptive_coverage = adaptive_covered / (n - 50)
+
+        # Both should have reasonable coverage
+        assert bellman_coverage >= 0.70
+        assert adaptive_coverage >= 0.70
+
+    def test_bellman_tighter_intervals_possible(self) -> None:
+        """Bellman may produce tighter intervals in some cases."""
+        from temporalcv.conformal import (
+            AdaptiveConformalPredictor,
+            BellmanConformalPredictor,
+        )
+
+        rng = np.random.default_rng(42)
+        n = 100
+
+        predictions = rng.normal(0, 1, n)
+        actuals = predictions + rng.normal(0, 0.3, n)
+
+        # Bellman
+        bcp = BellmanConformalPredictor(alpha=0.10, horizon=10)
+        bcp.initialize(predictions[:50], actuals[:50])
+        bellman_intervals = bcp.predict_intervals_batch(predictions[50:])
+
+        # Adaptive (simulate to get final quantile)
+        acp = AdaptiveConformalPredictor(alpha=0.10)
+        acp.initialize(predictions[:50], actuals[:50])
+
+        # Both produce valid intervals
+        assert bellman_intervals.mean_width > 0
+        assert acp.current_quantile > 0

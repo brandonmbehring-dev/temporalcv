@@ -287,3 +287,89 @@ print(f"Interval score: {quality['interval_score']:.4f}")
 | Split Conformal | Coverage guarantee, simple | Needs separate calibration set |
 | Adaptive Conformal | Handles drift | No finite-sample guarantee |
 | Bootstrap | No assumptions | Computationally expensive |
+
+---
+
+## Coverage Diagnostics
+
+### `CoverageDiagnostics`
+
+Detailed coverage diagnostics for conformal prediction intervals.
+
+```python
+@dataclass
+class CoverageDiagnostics:
+    overall_coverage: float           # Empirical coverage
+    target_coverage: float            # Nominal coverage (1 - α)
+    coverage_gap: float               # target - empirical
+    undercoverage_warning: bool       # True if gap > threshold
+    coverage_by_window: Dict[str, float]  # Window-based coverage
+    coverage_by_regime: Optional[Dict[str, float]]  # Per-regime coverage
+    n_observations: int               # Total observations
+```
+
+---
+
+### `compute_coverage_diagnostics`
+
+Compute detailed coverage diagnostics for prediction intervals.
+
+```python
+def compute_coverage_diagnostics(
+    intervals: PredictionInterval,
+    actuals: np.ndarray,
+    *,
+    target_coverage: Optional[float] = None,
+    window_size: int = 50,
+    regimes: Optional[np.ndarray] = None,
+    undercoverage_threshold: float = 0.05,
+) -> CoverageDiagnostics
+```
+
+**Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `intervals` | `PredictionInterval` | required | Intervals to evaluate |
+| `actuals` | `np.ndarray` | required | Actual values |
+| `target_coverage` | `float` | `None` | Target level (uses interval.confidence if None) |
+| `window_size` | `int` | `50` | Rolling window size for time-based analysis |
+| `regimes` | `np.ndarray` | `None` | Regime labels for stratified coverage |
+| `undercoverage_threshold` | `float` | `0.05` | Warning threshold for undercoverage |
+
+**Returns**: `CoverageDiagnostics` with detailed coverage analysis
+
+**Example**:
+
+```python
+from temporalcv import (
+    SplitConformalPredictor,
+    compute_coverage_diagnostics,
+)
+
+conformal = SplitConformalPredictor(alpha=0.05)
+conformal.calibrate(cal_preds, cal_actuals)
+intervals = conformal.predict_interval(test_preds)
+
+diag = compute_coverage_diagnostics(
+    intervals,
+    test_actuals,
+    regimes=volatility_regime,  # Optional regime stratification
+)
+
+print(f"Coverage: {diag.overall_coverage:.1%}")
+print(f"Target: {diag.target_coverage:.1%}")
+print(f"Gap: {diag.coverage_gap:+.1%}")
+
+if diag.undercoverage_warning:
+    print("WARNING: Coverage significantly below target!")
+
+if diag.coverage_by_regime:
+    for regime, cov in diag.coverage_by_regime.items():
+        print(f"  {regime}: {cov:.1%}")
+```
+
+**Use Cases**:
+1. Production monitoring for coverage degradation
+2. Identifying time periods with poor coverage
+3. Regime-specific performance analysis

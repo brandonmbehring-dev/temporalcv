@@ -83,7 +83,7 @@ result = gate_shuffled_target(model, X, y, n_shuffles=100)
 from temporalcv import WalkForwardCV
 
 # For 12-step ahead forecasting
-cv = WalkForwardCV(n_splits=5, gap=12, test_size=12)
+cv = WalkForwardCV(n_splits=5, horizon=12, extra_gap=0, test_size=12)
 ```
 
 ---
@@ -100,7 +100,7 @@ cv = WalkForwardCV(n_splits=5, gap=12, test_size=12)
 
 **Solution**: Check with `get_n_splits()`:
 ```python
-cv = WalkForwardCV(n_splits=10, gap=5, test_size=20)
+cv = WalkForwardCV(n_splits=10, horizon=5, extra_gap=0, test_size=20)
 n_actual = cv.get_n_splits(X, strict=False)  # Returns actual count
 print(f"Requested 10, got {n_actual}")
 ```
@@ -259,10 +259,11 @@ rates = load_fred_rates()  # Falls back gracefully
 
 **Solution**: Use appropriate metrics:
 ```python
-from temporalcv.persistence import compute_mc_ss
+from temporalcv.persistence import compute_move_conditional_metrics
 
 # MC-SS focuses on significant moves
-mc_ss = compute_mc_ss(predictions, actuals, threshold)
+result = compute_move_conditional_metrics(predictions, actuals, threshold=threshold)
+mc_ss = result.skill_score  # MC-SS (Move-Conditional Skill Score)
 ```
 
 ### "Validation gates pass but model underperforms"
@@ -302,16 +303,18 @@ result = gate_shuffled_target(model, X, y, method="permutation", n_shuffles=100)
 
 **Problem**: Walk-forward calibration refits at each step.
 
-**Solution**: Increase calibration window size:
+**Solution**: Use adaptive conformal with larger adaptation window:
 ```python
-from temporalcv.conformal import WalkForwardConformal
+from temporalcv.conformal import AdaptiveConformalPredictor
 
-# Larger window = fewer refits
-predictor = WalkForwardConformal(
-    model,
-    calibration_size=100,  # vs default 50
-    update_frequency=10    # Refit every 10 steps
+# Initialize with larger window (fewer parameter updates)
+predictor = AdaptiveConformalPredictor(
+    alpha=0.10,  # 90% intervals
+    gamma=0.01   # Slower adaptation = more stable (vs default 0.05)
 )
+
+# Initialize with calibration set
+predictor.initialize(cal_preds, cal_actuals)
 ```
 
 ---

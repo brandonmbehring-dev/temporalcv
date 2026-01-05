@@ -1,0 +1,74 @@
+{
+  "metadata": {
+    "run_id": "c1cd3952",
+    "timestamp": "2025-12-31T14:59:35.094197+00:00",
+    "temporalcv_version": "0.1.0",
+    "python_version": "3.13.7",
+    "platform": "Linux",
+    "cpu_count": 128
+  },
+  "report": {
+    "results": [
+      {
+        "dataset_name": "m4_quarterly",
+        "models": [
+          {
+            "model_name": "Naive",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 613.1002433822467,
+              "rmse": 1452.9541014258364,
+              "mape": 15.749229457708843,
+              "direction_accuracy": 0.13642052565707133
+            },
+            "runtime_seconds": 1.5308993170037866e-05,
+            "model_params": {}
+          },
+          {
+            "model_name": "SeasonalNaive_12",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 859.0440194861436,
+              "rmse": 1722.9001261232854,
+              "mape": 21.353940613997143,
+              "direction_accuracy": 0.6808510638297872
+            },
+            "runtime_seconds": 0.0002248960081487894,
+            "model_params": {
+              "season_length": 12
+            }
+          }
+        ],
+        "primary_metric": "mae",
+        "best_model": "Naive",
+        "statistical_tests": {
+          "SeasonalNaive_12": {
+            "statistic": -4.749568662845395,
+            "p_value": 2.4162089862223013e-06,
+            "significant": true
+          }
+        }
+      }
+    ],
+    "summary": {
+      "n_datasets": 1,
+      "wins_by_model": {
+        "Naive": 1
+      },
+      "mean_metrics_by_model": {
+        "Naive": {
+          "mae": 613.1002433822467,
+          "rmse": 1452.9541014258364,
+          "mape": 15.749229457708843,
+          "direction_accuracy": 0.13642052565707133
+        },
+        "SeasonalNaive_12": {
+          "mae": 859.0440194861436,
+          "rmse": 1722.9001261232854,
+          "mape": 21.353940613997143,
+          "direction_accuracy": 0.6808510638297872
+        }
+      }
+    }
+  }
+}

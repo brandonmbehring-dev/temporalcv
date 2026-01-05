@@ -507,8 +507,8 @@ class PurgedWalkForward:
         Remove training samples within this distance of test samples.
     embargo_pct : float
         Additional percentage of samples to remove after test set.
-    gap : int
-        Additional gap between train and test (on top of purge_gap).
+    extra_gap : int
+        Additional separation between train and test (on top of purge_gap).
 
     Examples
     --------
@@ -541,7 +541,7 @@ class PurgedWalkForward:
         test_size: int | None = None,
         purge_gap: int = 0,
         embargo_pct: float = 0.01,
-        gap: int = 0,
+        extra_gap: int = 0,
     ):
         if n_splits < 1:
             raise ValueError(f"n_splits must be >= 1, got {n_splits}")
@@ -553,15 +553,15 @@ class PurgedWalkForward:
             raise ValueError(f"purge_gap must be >= 0, got {purge_gap}")
         if not 0 <= embargo_pct < 1:
             raise ValueError(f"embargo_pct must be in [0, 1), got {embargo_pct}")
-        if gap < 0:
-            raise ValueError(f"gap must be >= 0, got {gap}")
+        if extra_gap < 0:
+            raise ValueError(f"extra_gap must be >= 0, got {extra_gap}")
 
         self.n_splits = n_splits
         self.train_size = train_size
         self.test_size = test_size
         self.purge_gap = purge_gap
         self.embargo_pct = embargo_pct
-        self.gap = gap
+        self.extra_gap = extra_gap
 
     def split(
         self,
@@ -593,13 +593,13 @@ class PurgedWalkForward:
         # Compute test size if not specified
         test_size = self.test_size
         if test_size is None:
-            # Reserve space for train, gap, and splits
+            # Reserve space for train, extra_gap, and splits
             min_train = self.train_size or (n_samples // (self.n_splits + 1))
-            available = n_samples - min_train - self.gap
+            available = n_samples - min_train - self.extra_gap
             test_size = max(1, available // self.n_splits)
 
         # Compute starting positions for each split
-        total_gap = self.gap + self.purge_gap
+        total_gap = self.extra_gap + self.purge_gap
         for split_idx in range(self.n_splits):
             # Test window position
             test_end = n_samples - (self.n_splits - split_idx - 1) * test_size
@@ -665,10 +665,10 @@ class PurgedWalkForward:
         test_size = self.test_size
         if test_size is None:
             min_train = self.train_size or (n_samples // (self.n_splits + 1))
-            available = n_samples - min_train - self.gap
+            available = n_samples - min_train - self.extra_gap
             test_size = max(1, available // self.n_splits)
 
-        total_gap = self.gap + self.purge_gap
+        total_gap = self.extra_gap + self.purge_gap
         for split_idx in range(self.n_splits):
             test_end = n_samples - (self.n_splits - split_idx - 1) * test_size
             test_start = test_end - test_size

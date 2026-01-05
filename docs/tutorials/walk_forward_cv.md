@@ -34,7 +34,7 @@ y = np.random.randn(200)
 cv = WalkForwardCV(
     n_splits=5,
     window_type="expanding",  # Training window grows
-    gap=0,                    # No gap (adjust for multi-step forecasts)
+    extra_gap=0,              # No extra gap (default - adjust for multi-step forecasts)
     test_size=1               # 1 observation per test fold
 )
 
@@ -99,7 +99,7 @@ Split 3: Train [70, 170), Test [170, 180)
 
 ## Gap Enforcement
 
-**Critical for multi-step forecasting.** If you predict h steps ahead, you need a gap of at least h-1:
+**Critical for multi-step forecasting.** For h-step forecasts, set `horizon=h`:
 
 ```python
 # For 2-step ahead forecasts
@@ -107,25 +107,32 @@ cv = WalkForwardCV(
     n_splits=5,
     window_type="sliding",
     window_size=100,
-    gap=2,  # 2-period gap
+    horizon=2,      # Minimum separation for 2-step forecasts
+    extra_gap=0,    # Optional: additional safety margin (default: 0)
     test_size=1
 )
 
 for train_idx, test_idx in cv.split(X):
-    # Guaranteed: train_idx[-1] + gap < test_idx[0]
-    assert train_idx[-1] + cv.gap < test_idx[0]
+    # Guaranteed: train_idx[-1] + total_gap < test_idx[0]
+    # where total_gap = horizon + extra_gap
+    total_gap = (cv.horizon or 0) + cv.extra_gap
+    assert train_idx[-1] + total_gap < test_idx[0]
 ```
 
 ### Why Gap Matters
 
-Without gap, the last training observation can leak into test features:
+Without proper separation, the last training observation can leak into test features:
 
 ```
 h=2 forecast: y[t+2] = f(y[t], y[t-1], ...)
 
-If train ends at t=99 and test starts at t=100:
+If train ends at t=99 and test starts at t=100 (no gap):
 - Test prediction uses y[99] (last training observation)
 - This is fine for h=1, but for h=2 it's LEAKAGE
+
+With horizon=2, extra_gap=0:
+- Train ends at t=99, test starts at t=102 (total separation = 2)
+- Test prediction for y[102] uses y[101], y[100], ... (safe!)
 ```
 
 ---
@@ -152,7 +159,7 @@ print(f"MAE: {-scores.mean():.4f} (+/- {scores.std():.4f})")
 Get detailed information about each split:
 
 ```python
-cv = WalkForwardCV(n_splits=5, window_type="sliding", window_size=100, gap=2)
+cv = WalkForwardCV(n_splits=5, window_type="sliding", window_size=100, horizon=2, extra_gap=0)
 
 for split_info in cv.get_split_info(X):
     print(f"Split {split_info.split_idx}:")
@@ -190,7 +197,8 @@ cv = WalkForwardCV(
     n_splits=10,
     window_type="sliding",
     window_size=150,
-    gap=2,  # For 2-step forecasts
+    horizon=2,      # Minimum separation for 2-step forecasts
+    extra_gap=0,    # No additional safety margin
     test_size=5
 )
 
@@ -253,12 +261,12 @@ print(f"Std MAE:  {df['mae'].std():.4f}")
 ### 2. Set Appropriate Gap
 
 ```python
-# Rule of thumb: gap >= horizon - 1
+# For h-step forecasting: set horizon=h
 horizon = 2  # 2-step forecast
-gap = horizon - 1  # Minimum safe gap
+extra_gap = 0  # Minimum safe (total separation = horizon)
 
-# Conservative: gap = horizon
-gap = horizon  # Extra safety margin
+# Conservative: add safety margin
+extra_gap = 1  # Total separation = horizon + 1 = 3
 ```
 
 ### 3. Use Enough Splits
@@ -277,7 +285,7 @@ for train_idx, test_idx in cv.split(X):
         train_end_idx=train_idx[-1],
         test_start_idx=test_idx[0],
         horizon=2,
-        gap=cv.gap
+        extra_gap=cv.extra_gap
     )
     assert result.status.name == "PASS"
 ```
@@ -288,16 +296,23 @@ for train_idx, test_idx in cv.split(X):
 
 ### Pitfall 1: Features Computed Before Split
 
-```python
-# WRONG - features computed on full series before split
-X = create_lag_features(y)  # Uses future data for lags!
-for train_idx, test_idx in cv.split(X):
-    model.fit(X[train_idx], y[train_idx])
+**Note**: Pure lag features (y[t-1], y[t-2], etc.) are backward-looking and safe.
+The real danger is rolling statistics, centered windows, or target-derived features.
 
-# WRONG - test features have no context for first n_lags
+```python
+# SAFE - lag features only look backward
+X = create_lag_features(y)  # Lag features are backward-looking
+for train_idx, test_idx in cv.split(X):
+    model.fit(X[train_idx], y[train_idx])  # This is fine!
+
+# DANGEROUS - rolling stats, centered windows, target encoding
+X['rolling_mean'] = y.rolling(10, center=True).mean()  # Uses future!
+X['target_mean'] = y.groupby(category).transform('mean')  # Uses future!
+
+# ISSUE - test features have no context for first n_lags
 for train_idx, test_idx in cv.split(y):
     X_train = create_lag_features(y[train_idx])
-    X_test = create_lag_features(y[test_idx])  # First n_lags rows invalid!
+    X_test = create_lag_features(y[test_idx])  # First n_lags rows are NaN!
     model.fit(X_train, y[train_idx])
 
 # RIGHT - use training context for test features
@@ -319,10 +334,10 @@ for train_idx, test_idx in cv.split(y):
 
 ```python
 # WRONG for h=3 forecasts
-cv = WalkForwardCV(gap=0)  # No gap!
+cv = WalkForwardCV()  # No horizon set, defaults to None (no gap enforcement)
 
 # RIGHT
-cv = WalkForwardCV(gap=2)  # At least h-1
+cv = WalkForwardCV(horizon=3, extra_gap=0)  # Total separation = 3 (minimum safe)
 ```
 
 ### Pitfall 3: Too Few Test Observations

@@ -144,6 +144,41 @@ All claims in documentation and docstrings are tagged by confidence level:
 
 ---
 
+## Research Context (MCP Integration)
+
+**Optional**: Claude Code can query research-kb for methodological background on statistical tests.
+
+**Available Queries**:
+```python
+# Query time_series domain for method documentation
+research_kb_search("Diebold Mariano test", domain="time_series")
+research_kb_search("HAC variance estimation", domain="time_series")
+research_kb_search("conformal prediction coverage", domain="time_series")
+
+# Cross-domain for causal inference connections
+research_kb_cross_domain_concepts(concept_name="instrumental variables",
+                                   source_domain="causal_inference",
+                                   target_domain="time_series")
+```
+
+**Key Sources** (with research-kb source IDs when available):
+| Method | Paper | Year | Status |
+|--------|-------|------|--------|
+| DM Test | Diebold & Mariano | 1995 | [T1] Core |
+| PT Test | Pesaran & Timmermann | 1992 | [T1] Core |
+| GW Test | Giacomini & White | 2006 | [T1] Core |
+| CW Test | Clark & West | 2007 | [T1] Core |
+| Reality Check | White | 2000 | [T1] Core |
+| SPA Test | Hansen | 2005 | [T1] Core |
+| Forecast Encompassing | Harvey et al. | 1998 | [T1] Core |
+| HAC Variance | Newey & West | 1987 | [T1] Core |
+| Conformal Prediction | Vovk et al. | 2005 | [T1] Core |
+| Adaptive Conformal | Gibbs & Candès | 2021 | [T1] Core |
+
+**Philosophy**: temporalcv = pure validation library; research-kb = developer tooling for methodological context.
+
+---
+
 ## Reference Patterns
 
 This project follows patterns from:

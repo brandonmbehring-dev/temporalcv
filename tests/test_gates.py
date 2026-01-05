@@ -765,3 +765,140 @@ class TestIntegration:
 
         # Leakage should be caught
         assert result.status == GateStatus.HALT
+
+
+# =============================================================================
+# Bootstrap CI Integration Tests
+# =============================================================================
+
+
+class TestBootstrapCIIntegration:
+    """Tests for bootstrap CI integration with gates."""
+
+    def test_shuffled_target_ci_disabled_by_default(
+        self, simple_data: tuple[np.ndarray, np.ndarray]
+    ) -> None:
+        """CI should not be computed by default."""
+        X, y = simple_data
+        model = MockModel("mean")
+
+        result = gate_shuffled_target(
+            model, X, y, n_shuffles=3, method="effect_size", random_state=42
+        )
+
+        assert "ci_lower" not in result.details
+        assert "ci_upper" not in result.details
+
+    def test_shuffled_target_ci_enabled(
+        self, simple_data: tuple[np.ndarray, np.ndarray]
+    ) -> None:
+        """CI should be computed when bootstrap_ci=True."""
+        X, y = simple_data
+        model = MockModel("mean")
+
+        result = gate_shuffled_target(
+            model, X, y,
+            n_shuffles=3,
+            method="effect_size",
+            random_state=42,
+            bootstrap_ci=True,
+            n_bootstrap=50,
+            bootstrap_alpha=0.05,
+        )
+
+        assert "ci_lower" in result.details
+        assert "ci_upper" in result.details
+        assert "ci_alpha" in result.details
+        assert "bootstrap_std" in result.details
+        assert "n_bootstrap" in result.details
+        assert "bootstrap_block_length" in result.details
+
+        # CI should be reasonable
+        assert result.details["ci_lower"] < result.details["ci_upper"]
+        assert result.details["ci_alpha"] == 0.05
+        assert result.details["n_bootstrap"] == 50
+
+    def test_synthetic_ar1_ci_disabled_by_default(self) -> None:
+        """CI should not be computed by default for synthetic AR1."""
+        model = MockModel("lag1")
+
+        result = gate_synthetic_ar1(
+            model, phi=0.9, sigma=1.0, n_samples=100, random_state=42
+        )
+
+        assert "ci_lower" not in result.details
+        assert "ci_upper" not in result.details
+
+    def test_synthetic_ar1_ci_enabled(self) -> None:
+        """CI should be computed when bootstrap_ci=True for synthetic AR1."""
+        model = MockModel("lag1")
+
+        result = gate_synthetic_ar1(
+            model,
+            phi=0.9,
+            sigma=1.0,
+            n_samples=100,
+            random_state=42,
+            bootstrap_ci=True,
+            n_bootstrap=50,
+            bootstrap_alpha=0.10,
+        )
+
+        assert "ci_lower" in result.details
+        assert "ci_upper" in result.details
+        assert "ci_alpha" in result.details
+        assert result.details["ci_alpha"] == 0.10
+
+        # CI should be reasonable
+        assert result.details["ci_lower"] < result.details["ci_upper"]
+
+    def test_ci_contains_point_estimate(
+        self, simple_data: tuple[np.ndarray, np.ndarray]
+    ) -> None:
+        """Point estimate should be within CI for well-behaved data."""
+        X, y = simple_data
+        model = MockModel("mean")
+
+        result = gate_shuffled_target(
+            model, X, y,
+            n_shuffles=3,
+            method="effect_size",
+            random_state=42,
+            bootstrap_ci=True,
+            n_bootstrap=100,
+        )
+
+        mae_real = result.details["mae_real"]
+        ci_lower = result.details["ci_lower"]
+        ci_upper = result.details["ci_upper"]
+
+        # Point estimate should be in CI (or very close)
+        assert ci_lower <= mae_real <= ci_upper
+
+    def test_ci_reproducibility(
+        self, simple_data: tuple[np.ndarray, np.ndarray]
+    ) -> None:
+        """Same seed should produce same CI."""
+        X, y = simple_data
+        model = MockModel("mean")
+
+        result1 = gate_shuffled_target(
+            model, X, y,
+            n_shuffles=3,
+            method="effect_size",
+            random_state=42,
+            bootstrap_ci=True,
+            n_bootstrap=50,
+        )
+
+        result2 = gate_shuffled_target(
+            model, X, y,
+            n_shuffles=3,
+            method="effect_size",
+            random_state=42,
+            bootstrap_ci=True,
+            n_bootstrap=50,
+        )
+
+        assert result1.details["ci_lower"] == result2.details["ci_lower"]
+        assert result1.details["ci_upper"] == result2.details["ci_upper"]

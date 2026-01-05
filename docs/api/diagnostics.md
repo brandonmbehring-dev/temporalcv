@@ -83,7 +83,7 @@ A model with `break_even_gap=1` is concerning—performance drops immediately wi
    - Consider leave-one-out robustness checks
 
 2. **Gap sensitivity is a leakage detector**
-   - Sharp degradation at gap=1 suggests temporal leakage
+   - Sharp degradation at extra_gap=1 suggests temporal leakage
    - Gradual degradation is expected as forecasting horizon increases
 
 3. **Combine with validation gates**

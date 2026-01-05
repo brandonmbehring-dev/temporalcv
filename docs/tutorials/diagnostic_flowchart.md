@@ -124,7 +124,7 @@ for split_info in cv.get_split_info(X):
 
 | Cause | Check | Fix |
 |-------|-------|-----|
-| gap=0 for h>1 forecasting | `WalkForwardCV(gap=0)` | Set `gap >= horizon` |
+| gap=0 for h>1 forecasting | `WalkForwardCV(horizon=0, extra_gap=0)` | Set `gap >= horizon` |
 | Target includes future | `y[t] = f(y[t+h])` | Ensure y uses only past |
 | Features computed wrong | Rolling windows include y[t] | Add `shift(1)` |
 

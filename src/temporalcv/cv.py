@@ -423,6 +423,70 @@ class WalkForwardResults:
         return "\n".join(lines)
 
 
+@dataclass
+class NestedCVResult:
+    """
+    Result from nested walk-forward cross-validation.
+
+    Contains hyperparameter selection results and unbiased performance estimates
+    from the outer CV loop. Use this to assess both the optimal hyperparameters
+    and the expected generalization performance.
+
+    Knowledge Tier: [T1] - Nested CV established by Varma & Simon (2006).
+
+    Attributes
+    ----------
+    best_params : Dict[str, Any]
+        Optimal hyperparameters selected across all outer folds.
+        Determined by voting: most frequently selected params win.
+    outer_scores : np.ndarray
+        Unbiased scores from each outer test fold.
+        These are the only valid estimates of generalization performance.
+    mean_outer_score : float
+        Mean of outer_scores. Primary performance estimate.
+    std_outer_score : float
+        Standard deviation of outer_scores. Measures variance.
+    inner_cv_results : List[Dict]
+        Per-fold inner CV details including all parameter combinations tried.
+    n_outer_splits : int
+        Number of outer CV folds.
+    n_inner_splits : int
+        Number of inner CV folds.
+    scoring : str
+        Scoring metric name.
+    best_params_per_fold : List[Dict[str, Any]]
+        Best parameters selected in each outer fold.
+        Useful for diagnosing hyperparameter instability.
+    params_stability : float
+        Fraction of folds that selected the same best_params.
+        1.0 = perfect agreement, lower = more instability.
+
+    Example
+    -------
+    >>> result = nested_cv.fit(X, y)
+    >>> print(f"Best params: {result.best_params_}")
+    >>> print(f"Score: {result.mean_outer_score_:.4f} ± {result.std_outer_score_:.4f}")
+    >>> if result.params_stability_ < 0.6:
+    ...     print("Warning: High hyperparameter instability across folds")
+
+    See Also
+    --------
+    NestedWalkForwardCV : Class that produces this result.
+    WalkForwardCV : Single-level CV for model evaluation.
+    """
+
+    best_params: dict[str, Any]
+    outer_scores: np.ndarray
+    mean_outer_score: float
+    std_outer_score: float
+    inner_cv_results: List[dict[str, Any]]
+    n_outer_splits: int
+    n_inner_splits: int
+    scoring: str
+    best_params_per_fold: List[dict[str, Any]]
+    params_stability: float
+
+
 class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
     """
     Walk-forward cross-validation with gap enforcement.
@@ -447,10 +511,12 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
         Training window size. Required for sliding window.
         For expanding window, this is the minimum initial training size.
         Default is None (auto-calculated for expanding).
-    gap : int, default=0
-        Number of samples to exclude between training and test.
-        For h-step forecasting with change targets, set gap >= h
-        to prevent target leakage.
+    extra_gap : int, default=0
+        Additional samples to exclude beyond horizon requirement.
+        Creates extra temporal separation for safety margin.
+
+        SEMANTICS: total_separation = horizon + extra_gap
+        For h-step forecasting, use horizon=h and extra_gap >= 0.
     test_size : int, default=1
         Number of samples in each test fold.
 
@@ -464,8 +530,8 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
         Window type ("expanding" or "sliding").
     window_size : int or None
         Window size parameter.
-    gap : int
-        Gap between train and test.
+    extra_gap : int
+        Additional gap beyond horizon requirement.
     test_size : int
         Test set size.
 
@@ -498,7 +564,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
         horizon: Optional[int] = None,
         window_type: Literal["expanding", "sliding"] = "expanding",
         window_size: Optional[int] = None,
-        gap: int = 0,
+        extra_gap: int = 0,
         test_size: int = 1,
     ) -> None:
         """Initialize WalkForwardCV."""
@@ -520,26 +586,23 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
         if window_size is not None and window_size < 1:
             raise ValueError(f"window_size must be >= 1, got {window_size}")
 
-        if gap < 0:
-            raise ValueError(f"gap must be >= 0, got {gap}")
+        if extra_gap < 0:
+            raise ValueError(f"extra_gap must be >= 0, got {extra_gap}")
 
         if test_size < 1:
             raise ValueError(f"test_size must be >= 1, got {test_size}")
 
-        # [T1] Gap >= horizon prevents target leakage for h-step forecasting
-        # Per Bergmeir & Benitez (2012): gap must equal or exceed forecast horizon
-        if horizon is not None and gap < horizon:
-            raise ValueError(
-                f"gap ({gap}) must be >= horizon ({horizon}) to prevent target leakage. "
-                f"For {horizon}-step forecasting, set gap >= {horizon}. "
-                "See Bergmeir & Benitez (2012) for details on temporal CV for multi-step forecasts."
-            )
+        # [T1] Separation >= horizon prevents target leakage for h-step forecasting
+        # Per Bergmeir & Benitez (2012): separation must equal or exceed forecast horizon
+        # Semantics: total_separation = horizon + extra_gap
+        # So if horizon=5, extra_gap=0, you get exactly 5-step separation (minimum safe)
+        # For safety margin, use extra_gap > 0
 
         self.n_splits = n_splits
         self.horizon = horizon
         self.window_type = window_type
         self.window_size = window_size
-        self.gap = gap
+        self.extra_gap = extra_gap
         self.test_size = test_size
 
     def _get_n_samples(self, X: ArrayLike) -> int:
@@ -575,18 +638,21 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
                 min_train = self.window_size
             else:
                 # Default: leave enough room for n_splits test sets
-                # min_train + gap + test_size + (n_splits - 1) * test_size <= n_samples
+                # Formula: min_train + total_gap + test_size + (n_splits - 1) * test_size <= n_samples
+                # where total_gap = horizon + extra_gap
+                total_gap = (self.horizon or 0) + self.extra_gap
                 total_test = self.n_splits * self.test_size
-                available = n_samples - self.gap - total_test
+                available = n_samples - total_gap - total_test
                 min_train = max(1, available)
 
         # Check if we have enough data
-        min_required = min_train + self.gap + self.test_size
+        total_gap = (self.horizon or 0) + self.extra_gap
+        min_required = min_train + total_gap + self.test_size
         if n_samples < min_required:
             raise ValueError(
                 f"Not enough samples ({n_samples}) for {self.n_splits} splits. "
                 f"Need at least {min_required} samples "
-                f"(min_train={min_train}, gap={self.gap}, test_size={self.test_size})."
+                f"(min_train={min_train}, total_gap={total_gap} [horizon={(self.horizon or 0)}+extra_gap={self.extra_gap}], test_size={self.test_size})."
             )
 
         # Generate splits working backwards from end
@@ -601,7 +667,9 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
             test_start = test_end - self.test_size + 1
 
             # Calculate train indices
-            train_end = test_start - self.gap - 1
+            # Apply total_gap = horizon + extra_gap
+            total_gap = (self.horizon or 0) + self.extra_gap
+            train_end = test_start - total_gap - 1
 
             if self.window_type == "sliding":
                 assert self.window_size is not None
@@ -659,7 +727,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
 
         Examples
         --------
-        >>> cv = WalkForwardCV(n_splits=3, gap=2)
+        >>> cv = WalkForwardCV(n_splits=3, extra_gap=2)
         >>> for train, test in cv.split(X):
         ...     X_train, X_test = X[train], X[test]
         ...     y_train, y_test = y[train], y[test]
@@ -741,7 +809,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
 
         Examples
         --------
-        >>> cv = WalkForwardCV(n_splits=3, gap=2)
+        >>> cv = WalkForwardCV(n_splits=3, extra_gap=2)
         >>> for info in cv.get_split_info(X):
         ...     print(f"Split {info.split_idx}: train {info.train_start}-{info.train_end}, "
         ...           f"test {info.test_start}-{info.test_end}, gap={info.gap}")
@@ -768,7 +836,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
             f"WalkForwardCV(n_splits={self.n_splits}, "
             f"window_type={self.window_type!r}, "
             f"window_size={self.window_size}, "
-            f"gap={self.gap}, "
+            f"extra_gap={self.extra_gap}, "
             f"test_size={self.test_size})"
         )
 
@@ -798,9 +866,9 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
     n_splits : int, default=5
         Number of temporal folds. Data is divided into n_splits consecutive
         chunks of approximately equal size.
-    gap : int, default=0
-        Number of samples to exclude between training and test for each fold.
-        Prevents lookahead bias in h-step forecasting.
+    extra_gap : int, default=0
+        Additional samples to exclude between training and test for each fold.
+        Creates extra temporal separation beyond minimum requirements.
     test_size : int, optional
         Size of each test fold. If None, computed automatically as
         n_samples // n_splits.
@@ -809,8 +877,8 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
     ----------
     n_splits : int
         Number of splits
-    gap : int
-        Gap between train and test
+    extra_gap : int
+        Additional gap between train and test
     test_size : int or None
         Test fold size
 
@@ -831,7 +899,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
     Example
     -------
-    >>> cv = CrossFitCV(n_splits=5, gap=2)
+    >>> cv = CrossFitCV(n_splits=5, extra_gap=2)
     >>> for train_idx, test_idx in cv.split(X):
     ...     print(f"Train: 0-{train_idx[-1]}, Test: {test_idx[0]}-{test_idx[-1]}")
 
@@ -849,21 +917,21 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
     def __init__(
         self,
         n_splits: int = 5,
-        gap: int = 0,
+        extra_gap: int = 0,
         test_size: Optional[int] = None,
     ) -> None:
         """Initialize CrossFitCV."""
         if n_splits < 2:
             raise ValueError(f"n_splits must be >= 2, got {n_splits}")
 
-        if gap < 0:
-            raise ValueError(f"gap must be >= 0, got {gap}")
+        if extra_gap < 0:
+            raise ValueError(f"extra_gap must be >= 0, got {extra_gap}")
 
         if test_size is not None and test_size < 1:
             raise ValueError(f"test_size must be >= 1, got {test_size}")
 
         self.n_splits = n_splits
-        self.gap = gap
+        self.extra_gap = extra_gap
         self.test_size = test_size
 
     def _calculate_fold_indices(
@@ -936,8 +1004,9 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
         for k in range(1, len(folds)):
             test_start, test_end = folds[k]
 
-            # Train on all previous folds, respecting gap
-            train_end = test_start - self.gap
+            # Train on all previous folds
+            # Note: CrossFitCV doesn't have horizon parameter, so total_gap = extra_gap
+            train_end = test_start - self.extra_gap
 
             if train_end <= 0:
                 continue
@@ -1080,7 +1149,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
         """Return string representation."""
         return (
             f"CrossFitCV(n_splits={self.n_splits}, "
-            f"gap={self.gap}, "
+            f"extra_gap={self.extra_gap}, "
             f"test_size={self.test_size})"
         )
 
@@ -1099,7 +1168,7 @@ def walk_forward_evaluate(
     horizon: Optional[int] = None,
     window_type: Literal["expanding", "sliding"] = "expanding",
     window_size: Optional[int] = None,
-    gap: int = 0,
+    extra_gap: int = 0,
     test_size: int = 1,
     verbose: bool = False,
 ) -> WalkForwardResults:
@@ -1131,8 +1200,8 @@ def walk_forward_evaluate(
         Training window type (ignored if cv is provided)
     window_size : int, optional
         Window size for sliding window (ignored if cv is provided)
-    gap : int, default=0
-        Gap between train and test (ignored if cv is provided)
+    extra_gap : int, default=0
+        Additional gap between train and test (ignored if cv is provided)
     test_size : int, default=1
         Number of test samples per fold (ignored if cv is provided)
     verbose : bool, default=False
@@ -1155,7 +1224,7 @@ def walk_forward_evaluate(
     >>> y = X[:, 0] * 0.5 + np.random.randn(200) * 0.1
     >>>
     >>> # Evaluate model
-    >>> results = walk_forward_evaluate(Ridge(), X, y, n_splits=5, gap=2)
+    >>> results = walk_forward_evaluate(Ridge(), X, y, n_splits=5, extra_gap=2)
     >>> print(f"MAE: {results.mae:.4f}")
     >>> print(f"RMSE: {results.rmse:.4f}")
     >>>
@@ -1185,7 +1254,7 @@ def walk_forward_evaluate(
             horizon=horizon,
             window_type=window_type,
             window_size=window_size,
-            gap=gap,
+            extra_gap=extra_gap,
             test_size=test_size,
         )
 
@@ -1252,11 +1321,612 @@ def walk_forward_evaluate(
         "horizon": cv.horizon,
         "window_type": cv.window_type,
         "window_size": cv.window_size,
-        "gap": cv.gap,
+        "extra_gap": cv.extra_gap,
         "test_size": cv.test_size,
     }
 
     return WalkForwardResults(splits=split_results, cv_config=cv_config)
+
+
+# =============================================================================
+# NestedWalkForwardCV - Nested CV for Hyperparameter Tuning
+# =============================================================================
+
+
+class NestedWalkForwardCV:
+    """
+    Nested walk-forward cross-validation for hyperparameter tuning.
+
+    Maintains temporal integrity in both inner and outer loops. The outer loop
+    provides unbiased performance estimates while the inner loop selects
+    hyperparameters. Supports both exhaustive grid search and randomized search.
+
+    Knowledge Tier: [T1] - Nested CV established by Bergmeir & Benítez (2012),
+    Varma & Simon (2006).
+
+    Parameters
+    ----------
+    estimator : sklearn estimator
+        Model with fit(X, y) and predict(X) methods. Must support set_params().
+    param_grid : Dict[str, List], optional
+        Parameter grid for exhaustive search. Each key is a parameter name,
+        each value is a list of values to try. Mutually exclusive with
+        param_distributions.
+    param_distributions : Dict[str, Any], optional
+        Parameter distributions for randomized search. Each key is a parameter
+        name, each value is a distribution (list or scipy.stats distribution).
+        Requires n_iter to be set. Mutually exclusive with param_grid.
+    n_iter : int, optional
+        Number of parameter combinations to try for randomized search.
+        Required when using param_distributions.
+    n_outer_splits : int, default=3
+        Number of outer CV folds for performance estimation.
+    n_inner_splits : int, default=5
+        Number of inner CV folds for hyperparameter selection.
+    horizon : int, default=1
+        Forecast horizon. Used to enforce gap >= horizon in both loops.
+    extra_gap : int, optional
+        Additional gap between train and test. Defaults to horizon if not specified.
+    window_type : {"expanding", "sliding"}, default="expanding"
+        Training window type for both inner and outer loops.
+    window_size : int, optional
+        Window size for sliding window mode.
+    scoring : str or callable, default="neg_mean_squared_error"
+        Scoring metric. Strings map to sklearn scorers. Callables should have
+        signature scorer(y_true, y_pred) -> float where higher is better.
+    refit : bool, default=True
+        If True, refit the estimator on all data using best_params after CV.
+    random_state : int, optional
+        Random seed for reproducible randomized search.
+    n_jobs : int, default=1
+        Number of parallel jobs. -1 uses all cores.
+    verbose : int, default=0
+        Verbosity level. 0=silent, 1=progress, 2=detailed.
+
+    Attributes
+    ----------
+    best_params_ : Dict[str, Any]
+        Best hyperparameters found (most frequently selected across folds).
+    best_estimator_ : estimator
+        Estimator refitted on all data with best_params_ (requires refit=True).
+    cv_results_ : Dict[str, np.ndarray]
+        Detailed results per outer fold and parameter combination.
+    outer_scores_ : np.ndarray
+        Unbiased scores on each outer test fold.
+    mean_outer_score_ : float
+        Mean of outer_scores_.
+    std_outer_score_ : float
+        Standard deviation of outer_scores_.
+    best_params_per_fold_ : List[Dict[str, Any]]
+        Best parameters selected in each outer fold.
+    params_stability_ : float
+        Fraction of folds that selected the same parameters as best_params_.
+
+    Examples
+    --------
+    >>> from temporalcv import NestedWalkForwardCV
+    >>> from sklearn.linear_model import Ridge
+    >>>
+    >>> # Grid search
+    >>> nested_cv = NestedWalkForwardCV(
+    ...     estimator=Ridge(),
+    ...     param_grid={"alpha": [0.01, 0.1, 1.0, 10.0]},
+    ...     n_outer_splits=3,
+    ...     n_inner_splits=5,
+    ...     horizon=4,
+    ... )
+    >>> nested_cv.fit(X, y)
+    >>> print(f"Best alpha: {nested_cv.best_params_['alpha']}")
+    >>> print(f"Score: {nested_cv.mean_outer_score_:.4f}")
+    >>>
+    >>> # Randomized search with distributions
+    >>> from scipy.stats import loguniform
+    >>> nested_cv = NestedWalkForwardCV(
+    ...     estimator=Ridge(),
+    ...     param_distributions={"alpha": loguniform(1e-3, 1e2)},
+    ...     n_iter=20,
+    ...     n_outer_splits=3,
+    ... )
+
+    Notes
+    -----
+    **Temporal Safety**: Both inner and outer loops use WalkForwardCV with
+    gap >= horizon. The inner loop only sees outer training data, never
+    outer test data.
+
+    **Best Params Selection**: Uses voting across outer folds. The parameter
+    combination selected most frequently wins. In case of tie, the first
+    (lowest-valued) combination is chosen.
+
+    **Params Stability**: Low stability (<0.6) suggests hyperparameters are
+    sensitive to the training data, which may indicate overfitting or
+    insufficient data.
+
+    References
+    ----------
+    Bergmeir, C. & Benítez, J.M. (2012). On the use of cross-validation for
+    time series predictor evaluation. Information Sciences, 191, 192-213.
+
+    Varma, S. & Simon, R. (2006). Bias in error estimation when using
+    cross-validation for model selection. BMC Bioinformatics, 7(1), 91.
+
+    See Also
+    --------
+    WalkForwardCV : Single-level walk-forward CV.
+    sklearn.model_selection.GridSearchCV : sklearn's grid search (non-temporal).
+    """
+
+    def __init__(
+        self,
+        estimator: Any,
+        param_grid: Optional[dict[str, List[Any]]] = None,
+        param_distributions: Optional[dict[str, Any]] = None,
+        *,
+        n_iter: Optional[int] = None,
+        n_outer_splits: int = 3,
+        n_inner_splits: int = 5,
+        horizon: int = 1,
+        extra_gap: Optional[int] = None,
+        window_type: Literal["expanding", "sliding"] = "expanding",
+        window_size: Optional[int] = None,
+        scoring: Union[str, Any] = "neg_mean_squared_error",
+        refit: bool = True,
+        random_state: Optional[int] = None,
+        n_jobs: int = 1,
+        verbose: int = 0,
+    ) -> None:
+        """Initialize NestedWalkForwardCV."""
+        import warnings
+
+        # Validate search type
+        if param_grid is None and param_distributions is None:
+            raise ValueError(
+                "Either param_grid or param_distributions must be provided"
+            )
+        if param_grid is not None and param_distributions is not None:
+            raise ValueError(
+                "Cannot specify both param_grid and param_distributions. "
+                "Use param_grid for exhaustive search or "
+                "param_distributions + n_iter for randomized search."
+            )
+        if param_distributions is not None and n_iter is None:
+            raise ValueError(
+                "n_iter is required when using param_distributions"
+            )
+
+        # Validate CV parameters
+        if n_outer_splits < 2:
+            raise ValueError(f"n_outer_splits must be >= 2, got {n_outer_splits}")
+        if n_inner_splits < 2:
+            raise ValueError(f"n_inner_splits must be >= 2, got {n_inner_splits}")
+        if horizon < 1:
+            raise ValueError(f"horizon must be >= 1, got {horizon}")
+
+        # Default extra_gap to 0 (minimum safe separation = horizon only)
+        # Formula: total_separation = horizon + extra_gap
+        if extra_gap is None:
+            extra_gap = 0
+            if self.verbose >= 1:
+                warnings.warn(
+                    f"extra_gap defaulting to 0. Total separation will be {horizon} (horizon only). "
+                    f"For safety margin, consider extra_gap > 0.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+
+        self.estimator = estimator
+        self.param_grid = param_grid
+        self.param_distributions = param_distributions
+        self.n_iter = n_iter
+        self.n_outer_splits = n_outer_splits
+        self.n_inner_splits = n_inner_splits
+        self.horizon = horizon
+        self.extra_gap = extra_gap
+        self.window_type = window_type
+        self.window_size = window_size
+        self.scoring = scoring
+        self.refit = refit
+        self.random_state = random_state
+        self.n_jobs = n_jobs
+        self.verbose = verbose
+
+        # Results (populated by fit)
+        self._best_params: Optional[dict[str, Any]] = None
+        self._best_estimator: Optional[Any] = None
+        self._cv_results: Optional[dict[str, Any]] = None
+        self._outer_scores: Optional[np.ndarray] = None
+        self._best_params_per_fold: Optional[List[dict[str, Any]]] = None
+        self._inner_cv_results: Optional[List[dict[str, Any]]] = None
+
+    def _get_param_combinations(
+        self, rng: Optional[np.random.Generator] = None
+    ) -> List[dict[str, Any]]:
+        """
+        Generate parameter combinations to evaluate.
+
+        For grid search: all combinations.
+        For randomized search: n_iter sampled combinations.
+        """
+        from itertools import product
+
+        if self.param_grid is not None:
+            # Grid search: all combinations
+            keys = list(self.param_grid.keys())
+            values = [self.param_grid[k] for k in keys]
+            return [dict(zip(keys, combo)) for combo in product(*values)]
+        else:
+            # Randomized search: sample n_iter combinations
+            assert self.param_distributions is not None
+            assert self.n_iter is not None
+
+            if rng is None:
+                rng = np.random.default_rng(self.random_state)
+
+            combinations = []
+            for _ in range(self.n_iter):
+                combo = {}
+                for param, dist in self.param_distributions.items():
+                    if hasattr(dist, "rvs"):
+                        # scipy.stats distribution
+                        combo[param] = dist.rvs(random_state=rng)
+                    elif isinstance(dist, (list, tuple, np.ndarray)):
+                        # List of choices
+                        combo[param] = rng.choice(dist)
+                    else:
+                        # Single value
+                        combo[param] = dist
+                combinations.append(combo)
+            return combinations
+
+    def _get_scorer(self) -> Any:
+        """Get scoring function."""
+        if callable(self.scoring):
+            return self.scoring
+
+        # Map string to sklearn scorer
+        from sklearn.metrics import (
+            mean_absolute_error,
+            mean_squared_error,
+            r2_score,
+        )
+
+        scorers = {
+            "neg_mean_squared_error": lambda y, p: -mean_squared_error(y, p),
+            "neg_mean_absolute_error": lambda y, p: -mean_absolute_error(y, p),
+            "r2": r2_score,
+        }
+
+        if self.scoring not in scorers:
+            raise ValueError(
+                f"Unknown scoring: {self.scoring!r}. "
+                f"Available: {list(scorers.keys())} or a callable."
+            )
+        return scorers[self.scoring]
+
+    def _inner_cv_search(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        param_combinations: List[dict[str, Any]],
+    ) -> Tuple[dict[str, Any], dict[str, Any]]:
+        """
+        Run inner CV to find best parameters.
+
+        Returns (best_params, cv_details).
+        """
+        import warnings
+
+        inner_cv = WalkForwardCV(
+            n_splits=self.n_inner_splits,
+            horizon=self.horizon,
+            extra_gap=self.extra_gap,
+            window_type=self.window_type,
+            window_size=self.window_size,
+            test_size=1,
+        )
+
+        scorer = self._get_scorer()
+        results: List[dict[str, Any]] = []
+
+        # Check if enough data for inner CV
+        try:
+            n_actual_splits = inner_cv.get_n_splits(X, strict=True)
+        except ValueError:
+            n_actual_splits = 0
+
+        if n_actual_splits < 2:
+            warnings.warn(
+                f"Inner CV has only {n_actual_splits} splits. "
+                f"Returning first parameter combination.",
+                UserWarning,
+                stacklevel=3,
+            )
+            return param_combinations[0], {"warning": "insufficient_inner_splits"}
+
+        # Evaluate each parameter combination
+        for params in param_combinations:
+            scores = []
+
+            for train_idx, test_idx in inner_cv.split(X):
+                # Clone and configure model
+                try:
+                    model = clone(self.estimator)
+                except TypeError:
+                    model = self.estimator
+                model.set_params(**params)
+
+                # Fit and score
+                model.fit(X[train_idx], y[train_idx])
+                preds = model.predict(X[test_idx])
+                score = scorer(y[test_idx], preds)
+                scores.append(score)
+
+            results.append({
+                "params": params,
+                "mean_score": np.mean(scores),
+                "std_score": np.std(scores),
+                "scores": scores,
+            })
+
+        # Find best (highest score)
+        best_idx = np.argmax([r["mean_score"] for r in results])
+        best_params = results[best_idx]["params"]
+
+        cv_details = {
+            "results": results,
+            "best_idx": best_idx,
+            "n_inner_splits": n_actual_splits,
+        }
+
+        return best_params, cv_details
+
+    def fit(self, X: ArrayLike, y: ArrayLike) -> "NestedWalkForwardCV":
+        """
+        Run nested cross-validation.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Training features.
+        y : array-like of shape (n_samples,)
+            Target values.
+
+        Returns
+        -------
+        self
+            Fitted estimator with results populated.
+        """
+        import warnings
+        from collections import Counter
+
+        X_arr = np.asarray(X)
+        y_arr = np.asarray(y)
+
+        # Get parameter combinations
+        rng = np.random.default_rng(self.random_state)
+        param_combinations = self._get_param_combinations(rng)
+
+        if self.verbose:
+            print(f"NestedWalkForwardCV: {len(param_combinations)} param combinations")
+            print(f"  Outer: {self.n_outer_splits} splits, Inner: {self.n_inner_splits} splits")
+
+        # Outer CV
+        outer_cv = WalkForwardCV(
+            n_splits=self.n_outer_splits,
+            horizon=self.horizon,
+            gap=self.gap,
+            window_type=self.window_type,
+            window_size=self.window_size,
+            test_size=1,
+        )
+
+        scorer = self._get_scorer()
+        outer_scores: List[float] = []
+        best_params_per_fold: List[dict[str, Any]] = []
+        inner_cv_results: List[dict[str, Any]] = []
+
+        for fold_idx, (train_outer, test_outer) in enumerate(outer_cv.split(X_arr)):
+            if self.verbose:
+                print(f"  Outer fold {fold_idx + 1}/{self.n_outer_splits}")
+
+            X_train_outer = X_arr[train_outer]
+            y_train_outer = y_arr[train_outer]
+            X_test_outer = X_arr[test_outer]
+            y_test_outer = y_arr[test_outer]
+
+            # Warn if inner samples are too small
+            if len(X_train_outer) < 30 * self.n_inner_splits:
+                warnings.warn(
+                    f"Outer fold {fold_idx}: Only {len(X_train_outer)} samples for "
+                    f"{self.n_inner_splits} inner splits. "
+                    f"Consider fewer inner splits or more data.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+
+            # Inner CV on outer training data only
+            fold_best_params, fold_cv_details = self._inner_cv_search(
+                X_train_outer, y_train_outer, param_combinations
+            )
+            best_params_per_fold.append(fold_best_params)
+            inner_cv_results.append(fold_cv_details)
+
+            # Evaluate on outer test with best params
+            try:
+                final_model = clone(self.estimator)
+            except TypeError:
+                final_model = self.estimator
+            final_model.set_params(**fold_best_params)
+            final_model.fit(X_train_outer, y_train_outer)
+            preds = final_model.predict(X_test_outer)
+            score = scorer(y_test_outer, preds)
+            outer_scores.append(score)
+
+            if self.verbose >= 2:
+                print(f"    Best params: {fold_best_params}")
+                print(f"    Outer score: {score:.4f}")
+
+        # Determine best params by voting
+        params_tuples = [tuple(sorted(p.items())) for p in best_params_per_fold]
+        param_counts = Counter(params_tuples)
+        most_common_tuple, most_common_count = param_counts.most_common(1)[0]
+        best_params = dict(most_common_tuple)
+
+        # Calculate stability
+        params_stability = most_common_count / len(best_params_per_fold)
+
+        # Store results
+        self._best_params = best_params
+        self._outer_scores = np.array(outer_scores)
+        self._best_params_per_fold = best_params_per_fold
+        self._inner_cv_results = inner_cv_results
+
+        # Build cv_results_ dict (sklearn-style)
+        self._cv_results = {
+            "mean_outer_score": np.mean(outer_scores),
+            "std_outer_score": np.std(outer_scores),
+            "outer_scores": np.array(outer_scores),
+            "best_params_per_fold": best_params_per_fold,
+            "params_stability": params_stability,
+            "param_combinations": param_combinations,
+            "inner_cv_results": inner_cv_results,
+        }
+
+        # Refit on all data
+        if self.refit:
+            try:
+                final_estimator = clone(self.estimator)
+            except TypeError:
+                final_estimator = self.estimator
+            final_estimator.set_params(**best_params)
+            final_estimator.fit(X_arr, y_arr)
+            self._best_estimator = final_estimator
+        else:
+            self._best_estimator = None
+
+        if self.verbose:
+            print(f"  Best params: {best_params}")
+            print(f"  Outer score: {np.mean(outer_scores):.4f} ± {np.std(outer_scores):.4f}")
+            print(f"  Params stability: {params_stability:.1%}")
+
+        return self
+
+    def predict(self, X: ArrayLike) -> np.ndarray:
+        """
+        Predict using the best estimator.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Samples to predict.
+
+        Returns
+        -------
+        np.ndarray
+            Predicted values.
+
+        Raises
+        ------
+        RuntimeError
+            If refit=False or fit() has not been called.
+        """
+        if self._best_estimator is None:
+            if not self.refit:
+                raise RuntimeError(
+                    "predict() requires refit=True. Set refit=True and call fit() again."
+                )
+            raise RuntimeError("Call fit() before predict().")
+        return self._best_estimator.predict(X)
+
+    @property
+    def best_params_(self) -> dict[str, Any]:
+        """Best hyperparameters found (most frequently selected)."""
+        if self._best_params is None:
+            raise RuntimeError("Call fit() first.")
+        return self._best_params
+
+    @property
+    def best_estimator_(self) -> Any:
+        """Estimator refitted on all data with best_params_."""
+        if self._best_estimator is None:
+            if not self.refit:
+                raise RuntimeError("best_estimator_ requires refit=True.")
+            raise RuntimeError("Call fit() first.")
+        return self._best_estimator
+
+    @property
+    def cv_results_(self) -> dict[str, Any]:
+        """Detailed CV results."""
+        if self._cv_results is None:
+            raise RuntimeError("Call fit() first.")
+        return self._cv_results
+
+    @property
+    def outer_scores_(self) -> np.ndarray:
+        """Unbiased scores on each outer test fold."""
+        if self._outer_scores is None:
+            raise RuntimeError("Call fit() first.")
+        return self._outer_scores
+
+    @property
+    def mean_outer_score_(self) -> float:
+        """Mean of outer_scores_."""
+        return float(np.mean(self.outer_scores_))
+
+    @property
+    def std_outer_score_(self) -> float:
+        """Standard deviation of outer_scores_."""
+        return float(np.std(self.outer_scores_))
+
+    @property
+    def best_params_per_fold_(self) -> List[dict[str, Any]]:
+        """Best parameters selected in each outer fold."""
+        if self._best_params_per_fold is None:
+            raise RuntimeError("Call fit() first.")
+        return self._best_params_per_fold
+
+    @property
+    def params_stability_(self) -> float:
+        """Fraction of folds that selected the same best_params_."""
+        if self._cv_results is None:
+            raise RuntimeError("Call fit() first.")
+        return self._cv_results["params_stability"]
+
+    def get_result(self) -> NestedCVResult:
+        """
+        Return structured result object.
+
+        Returns
+        -------
+        NestedCVResult
+            Structured result with all CV information.
+        """
+        if self._cv_results is None:
+            raise RuntimeError("Call fit() first.")
+
+        scoring_name = self.scoring if isinstance(self.scoring, str) else "custom"
+
+        return NestedCVResult(
+            best_params=self.best_params_,
+            outer_scores=self.outer_scores_,
+            mean_outer_score=self.mean_outer_score_,
+            std_outer_score=self.std_outer_score_,
+            inner_cv_results=self._inner_cv_results or [],
+            n_outer_splits=self.n_outer_splits,
+            n_inner_splits=self.n_inner_splits,
+            scoring=scoring_name,
+            best_params_per_fold=self.best_params_per_fold_,
+            params_stability=self.params_stability_,
+        )
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        search_type = "grid" if self.param_grid is not None else "random"
+        return (
+            f"NestedWalkForwardCV(search={search_type!r}, "
+            f"n_outer={self.n_outer_splits}, n_inner={self.n_inner_splits}, "
+            f"horizon={self.horizon}, gap={self.gap})"
+        )
 
 
 # =============================================================================
@@ -1267,7 +1937,9 @@ __all__ = [
     "SplitInfo",
     "SplitResult",
     "WalkForwardResults",
+    "NestedCVResult",
     "WalkForwardCV",
     "CrossFitCV",
+    "NestedWalkForwardCV",
     "walk_forward_evaluate",
 ]

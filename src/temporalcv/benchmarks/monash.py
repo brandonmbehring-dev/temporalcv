@@ -147,7 +147,7 @@ def load_m3(
         },
         license="open_access",
         source_url=MONASH_URL,
-        official_split=True,  # M3 Competition protocol
+        official_split=not was_truncated,  # Only true if data unchanged from competition
         truncated=was_truncated,
         original_series_lengths=original_lengths if was_truncated else None,
         split_source="M3 Competition (Makridakis & Hibon, 2000)",
@@ -198,7 +198,8 @@ def load_m4(
 
     from datasetsforecast.m4 import M4
 
-    df, _, _ = M4.load(directory=None, group=subset)
+    # datasetsforecast expects capitalized group names: 'Monthly' not 'monthly'
+    df, _, _ = M4.load(directory=None, group=subset.title())
 
     unique_ids = df["unique_id"].unique()
     if sample_size is not None and sample_size < len(unique_ids):
@@ -235,7 +236,7 @@ def load_m4(
         },
         license="open_access",
         source_url=MONASH_URL,
-        official_split=True,  # M4 Competition protocol
+        official_split=not was_truncated,  # Only true if data unchanged from competition
         truncated=was_truncated,
         original_series_lengths=original_lengths if was_truncated else None,
         split_source="M4 Competition (Makridakis et al., 2018)",

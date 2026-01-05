@@ -1,0 +1,74 @@
+{
+  "metadata": {
+    "run_id": "8378fe7b",
+    "timestamp": "2025-12-31T14:59:35.095275+00:00",
+    "temporalcv_version": "0.1.0",
+    "python_version": "3.13.7",
+    "platform": "Linux",
+    "cpu_count": 128
+  },
+  "report": {
+    "results": [
+      {
+        "dataset_name": "m4_monthly",
+        "models": [
+          {
+            "model_name": "Naive",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 337.5796162914223,
+              "rmse": 576.4476576481946,
+              "mape": 15.1729931497357,
+              "direction_accuracy": 0.08893829905503058
+            },
+            "runtime_seconds": 1.3334996765479445e-05,
+            "model_params": {}
+          },
+          {
+            "model_name": "SeasonalNaive_12",
+            "package": "temporalcv",
+            "metrics": {
+              "mae": 389.26967363880425,
+              "rmse": 660.3353102041684,
+              "mape": 16.39831155735878,
+              "direction_accuracy": 0.5736520289049472
+            },
+            "runtime_seconds": 0.00038259397842921317,
+            "model_params": {
+              "season_length": 12
+            }
+          }
+        ],
+        "primary_metric": "mae",
+        "best_model": "Naive",
+        "statistical_tests": {
+          "SeasonalNaive_12": {
+            "statistic": -2.9018779541599637,
+            "p_value": 0.003754451128132441,
+            "significant": true
+          }
+        }
+      }
+    ],
+    "summary": {
+      "n_datasets": 1,
+      "wins_by_model": {
+        "Naive": 1
+      },
+      "mean_metrics_by_model": {
+        "Naive": {
+          "mae": 337.5796162914223,
+          "rmse": 576.4476576481946,
+          "mape": 15.1729931497357,
+          "direction_accuracy": 0.08893829905503058
+        },
+        "SeasonalNaive_12": {
+          "mae": 389.26967363880425,
+          "rmse": 660.3353102041684,
+          "mape": 16.39831155735878,
+          "direction_accuracy": 0.5736520289049472
+        }
+      }
+    }
+  }
+}

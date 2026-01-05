@@ -66,6 +66,22 @@ from temporalcv.compare.runner import (
     run_comparison,
 )
 
+# Result serialization (always available)
+from temporalcv.compare.results import (
+    create_run_metadata,
+    load_benchmark_results,
+    load_checkpoint,
+    save_benchmark_results,
+    save_checkpoint,
+)
+
+# Documentation generation (always available)
+from temporalcv.compare.docs import (
+    generate_benchmark_docs,
+    generate_ranking_table,
+    generate_summary_table,
+)
+
 __all__ = [
     # Dataclasses
     "ModelResult",
@@ -80,6 +96,16 @@ __all__ = [
     "run_benchmark_suite",
     "compare_to_baseline",
     "compute_comparison_metrics",
+    # Result serialization
+    "create_run_metadata",
+    "save_benchmark_results",
+    "load_benchmark_results",
+    "save_checkpoint",
+    "load_checkpoint",
+    # Documentation generation
+    "generate_benchmark_docs",
+    "generate_summary_table",
+    "generate_ranking_table",
 ]
 
 # Conditional imports for optional adapters

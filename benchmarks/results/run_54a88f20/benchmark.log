@@ -1,0 +1,12 @@
+2025-12-31 09:12:04,337 - INFO - ============================================================
+2025-12-31 09:12:04,337 - INFO - M4/M5 Benchmark Suite
+2025-12-31 09:12:04,337 - INFO - ============================================================
+2025-12-31 09:12:04,337 - INFO - Output directory: benchmarks/results/run_54a88f20
+2025-12-31 09:12:04,337 - INFO - Sample size: 10 series/dataset
+2025-12-31 09:12:04,337 - INFO - Model set: baseline
+2025-12-31 09:12:04,338 - INFO - ------------------------------------------------------------
+2025-12-31 09:12:04,338 - INFO - Loading datasets...
+2025-12-31 09:12:05,044 - WARNING - Failed to load M4 monthly: datasetsforecast required for M3/M4 loading.
+Install with: pip install temporalcv[monash]
+Or: pip install datasetsforecast
+2025-12-31 09:12:05,044 - ERROR - No datasets loaded!

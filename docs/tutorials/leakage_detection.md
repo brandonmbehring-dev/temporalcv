@@ -242,7 +242,7 @@ Compute lag features within each CV split:
 ```python
 from temporalcv import WalkForwardCV
 
-cv = WalkForwardCV(n_splits=5, window_type="sliding", window_size=100, gap=2)
+cv = WalkForwardCV(n_splits=5, window_type="sliding", window_size=100, horizon=2, extra_gap=0)
 
 for train_idx, test_idx in cv.split(y):
     # Create features ONLY from training portion
