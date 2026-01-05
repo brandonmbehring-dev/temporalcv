@@ -52,3 +52,79 @@ jobs:
             echo "::error::Some tests failed. Check artifacts for details."
             exit 1
           fi
+
+  # Nightly notebook validation (more thorough than PR)
+  notebooks-nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[all]"  # Install all optional dependencies for notebooks
+          pip install jupyter nbconvert nbformat matplotlib seaborn
+
+      - name: Execute all notebooks
+        run: |
+          # Execute all notebooks including slow ones
+          for notebook in notebooks/*.ipynb; do
+            echo "Executing $notebook"
+            jupyter nbconvert --to notebook --execute --inplace "$notebook" \
+              --ExecutePreprocessor.timeout=600 \
+              --ExecutePreprocessor.kernel_name=python3
+          done
+
+      - name: Validate notebook outputs
+        run: |
+          python -c "
+          import nbformat
+          import sys
+          from pathlib import Path
+
+          failed = []
+          warnings = []
+
+          for nb_path in Path('notebooks').glob('*.ipynb'):
+              nb = nbformat.read(nb_path, as_version=4)
+
+              # Check for errors
+              for cell in nb.cells:
+                  if cell.cell_type == 'code':
+                      for output in cell.get('outputs', []):
+                          if output.get('output_type') == 'error':
+                              failed.append((nb_path.name, output.get('ename', 'Unknown')))
+                          # Check for warnings in stderr
+                          elif output.get('name') == 'stderr':
+                              text = output.get('text', '')
+                              if 'warning' in text.lower():
+                                  warnings.append((nb_path.name, text[:100]))
+
+          if failed:
+              print('Notebooks with errors:')
+              for name, error in failed:
+                  print(f'  {name}: {error}')
+              sys.exit(1)
+
+          if warnings:
+              print('Notebooks with warnings:')
+              for name, warning in warnings:
+                  print(f'  {name}: {warning}')
+
+          print(f'Successfully executed {len(list(Path(\"notebooks\").glob(\"*.ipynb\")))} notebooks')
+          "
+
+      - name: Upload executed notebooks
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: executed-notebooks
+          path: notebooks/*.ipynb
+          retention-days: 7

@@ -56,26 +56,36 @@ Installation
    :caption: API Guides
 
    api/gates
+   api/guardrails
    api/cv
+   api/cv_financial
    api/statistical_tests
+   api/stationarity
+   api/lag_selection
    api/conformal
    api/persistence
    api/regimes
    api/bagging
    api/diagnostics
+   api/changepoint
 
 .. toctree::
    :maxdepth: 2
    :caption: API Reference
 
    api_reference/gates
+   api_reference/guardrails
    api_reference/cv
+   api_reference/cv_financial
    api_reference/statistical_tests
+   api_reference/stationarity
+   api_reference/lag_selection
    api_reference/conformal
    api_reference/persistence
    api_reference/regimes
    api_reference/bagging
    api_reference/diagnostics
+   api_reference/changepoint
    api_reference/inference
    api_reference/metrics
    api_reference/benchmarks
@@ -89,6 +99,23 @@ Installation
    knowledge/mathematical_foundations
    knowledge/assumptions
    knowledge/notation
+   testing_strategy
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Model Cards
+
+   model_cards/README
+   model_cards/walk_forward_cv
+   model_cards/gate_shuffled_target
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Benchmarks
+
+   benchmarks
+   benchmarks/methodology
+   benchmarks/reproduce
 
 .. toctree::
    :maxdepth: 1

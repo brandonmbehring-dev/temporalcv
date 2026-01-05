@@ -119,6 +119,36 @@ For development:
 pip install temporalcv[dev]
 ```
 
+### Optional Dependencies
+
+temporalcv has modular dependencies for specific features:
+
+| Feature | Install Command | When Needed |
+|---------|----------------|-------------|
+| **Benchmarks** | `pip install temporalcv[benchmarks]` | Running M4/M5 benchmarks |
+| **Changepoint** | `pip install temporalcv[changepoint]` | PELT algorithm (requires `ruptures`) |
+| **Model Comparison** | `pip install temporalcv[compare]` | Benchmark runner with DM tests |
+| **Development** | `pip install temporalcv[dev]` | Testing, linting, type checking |
+| **All Features** | `pip install temporalcv[all]` | Everything above |
+
+**Core dependencies** (always installed):
+- `numpy >= 1.23.0`
+- `scipy >= 1.9.0`
+- `scikit-learn >= 1.1.0`
+- `pandas >= 1.5.0`
+
+### Platform Compatibility
+
+| Platform | Status | Tested Versions |
+|----------|--------|-----------------|
+| **Linux** | ✅ Fully supported | Ubuntu 20.04+, Debian 11+ |
+| **macOS** | ✅ Fully supported | macOS 11+ (Intel & Apple Silicon) |
+| **Windows** | ✅ Fully supported | Windows 10+, Windows Server 2019+ |
+
+**Python versions**: 3.9, 3.10, 3.11, 3.12
+
+**CI Matrix**: All combinations tested on every PR via GitHub Actions.
+
 ---
 
 ## Quick Example
@@ -263,6 +293,12 @@ print(report.to_markdown())
 ### Internal
 - [Planning Documentation](docs/plans/INDEX.md)
 - [Ecosystem Gap Analysis](docs/plans/reference/ecosystem_gaps.md)
+
+### Help & Support
+- [**Troubleshooting Guide**](docs/troubleshooting.md) - Common issues and solutions
+- [**Testing Strategy**](docs/testing_strategy.md) - How temporalcv is tested
+- [**Benchmark Methodology**](docs/benchmarks/methodology.md) - How benchmark results are generated
+- [**GitHub Issues**](https://github.com/brandonmbehring-dev/temporalcv/issues) - Report bugs or request features
 
 ---
 
