@@ -9,6 +9,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [1.0.0-rc1] - 2025-12-26
+
+Release candidate 1 for v1.0.0 - statistical rigor improvements and API stabilization.
+
+### Breaking Changes
+
+#### `gate_shuffled_target()` - New Default Behavior
+- **Default method changed from heuristic to true permutation test**
+- Old behavior: `method="effect_size"` (fast, n_shuffles=5, improvement ratio)
+- New behavior: `method="permutation"` (rigorous, n_shuffles=100, p-value)
+- **Migration**: Add `method="effect_size"` to preserve old behavior
+
+#### `get_n_splits()` - Strict by Default
+- Now raises `ValueError` on insufficient data instead of silently returning 0
+- **Migration**: Use `get_n_splits(X, strict=False)` for old behavior
+
+### Added
+
+#### Two-Mode Shuffled Target Gate
+- `method="permutation"`: True permutation test with p-value (Phipson & Smyth 2010)
+  - Default `n_shuffles=100` for statistical power
+  - `alpha=0.05` significance level
+  - `strict=True` uses n_shuffles=199 for p-value resolution of 0.005
+- `method="effect_size"`: Fast heuristic (original behavior)
+  - Default `n_shuffles=5` for quick iteration
+  - `threshold=0.05` improvement ratio threshold
+- Statistical power warnings when n_shuffles too low for target alpha
+
+#### Strict Mode for CV Methods
+- `get_n_splits(strict=True)`: Raises on insufficient data (default)
+- `get_n_splits(strict=False)`: Returns 0 on failure (backward compatible)
+- Clear error messages with suggested fixes
+
+### Changed
+
+- Development Status: Alpha → Beta
+- SPECIFICATION.md Section 1.2: Documented both shuffled target methods
+
+### Technical Notes
+
+**Test Count**: 1,453+ tests
+
+**Breaking Change Impact**: Low - most users use default thresholds
+
+---
+
 ## [0.4.0] - 2025-12-24
 
 Hardening release with robustness testing and cross-platform CI.

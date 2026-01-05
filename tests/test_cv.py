@@ -211,6 +211,39 @@ class TestWalkForwardCV:
         cv = WalkForwardCV(n_splits=5)
         assert cv.get_n_splits(X) == 5
 
+    def test_get_n_splits_strict_raises_on_insufficient_data(self) -> None:
+        """
+        get_n_splits(strict=True) should raise ValueError on insufficient data.
+
+        This tests the fix for silent failures - previously errors were swallowed
+        and 0 was returned, which could mask configuration problems.
+        """
+        # Create data that's too small for the requested splits
+        rng = np.random.default_rng(42)
+        X_tiny = rng.standard_normal((5, 3))  # Only 5 samples
+
+        # Request more splits than possible
+        cv = WalkForwardCV(n_splits=10, window_size=5)
+
+        # Default (strict=True) should raise
+        with pytest.raises(ValueError, match="Cannot compute n_splits"):
+            cv.get_n_splits(X_tiny)
+
+    def test_get_n_splits_strict_false_returns_zero(self) -> None:
+        """
+        get_n_splits(strict=False) should return 0 on insufficient data.
+
+        This preserves backward compatibility for callers who want the old behavior.
+        """
+        rng = np.random.default_rng(42)
+        X_tiny = rng.standard_normal((5, 3))
+
+        cv = WalkForwardCV(n_splits=10, window_size=5)
+
+        # strict=False should return 0 instead of raising
+        result = cv.get_n_splits(X_tiny, strict=False)
+        assert result == 0
+
     def test_get_split_info(self, sample_data: tuple) -> None:
         """get_split_info() should return SplitInfo objects."""
         X, y = sample_data

@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/brandon_behring/Claude/temporalcv"
+      ],
+      "description": "Direct filesystem access to temporalcv project"
+    },
+    "research-kb": {
+      "command": "python",
+      "args": ["-m", "research_kb_mcp.server"],
+      "cwd": "/home/brandon_behring/Claude/research-kb",
+      "description": "Search statistical/ML literature - 120 papers + 76 textbooks with FTS+vector+graph"
+    }
+  }
+}

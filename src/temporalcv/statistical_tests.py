@@ -292,6 +292,44 @@ def dm_test(
 
     Harvey adjustment: DM_adj = DM * sqrt((n + 1 - 2h + h(h-1)/n) / n)
 
+    .. warning::
+
+       **Important Limitations** (Diebold 2015 retrospective):
+
+       1. **Designed for forecasts, not models**: The DM test compares two sets of
+          *forecasts* under the assumption of a fixed data-generating process.
+          It was NOT designed for comparing *models* (e.g., in nested model comparison
+          or model selection contexts). See Clark & West (2007) for nested models.
+
+       2. **Negative variance estimates**: HAC variance estimation can produce
+          negative estimates with multi-step forecasts (h > 1), especially with
+          strong autocorrelation. This function returns pvalue=1.0 in such cases.
+          See Coroneo & Iacone (2016) for detailed analysis.
+
+       3. **Size distortions in small samples**: Even with Harvey adjustment, the
+          test may have incorrect size (reject too often or too rarely) when
+          n < 50. Use bootstrap alternatives for small samples.
+
+       4. **Low power with strong autocorrelation**: When loss differentials are
+          highly persistent, the test has low power to detect real differences.
+
+       5. **Bandwidth sensitivity**: HAC variance estimation is sensitive to
+          bandwidth choice. We use h-1 (theoretically motivated for MA(h-1)
+          structure), but this may be suboptimal in practice.
+
+    References
+    ----------
+    Diebold, F.X. & Mariano, R.S. (1995). Comparing Predictive Accuracy.
+        Journal of Business & Economic Statistics, 13(3), 253-263.
+    Diebold, F.X. (2015). Comparing Predictive Accuracy, Twenty Years Later:
+        A Personal Perspective. Journal of Business & Economic Statistics, 33(1), 1-8.
+    Harvey, D., Leybourne, S. & Newbold, P. (1997). Testing the Equality of
+        Prediction Mean Squared Errors. International Journal of Forecasting, 13(2), 281-291.
+    Clark, T.E. & West, K.D. (2007). Approximately Normal Tests for Equal Predictive
+        Accuracy in Nested Models. Journal of Econometrics, 138(1), 291-311.
+    Coroneo, L. & Iacone, F. (2016). Comparing Predictive Accuracy in Small Samples.
+        Journal of Forecasting, 35(7), 608-625.
+
     Example
     -------
     >>> # Test if model beats persistence baseline
@@ -355,6 +393,20 @@ def dm_test(
     # HAC variance with h-1 bandwidth for h-step forecasts
     # For h=1, bandwidth=0 (no autocorrelation in 1-step errors)
     bandwidth = max(0, h - 1)
+
+    # Warn if bandwidth is large relative to sample size
+    # Per Coroneo & Iacone (2016), large bandwidth can cause negative variance estimates
+    if bandwidth > n / 4:
+        warnings.warn(
+            f"DM test bandwidth ({bandwidth}) exceeds n/4 ({n/4:.0f}). "
+            f"HAC variance estimation may be unreliable with long forecast horizons "
+            f"relative to sample size. Consider: (1) increasing sample size, "
+            f"(2) using bootstrap-based tests, (3) reducing forecast horizon. "
+            f"See Coroneo & Iacone (2016) for details on DM test limitations.",
+            UserWarning,
+            stacklevel=2,
+        )
+
     var_d = compute_hac_variance(d, bandwidth=bandwidth)
 
     # Handle degenerate case - warn instead of failing silently

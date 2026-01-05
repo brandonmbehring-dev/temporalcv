@@ -26,20 +26,46 @@ WARN if: 0.10 < improvement <= 0.20
 PASS if: improvement <= 0.10
 ```
 
-### 1.2 Shuffled Target Gate [T3]
+### 1.2 Shuffled Target Gate [T1/T3]
+
+The shuffled target gate supports two statistical methods:
+
+#### Method: `"permutation"` (default, recommended) [T1]
 
 | Parameter | Value | Justification |
 |-----------|-------|---------------|
-| `threshold` | 0.05 (5%) | Standard p-value for hypothesis testing |
-| `n_shuffles` | 5 (default) | Balance between accuracy and runtime (100 too slow for typical use) |
+| `method` | "permutation" | True permutation test with p-value [Phipson & Smyth 2010] |
+| `alpha` | 0.05 | Standard significance level |
+| `n_shuffles` | 100 (default) | Min p-value of 0.0099, sufficient for α=0.05 |
+| `strict` | False | If True, uses n_shuffles=199 for p-value resolution of 0.005 |
 
-**Interpretation**: If model beats shuffled targets at p < 0.05, features encode target position.
+**Interpretation**: If model beats shuffled targets at p < α, features encode target position.
+
+**Formula** (per Phipson & Smyth 2010):
+```
+p-value = (1 + count(shuffled_mae <= model_mae)) / (1 + n_shuffles)
+HALT if: p-value < alpha
+```
+
+#### Method: `"effect_size"` (fast, heuristic) [T3]
+
+| Parameter | Value | Justification |
+|-----------|-------|---------------|
+| `method` | "effect_size" | Compare improvement ratio to threshold |
+| `threshold` | 0.05 (5%) | Maximum acceptable improvement over shuffled |
+| `n_shuffles` | 5 (default) | Balance between accuracy and runtime |
+
+**Interpretation**: If model improves by more than threshold over shuffled, likely leakage.
 
 **Formula**:
 ```
-improvement_ratio = (mean_shuffled_error - model_error) / mean_shuffled_error
-HALT if: improvement_ratio > threshold (model reliably beats random)
+improvement_ratio = 1 - (model_mae / mean_shuffled_mae)
+HALT if: improvement_ratio > threshold
 ```
+
+**Method Selection Guide**:
+- Use `"permutation"` (default) for rigorous statistical testing and publication
+- Use `"effect_size"` for quick sanity checks during development
 
 ### 1.3 Synthetic AR(1) Gate [T1]
 

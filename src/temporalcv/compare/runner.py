@@ -17,11 +17,14 @@ Example
 
 from __future__ import annotations
 
+import logging
 import time
 import warnings
-from typing import Any, Dict, List, Optional, Protocol, Tuple
+from typing import Any, Dict, List, Literal, Optional, Protocol, Tuple
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 from temporalcv.compare.base import (
     ComparisonReport,
@@ -65,6 +68,7 @@ def run_comparison(
     adapters: List[ForecastAdapter],
     primary_metric: str = "mae",
     include_dm_test: bool = True,
+    aggregation_mode: Literal["flatten", "per_series_mean", "per_series_median"] = "flatten",
 ) -> ComparisonResult:
     """
     Compare multiple models on a single dataset.
@@ -79,6 +83,14 @@ def run_comparison(
         Metric to use for ranking models
     include_dm_test : bool, default=True
         Whether to run Diebold-Mariano test between best and other models
+    aggregation_mode : {"flatten", "per_series_mean", "per_series_median"}, default="flatten"
+        How to aggregate metrics for multi-series datasets:
+
+        - ``"flatten"``: Concatenate all series, compute single metric (default)
+        - ``"per_series_mean"``: Compute metric per series, return mean
+        - ``"per_series_median"``: Compute metric per series, return median
+
+        .. versionadded:: 1.0.0
 
     Returns
     -------
@@ -118,25 +130,56 @@ def run_comparison(
             )
         except Exception as e:
             # Log error but continue with other models
-            print(f"Warning: {adapter.model_name} failed: {e}")
+            logger.warning("%s failed: %s", adapter.model_name, e)
             continue
 
         elapsed = time.perf_counter() - start_time
 
-        # Flatten test for comparison if multi-series
-        test_flat = test.flatten() if test.ndim > 1 else test
-        pred_flat = predictions.flatten() if predictions.ndim > 1 else predictions
+        # Compute metrics based on aggregation mode
+        if aggregation_mode == "flatten":
+            # Flatten test for comparison if multi-series
+            test_flat = test.flatten() if test.ndim > 1 else test
+            pred_flat = predictions.flatten() if predictions.ndim > 1 else predictions
 
-        # Validate prediction/test alignment
-        if len(test_flat) != len(pred_flat):
-            raise ValueError(
-                f"{adapter.model_name} returned {len(pred_flat)} predictions, "
-                f"expected {len(test_flat)} (test_size). "
-                f"Check adapter implementation."
-            )
+            # Validate prediction/test alignment
+            if len(test_flat) != len(pred_flat):
+                raise ValueError(
+                    f"{adapter.model_name} returned {len(pred_flat)} predictions, "
+                    f"expected {len(test_flat)} (test_size). "
+                    f"Check adapter implementation."
+                )
 
-        # Compute metrics
-        metrics = compute_comparison_metrics(pred_flat, test_flat)
+            metrics = compute_comparison_metrics(pred_flat, test_flat)
+
+        else:
+            # Per-series aggregation
+            if test.ndim == 1:
+                # Single series - just compute directly
+                metrics = compute_comparison_metrics(predictions, test)
+            else:
+                # Multi-series: compute per series, then aggregate
+                n_series = test.shape[0]
+
+                # Validate shape alignment
+                if predictions.shape != test.shape:
+                    raise ValueError(
+                        f"{adapter.model_name} returned shape {predictions.shape}, "
+                        f"expected {test.shape}. Check adapter implementation."
+                    )
+
+                # Compute metrics for each series
+                series_metrics: List[Dict[str, float]] = []
+                for i in range(n_series):
+                    series_metrics.append(
+                        compute_comparison_metrics(predictions[i], test[i])
+                    )
+
+                # Aggregate across series
+                agg_func = np.mean if aggregation_mode == "per_series_mean" else np.median
+                metrics = {}
+                for key in series_metrics[0].keys():
+                    values = [sm[key] for sm in series_metrics]
+                    metrics[key] = float(agg_func(values))
 
         model_results.append(
             ModelResult(
@@ -258,6 +301,7 @@ def run_benchmark_suite(
     adapters: List[ForecastAdapter],
     primary_metric: str = "mae",
     include_dm_test: bool = True,
+    aggregation_mode: Literal["flatten", "per_series_mean", "per_series_median"] = "flatten",
 ) -> ComparisonReport:
     """
     Run model comparison across multiple datasets.
@@ -272,6 +316,11 @@ def run_benchmark_suite(
         Metric to use for ranking
     include_dm_test : bool, default=True
         Whether to run statistical tests
+    aggregation_mode : {"flatten", "per_series_mean", "per_series_median"}, default="flatten"
+        How to aggregate metrics for multi-series datasets.
+        See ``run_comparison`` for details.
+
+        .. versionadded:: 1.0.0
 
     Returns
     -------
@@ -299,10 +348,11 @@ def run_benchmark_suite(
                 adapters=adapters,
                 primary_metric=primary_metric,
                 include_dm_test=include_dm_test,
+                aggregation_mode=aggregation_mode,
             )
             results.append(result)
         except Exception as e:
-            print(f"Warning: Failed on dataset {dataset.metadata.name}: {e}")
+            logger.warning("Failed on dataset %s: %s", dataset.metadata.name, e)
             continue
 
     if not results:

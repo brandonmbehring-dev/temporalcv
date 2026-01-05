@@ -81,6 +81,7 @@ class TestShuffledTargetValidation:
             y=y,
             n_shuffles=5,
             threshold=0.10,  # Higher threshold for out-of-sample variance
+            method="effect_size",  # Use effect size mode for this test
             random_state=42,
         )
 
@@ -127,6 +128,7 @@ class TestShuffledTargetValidation:
             y=y,
             n_shuffles=5,
             threshold=0.05,
+            method="effect_size",  # Use effect size mode to check improvement_ratio
             random_state=42,
         )
 
@@ -141,7 +143,7 @@ class TestShuffledTargetValidation:
         )
 
     def test_threshold_default_value(self) -> None:
-        """Default threshold should be 0.05 per SPECIFICATION.md."""
+        """Default threshold should be 0.05 per SPECIFICATION.md (effect_size mode)."""
         rng = np.random.default_rng(42)
         n = 50
         X = rng.standard_normal((n, 3))
@@ -154,10 +156,32 @@ class TestShuffledTargetValidation:
             X=X,
             y=y,
             n_shuffles=3,
+            method="effect_size",  # Test effect_size mode threshold
             random_state=42,
         )
 
         # Verify threshold is applied
+        assert result.threshold == 0.05
+
+    def test_alpha_default_value(self) -> None:
+        """Default alpha should be 0.05 per SPECIFICATION.md (permutation mode)."""
+        rng = np.random.default_rng(42)
+        n = 50
+        X = rng.standard_normal((n, 3))
+        y = rng.standard_normal(n)
+
+        model = MockMeanPredictor()
+
+        result = gate_shuffled_target(
+            model=model,
+            X=X,
+            y=y,
+            n_shuffles=20,  # Enough for p < 0.05
+            method="permutation",  # Test permutation mode alpha
+            random_state=42,
+        )
+
+        # Verify alpha is used as threshold in permutation mode
         assert result.threshold == 0.05
 
     def test_n_shuffles_parameter(self) -> None:
@@ -174,6 +198,7 @@ class TestShuffledTargetValidation:
             X=X,
             y=y,
             n_shuffles=7,
+            method="effect_size",  # Use effect_size mode to test n_shuffles
             random_state=42,
         )
 
@@ -187,7 +212,7 @@ class TestShuffledTargetStatistics:
     def test_improvement_ratio_calculation(self) -> None:
         """
         Improvement ratio should be:
-        (mae_shuffled - mae_real) / mae_shuffled
+        1 - (mae_real / mae_shuffled) = (mae_shuffled - mae_real) / mae_shuffled
         """
         rng = np.random.default_rng(42)
         n = 50
@@ -201,14 +226,17 @@ class TestShuffledTargetStatistics:
             X=X,
             y=y,
             n_shuffles=3,
+            method="effect_size",  # Use effect_size mode to check improvement_ratio
             random_state=42,
         )
 
         mae_real = result.details["mae_real"]
         mae_shuffled = result.details["mae_shuffled_avg"]
 
-        expected_ratio = (mae_shuffled - mae_real) / mae_shuffled
+        expected_ratio = 1 - (mae_real / mae_shuffled)
         assert abs(result.metric_value - expected_ratio) < 0.001
+        # Also verify improvement_ratio is stored in details
+        assert abs(result.details["improvement_ratio"] - expected_ratio) < 0.001
 
     def test_variance_across_shuffles(self) -> None:
         """Multiple shuffles should show variance in MAE."""
@@ -224,6 +252,7 @@ class TestShuffledTargetStatistics:
             X=X,
             y=y,
             n_shuffles=10,
+            method="effect_size",  # Use effect_size mode for this test
             random_state=42,
         )
 

@@ -307,6 +307,7 @@ class TestGateShuffledTarget:
             y=y,
             n_shuffles=3,
             threshold=0.05,
+            method="effect_size",  # Use effect size mode for this test
             random_state=42,
         )
 
@@ -422,6 +423,72 @@ class TestGateShuffledTarget:
                 permutation="invalid",  # type: ignore
                 random_state=42,
             )
+
+    def test_strict_mode_uses_199_shuffles(self) -> None:
+        """strict=True should override n_shuffles to 199 for p-value resolution of 0.005."""
+        rng = np.random.default_rng(42)
+        X = rng.standard_normal((100, 3))
+        y = rng.standard_normal(100)
+        model = MockModel("mean")
+
+        result = gate_shuffled_target(
+            model=model,
+            X=X,
+            y=y,
+            n_shuffles=5,  # Request 5, but strict=True should override
+            strict=True,
+            random_state=42,
+        )
+
+        # Verify effective n_shuffles is 199
+        assert result.details["n_shuffles"] == 5  # Original request preserved
+        assert result.details["n_shuffles_effective"] == 199  # Overridden to 199
+        assert result.details["strict"] is True
+        assert result.details["min_pvalue"] == pytest.approx(0.005, rel=0.01)
+
+    def test_strict_mode_does_not_downgrade(self) -> None:
+        """strict=True should not reduce n_shuffles if already >= 199."""
+        rng = np.random.default_rng(42)
+        X = rng.standard_normal((100, 3))
+        y = rng.standard_normal(100)
+        model = MockModel("mean")
+
+        result = gate_shuffled_target(
+            model=model,
+            X=X,
+            y=y,
+            n_shuffles=250,  # Already above 199
+            strict=True,
+            random_state=42,
+        )
+
+        # Should use original since it's already >= 199
+        assert result.details["n_shuffles_effective"] == 250
+
+    def test_power_warning_for_low_n_shuffles(self) -> None:
+        """Low n_shuffles without strict=True should emit power warning."""
+        import warnings
+
+        rng = np.random.default_rng(42)
+        X = rng.standard_normal((100, 3))
+        y = rng.standard_normal(100)
+        model = MockModel("mean")
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            gate_shuffled_target(
+                model=model,
+                X=X,
+                y=y,
+                n_shuffles=5,
+                strict=False,
+                random_state=42,
+            )
+
+        # Should have power warning
+        power_warnings = [x for x in w if "limited statistical power" in str(x.message)]
+        assert len(power_warnings) >= 1
+        assert "Phipson & Smyth" in str(power_warnings[0].message)
 
 
 # =============================================================================
@@ -691,7 +758,9 @@ class TestIntegration:
         model = MockModel("leaky")
 
         result = gate_shuffled_target(
-            model, X, y, n_shuffles=3, threshold=0.05, random_state=42
+            model, X, y, n_shuffles=3, threshold=0.05,
+            method="effect_size",  # Use effect_size mode for this test
+            random_state=42
         )
 
         # Leakage should be caught

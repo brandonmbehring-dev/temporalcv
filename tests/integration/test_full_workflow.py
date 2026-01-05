@@ -104,7 +104,9 @@ class TestFullValidationPipeline:
         # Run shuffled target gate (should catch leakage)
         gate_results = [
             gate_shuffled_target(
-                model, X, y, n_shuffles=3, threshold=0.05, random_state=42
+                model, X, y, n_shuffles=3, threshold=0.05,
+                method="effect_size",  # Use effect_size mode for this test
+                random_state=42
             ),
         ]
 

@@ -201,12 +201,16 @@ def gate_shuffled_target(
     model: FitPredictModel,
     X: ArrayLike,
     y: ArrayLike,
-    n_shuffles: int = 5,
+    n_shuffles: Optional[int] = None,
     threshold: float = 0.05,
     n_cv_splits: int = 3,
     permutation: Literal["iid", "block"] = "block",
     block_size: Union[int, Literal["auto"]] = "auto",
     random_state: Optional[int] = None,
+    *,
+    method: Literal["effect_size", "permutation"] = "permutation",
+    alpha: float = 0.05,
+    strict: bool = False,
 ) -> GateResult:
     """
     Shuffled target test: definitive leakage detection.
@@ -225,15 +229,24 @@ def gate_shuffled_target(
         Feature matrix
     y : array-like of shape (n_samples,)
         Target vector
-    n_shuffles : int, default=5
-        Number of shuffled targets to average over
+    n_shuffles : int, optional
+        Number of shuffled targets to generate. Defaults depend on ``method``:
+
+        - ``method="effect_size"``: default=5 (fast heuristic)
+        - ``method="permutation"``: default=100 (statistically rigorous)
+
+        **Power analysis** [T1]: With n permutations, the minimum achievable
+        p-value is 1/(n+1). For p < 0.05, use n >= 19. For p < 0.01, use n >= 99.
+        See Phipson & Smyth (2010).
     threshold : float, default=0.05
-        Maximum allowed improvement ratio over shuffled baseline
+        Maximum allowed improvement ratio over shuffled baseline.
+        Only used when ``method="effect_size"``.
     n_cv_splits : int, default=3
         Number of walk-forward CV splits for out-of-sample evaluation.
         Uses expanding window CV to ensure proper temporal evaluation.
     permutation : {"iid", "block"}, default="block"
         Permutation strategy for null hypothesis:
+
         - "iid": Standard random permutation (may produce false positives
           on persistent time series)
         - "block": Block permutation that preserves local autocorrelation
@@ -243,6 +256,19 @@ def gate_shuffled_target(
         Ignored if permutation="iid".
     random_state : int, optional
         Random seed for reproducibility
+    method : {"effect_size", "permutation"}, default="permutation"
+        Statistical method for decision:
+
+        - "effect_size": Compare improvement ratio to threshold (fast, heuristic).
+          HALT if model_mae < shuffled_mae * (1 - threshold). Default n_shuffles=5.
+        - "permutation": True permutation test with p-value (rigorous).
+          HALT if p-value < alpha. Default n_shuffles=100. Per Phipson & Smyth (2010),
+          p-value = (1 + count(shuffled_mae <= model_mae)) / (1 + n_shuffles).
+    alpha : float, default=0.05
+        Significance level for permutation test. Only used when ``method="permutation"``.
+    strict : bool, default=False
+        If True and method="permutation", override n_shuffles to max(n_shuffles, 199)
+        for p-value resolution of 0.005. Recommended for publication.
 
     Returns
     -------
@@ -254,6 +280,13 @@ def gate_shuffled_target(
     This is the definitive leakage test. If your model beats a shuffled
     target, something is wrong - either features leak future information
     or there's a bug in the evaluation pipeline.
+
+    **Method Selection Guide**:
+
+    - Use ``method="permutation"`` (default) for rigorous statistical testing.
+      The p-value answers: "What's the probability of seeing this result by chance?"
+    - Use ``method="effect_size"`` for quick sanity checks during development.
+      The effect size answers: "How much better is the model than shuffled?"
 
     Uses WalkForwardCV internally to compute out-of-sample MAE, avoiding
     the bias of in-sample evaluation that could mask or exaggerate leakage.
@@ -274,6 +307,22 @@ def gate_shuffled_target(
          Stationary Observations. Annals of Statistics, 17(3), 1217-1241.
     [T1] Politis, D.N. & Romano, J.P. (1994). The Stationary Bootstrap.
          JASA, 89(428), 1303-1313.
+    [T1] Phipson, B. & Smyth, G.K. (2010). Permutation P-values Should Never
+         Be Zero: Calculating Exact P-values When Permutations Are Randomly
+         Drawn. Statistical Applications in Genetics and Molecular Biology,
+         9(1), Article 39. https://doi.org/10.2202/1544-6115.1585
+
+    Examples
+    --------
+    Quick check during development (effect size mode):
+
+    >>> result = gate_shuffled_target(model, X, y, method="effect_size")
+    >>> print(f"Improvement: {result.metric_value:.1%}")
+
+    Rigorous testing for publication (permutation mode, default):
+
+    >>> result = gate_shuffled_target(model, X, y, method="permutation", strict=True)
+    >>> print(f"p-value: {result.details['pvalue']:.4f}")
 
     See Also
     --------
@@ -283,6 +332,10 @@ def gate_shuffled_target(
     """
     X = np.asarray(X)
     y = np.asarray(y)
+
+    # Validate method parameter
+    if method not in ("effect_size", "permutation"):
+        raise ValueError(f"method must be 'effect_size' or 'permutation', got {method!r}")
 
     # Validate no NaN values
     if np.any(np.isnan(X)):
@@ -305,6 +358,29 @@ def gate_shuffled_target(
 
     if permutation not in ("iid", "block"):
         raise ValueError(f"permutation must be 'iid' or 'block', got {permutation!r}")
+
+    # Set default n_shuffles based on method
+    if n_shuffles is None:
+        if method == "effect_size":
+            n_shuffles = 5  # Fast heuristic
+        else:  # permutation
+            n_shuffles = 100  # Statistically rigorous
+
+    # Handle strict mode: override n_shuffles for adequate statistical power
+    effective_n_shuffles = n_shuffles
+    if strict and method == "permutation":
+        effective_n_shuffles = max(n_shuffles, 199)  # p-value resolution of 0.005
+    elif method == "permutation" and n_shuffles < 19:
+        # Warn about insufficient power with small n_shuffles in permutation mode
+        # With n=19, min p-value is 1/20 = 0.05 (just at 5% level)
+        warnings.warn(
+            f"n_shuffles={n_shuffles} provides limited statistical power for permutation test. "
+            f"Minimum achievable p-value is 1/{n_shuffles+1} ≈ {1/(n_shuffles+1):.3f}. "
+            f"Use n_shuffles >= 19 for p < 0.05, or n_shuffles >= 99 for p < 0.01. "
+            f"See Phipson & Smyth (2010) for permutation test power analysis.",
+            UserWarning,
+            stacklevel=2,
+        )
 
     n = len(y)
     rng = np.random.default_rng(random_state)
@@ -383,7 +459,7 @@ def gate_shuffled_target(
 
     # Compute out-of-sample MAE on shuffled targets
     shuffled_maes: List[float] = []
-    for _ in range(n_shuffles):
+    for _ in range(effective_n_shuffles):
         # Apply permutation strategy
         if permutation == "block":
             y_shuffled = block_permute(y, rng)
@@ -417,36 +493,72 @@ def gate_shuffled_target(
         )
         improvement_ratio = 0.0
 
+    # Compute p-value for permutation test mode
+    # Per Phipson & Smyth (2010): p = (1 + count(shuffled <= observed)) / (1 + n)
+    # A lower model MAE = better, so we count shuffled MAEs that are <= model MAE
+    # (i.e., how often shuffled model does at least as well as real model)
+    n_shuffled_at_least_as_good = sum(1 for s_mae in shuffled_maes if s_mae <= mae_real)
+    pvalue = (1 + n_shuffled_at_least_as_good) / (1 + effective_n_shuffles)
+
     details = {
         "mae_real": mae_real,
         "mae_shuffled_avg": mae_shuffled_avg,
         "mae_shuffled_all": shuffled_maes,
+        "improvement_ratio": improvement_ratio,
+        "pvalue": pvalue,
+        "method": method,
         "n_shuffles": n_shuffles,
+        "n_shuffles_effective": effective_n_shuffles,
+        "strict": strict,
+        "min_pvalue": 1 / (effective_n_shuffles + 1),
         "n_cv_splits": n_cv_splits,
         "evaluation_method": "walk_forward_cv",
         "permutation": permutation,
         "block_size": computed_block_size if permutation == "block" else None,
     }
 
-    if improvement_ratio > threshold:
+    # Decision logic depends on method
+    if method == "permutation":
+        # True permutation test: HALT if p-value < alpha
+        # Low p-value means model reliably beats shuffled (suspicious)
+        if pvalue < alpha:
+            return GateResult(
+                name="shuffled_target",
+                status=GateStatus.HALT,
+                message=f"Permutation test: p={pvalue:.4f} < α={alpha} (model beats shuffled)",
+                metric_value=pvalue,
+                threshold=alpha,
+                details=details,
+                recommendation="Check for data leakage. Model should NOT beat shuffled target.",
+            )
         return GateResult(
             name="shuffled_target",
-            status=GateStatus.HALT,
-            message=f"Model beats shuffled by {improvement_ratio:.1%} (max: {threshold:.0%})",
+            status=GateStatus.PASS,
+            message=f"Permutation test: p={pvalue:.4f} >= α={alpha} (no significant leakage)",
+            metric_value=pvalue,
+            threshold=alpha,
+            details=details,
+        )
+    else:
+        # Effect size mode: HALT if improvement_ratio > threshold
+        if improvement_ratio > threshold:
+            return GateResult(
+                name="shuffled_target",
+                status=GateStatus.HALT,
+                message=f"Model beats shuffled by {improvement_ratio:.1%} (max: {threshold:.0%})",
+                metric_value=improvement_ratio,
+                threshold=threshold,
+                details=details,
+                recommendation="Check for data leakage. Model should NOT beat shuffled target.",
+            )
+        return GateResult(
+            name="shuffled_target",
+            status=GateStatus.PASS,
+            message=f"Model improvement {improvement_ratio:.1%} is acceptable",
             metric_value=improvement_ratio,
             threshold=threshold,
             details=details,
-            recommendation="Check for data leakage. Model should NOT beat shuffled target.",
         )
-
-    return GateResult(
-        name="shuffled_target",
-        status=GateStatus.PASS,
-        message=f"Model improvement {improvement_ratio:.1%} is acceptable",
-        metric_value=improvement_ratio,
-        threshold=threshold,
-        details=details,
-    )
 
 
 def gate_synthetic_ar1(

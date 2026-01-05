@@ -66,15 +66,16 @@ print(f"Moves: {np.unique(moves, return_counts=True)}")
 The key metric for high-persistence series:
 
 ```python
-# Get model predictions
-predictions = model.predict(X_test)
-actuals = y_test
+# IMPORTANT: MC-SS operates on CHANGES, not levels!
+# Convert predictions and actuals to changes first
+pred_changes = np.diff(model.predict(X_test))
+actual_changes = np.diff(y_test)
 
-# Compute move-conditional metrics
+# Compute move-conditional metrics on changes
 mc_result = compute_move_conditional_metrics(
-    predictions=predictions,
-    actuals=actuals,
-    threshold=threshold
+    predictions=pred_changes,
+    actuals=actual_changes,
+    threshold=threshold  # threshold was computed from training changes
 )
 
 print(f"MC-SS: {mc_result.skill_score:.3f}")
@@ -102,12 +103,15 @@ Did you predict the right direction?
 ```python
 from temporalcv import compute_direction_accuracy
 
+# IMPORTANT: For high-persistence series, use CHANGES not levels
+# pred_changes and actual_changes from np.diff() conversions above
+
 # 2-class (sign-based)
-acc_2class = compute_direction_accuracy(predictions, actuals)
+acc_2class = compute_direction_accuracy(pred_changes, actual_changes)
 print(f"Direction accuracy (2-class): {acc_2class:.1%}")
 
 # 3-class (with move threshold)
-acc_3class = compute_direction_accuracy(predictions, actuals, move_threshold=threshold)
+acc_3class = compute_direction_accuracy(pred_changes, actual_changes, move_threshold=threshold)
 print(f"Direction accuracy (3-class): {acc_3class:.1%}")
 ```
 

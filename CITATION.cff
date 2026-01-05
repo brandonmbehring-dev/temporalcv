@@ -1,0 +1,60 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "temporalcv"
+abstract: "Temporal cross-validation with leakage protection for time-series ML."
+authors:
+  - family-names: Behring
+    given-names: Brandon
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+repository-code: "https://github.com/brandonmbehring-dev/temporalcv"
+url: "https://temporalcv.readthedocs.io"
+license: MIT
+version: "1.0.0"
+date-released: "2025-01-01"
+keywords:
+  - time-series
+  - cross-validation
+  - machine-learning
+  - data-leakage
+  - walk-forward
+  - conformal-prediction
+  - statistical-testing
+  - diebold-mariano
+references:
+  - type: article
+    authors:
+      - family-names: Diebold
+        given-names: Francis X.
+      - family-names: Mariano
+        given-names: Roberto S.
+    title: "Comparing Predictive Accuracy"
+    journal: "Journal of Business & Economic Statistics"
+    volume: 13
+    issue: 3
+    year: 1995
+    pages: "253-263"
+    doi: "10.1080/07350015.1995.10524599"
+  - type: article
+    authors:
+      - family-names: Romano
+        given-names: Yaniv
+      - family-names: Patterson
+        given-names: Evan
+      - family-names: Candès
+        given-names: Emmanuel J.
+    title: "Conformalized Quantile Regression"
+    conference: "NeurIPS"
+    year: 2019
+  - type: article
+    authors:
+      - family-names: Pesaran
+        given-names: M. Hashem
+      - family-names: Timmermann
+        given-names: Allan
+    title: "A Simple Nonparametric Test of Predictive Performance"
+    journal: "Journal of Business & Economic Statistics"
+    volume: 10
+    issue: 4
+    year: 1992
+    pages: "461-465"

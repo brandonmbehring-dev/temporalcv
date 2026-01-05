@@ -675,6 +675,8 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
         X: Optional[ArrayLike] = None,
         y: Optional[ArrayLike] = None,
         groups: Optional[ArrayLike] = None,
+        *,
+        strict: bool = True,
     ) -> int:
         """
         Return the number of splitting iterations.
@@ -688,18 +690,36 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
             Not used, for API compatibility.
         groups : array-like, optional
             Not used, for API compatibility.
+        strict : bool, default=True
+            If True (default), raise ValueError when splits cannot be computed
+            (e.g., insufficient data). If False, return 0 on failure.
+
+            .. versionadded:: 1.0.0
+               The ``strict`` parameter was added to prevent silent failures.
+               Previously, errors were silently swallowed and 0 was returned.
 
         Returns
         -------
         int
             Number of splits.
+
+        Raises
+        ------
+        ValueError
+            If strict=True and splits cannot be computed due to insufficient data
+            or invalid configuration.
         """
         if X is not None:
             n_samples = self._get_n_samples(X)
             try:
                 splits = self._calculate_splits(n_samples)
                 return len(splits)
-            except ValueError:
+            except ValueError as e:
+                if strict:
+                    raise ValueError(
+                        f"Cannot compute n_splits: {e}. "
+                        f"Set strict=False to return 0 instead of raising."
+                    ) from e
                 return 0
         return self.n_splits
 
@@ -932,10 +952,41 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
         X: Optional[ArrayLike] = None,
         y: Optional[ArrayLike] = None,
         groups: Optional[ArrayLike] = None,
+        *,
+        strict: bool = True,
     ) -> int:
-        """Return number of splitting iterations."""
+        """
+        Return number of splitting iterations.
+
+        Parameters
+        ----------
+        X : array-like, optional
+            Training data. If provided, returns actual number of valid splits.
+        y : array-like, optional
+            Not used, for API compatibility.
+        groups : array-like, optional
+            Not used, for API compatibility.
+        strict : bool, default=True
+            If True (default), raise ValueError on failure.
+            If False, return 0 on failure.
+
+            .. versionadded:: 1.0.0
+
+        Returns
+        -------
+        int
+            Number of splits.
+        """
         if X is not None:
-            return sum(1 for _ in self.split(X))
+            try:
+                return sum(1 for _ in self.split(X))
+            except ValueError as e:
+                if strict:
+                    raise ValueError(
+                        f"Cannot compute n_splits: {e}. "
+                        f"Set strict=False to return 0 instead of raising."
+                    ) from e
+                return 0
         return self.n_splits - 1
 
     def fit_predict(

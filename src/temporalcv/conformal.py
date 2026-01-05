@@ -45,11 +45,14 @@ References
 
 from __future__ import annotations
 
+import logging
 import warnings
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -259,6 +262,28 @@ class SplitConformalPredictor:
         if len(predictions) < 10:
             raise ValueError(
                 f"Need at least 10 calibration samples, got {len(predictions)}"
+            )
+
+        # Tiered sample size warnings [T2]
+        # n>=10: allowed (minimum for quantile estimation)
+        # n>=30: recommended (CLT threshold)
+        # n>=50: reliable (stable quantile estimation)
+        n_cal = len(predictions)
+        if n_cal < 30:
+            warnings.warn(
+                f"Calibration set size n={n_cal} is below recommended minimum of 30. "
+                f"Coverage guarantee holds but quantile estimation may be unstable. "
+                f"n>=50 recommended for reliable inference. "
+                f"See SPECIFICATION.md Section 5.2 for guidance.",
+                UserWarning,
+                stacklevel=2,
+            )
+        elif n_cal < 50:
+            warnings.warn(
+                f"Calibration set size n={n_cal} is adequate but below optimal. "
+                f"n>=50 recommended for stable quantile estimation.",
+                UserWarning,
+                stacklevel=2,
             )
 
         # Nonconformity scores: absolute residuals
@@ -846,12 +871,191 @@ def walk_forward_conformal(
 
 
 # =============================================================================
+# Coverage Diagnostics
+# =============================================================================
+
+
+@dataclass
+class CoverageDiagnostics:
+    """
+    Detailed coverage diagnostics for conformal prediction intervals.
+
+    Attributes
+    ----------
+    overall_coverage : float
+        Empirical coverage across all observations.
+    target_coverage : float
+        Nominal coverage level (1 - alpha).
+    coverage_gap : float
+        Difference between target and empirical coverage.
+    undercoverage_warning : bool
+        True if coverage is significantly below target.
+    coverage_by_window : Dict[str, float]
+        Coverage computed in rolling windows.
+    coverage_by_regime : Optional[Dict[str, float]]
+        Coverage by regime (if regimes provided).
+    n_observations : int
+        Total number of observations.
+
+    .. versionadded:: 1.0.0
+    """
+
+    overall_coverage: float
+    target_coverage: float
+    coverage_gap: float
+    undercoverage_warning: bool
+    coverage_by_window: Dict[str, float]
+    coverage_by_regime: Optional[Dict[str, float]]
+    n_observations: int
+
+
+def compute_coverage_diagnostics(
+    intervals: PredictionInterval,
+    actuals: np.ndarray,
+    *,
+    target_coverage: Optional[float] = None,
+    window_size: int = 50,
+    regimes: Optional[np.ndarray] = None,
+    undercoverage_threshold: float = 0.05,
+) -> CoverageDiagnostics:
+    """
+    Compute detailed coverage diagnostics for prediction intervals.
+
+    Analyzes empirical coverage overall, by time window, and optionally by
+    regime. Warns if coverage falls significantly below target.
+
+    Parameters
+    ----------
+    intervals : PredictionInterval
+        Prediction intervals to evaluate.
+    actuals : np.ndarray
+        Actual values for coverage computation.
+    target_coverage : float, optional
+        Target coverage level (1 - alpha). If None, uses ``intervals.confidence``.
+    window_size : int, default=50
+        Size of rolling windows for time-based coverage analysis.
+    regimes : np.ndarray, optional
+        Integer or string array of regime labels for each observation.
+        If provided, coverage is also computed per regime.
+    undercoverage_threshold : float, default=0.05
+        Trigger warning if ``target_coverage - empirical_coverage > threshold``.
+
+    Returns
+    -------
+    CoverageDiagnostics
+        Detailed coverage diagnostics.
+
+    Warns
+    -----
+    UserWarning
+        If empirical coverage is significantly below target (gap > threshold).
+
+    Examples
+    --------
+    >>> from temporalcv.conformal import (
+    ...     SplitConformalPredictor,
+    ...     compute_coverage_diagnostics,
+    ... )
+    >>> conformal = SplitConformalPredictor(alpha=0.05)
+    >>> conformal.calibrate(cal_preds, cal_actuals)
+    >>> intervals = conformal.predict_interval(test_preds)
+    >>> diag = compute_coverage_diagnostics(intervals, test_actuals)
+    >>> print(f"Coverage: {diag.overall_coverage:.1%}, "
+    ...       f"Target: {diag.target_coverage:.1%}")
+
+    Notes
+    -----
+    This function is useful for:
+
+    1. Detecting coverage degradation in production
+    2. Identifying time periods with poor coverage
+    3. Regime-specific performance analysis
+
+    .. versionadded:: 1.0.0
+    """
+    actuals = np.asarray(actuals)
+    n = len(actuals)
+
+    if len(intervals.lower) != n or len(intervals.upper) != n:
+        raise ValueError(
+            f"Interval length ({len(intervals.lower)}) doesn't match "
+            f"actuals length ({n})"
+        )
+
+    # Use interval's confidence if target not specified
+    if target_coverage is None:
+        target_coverage = intervals.confidence
+
+    # Compute overall coverage
+    covered = (actuals >= intervals.lower) & (actuals <= intervals.upper)
+    overall_coverage = float(np.mean(covered))
+
+    # Coverage by time window
+    coverage_by_window: Dict[str, float] = {}
+    n_windows = max(1, n // window_size)
+
+    for i in range(n_windows):
+        start = i * window_size
+        end = min((i + 1) * window_size, n)
+        window_covered = covered[start:end]
+        window_name = f"window_{i + 1}_{start}_{end}"
+        coverage_by_window[window_name] = float(np.mean(window_covered))
+
+    # Handle last partial window if exists
+    if n % window_size != 0 and n_windows * window_size < n:
+        start = n_windows * window_size
+        window_covered = covered[start:]
+        window_name = f"window_{n_windows + 1}_{start}_{n}"
+        coverage_by_window[window_name] = float(np.mean(window_covered))
+
+    # Coverage by regime (if provided)
+    coverage_by_regime: Optional[Dict[str, float]] = None
+    if regimes is not None:
+        regimes = np.asarray(regimes)
+        if len(regimes) != n:
+            raise ValueError(
+                f"Regimes length ({len(regimes)}) doesn't match actuals length ({n})"
+            )
+
+        coverage_by_regime = {}
+        unique_regimes = np.unique(regimes)
+        for regime in unique_regimes:
+            mask = regimes == regime
+            regime_coverage = float(np.mean(covered[mask]))
+            coverage_by_regime[str(regime)] = regime_coverage
+
+    # Check for undercoverage
+    coverage_gap = target_coverage - overall_coverage
+    undercoverage_warning = coverage_gap > undercoverage_threshold
+
+    if undercoverage_warning:
+        logger.warning(
+            "Coverage undercoverage detected: empirical=%.3f, target=%.3f, gap=%.3f. "
+            "Consider recalibrating or investigating distribution shift.",
+            overall_coverage,
+            target_coverage,
+            coverage_gap,
+        )
+
+    return CoverageDiagnostics(
+        overall_coverage=overall_coverage,
+        target_coverage=target_coverage,
+        coverage_gap=coverage_gap,
+        undercoverage_warning=undercoverage_warning,
+        coverage_by_window=coverage_by_window,
+        coverage_by_regime=coverage_by_regime,
+        n_observations=n,
+    )
+
+
+# =============================================================================
 # Public API
 # =============================================================================
 
 __all__ = [
     # Dataclasses
     "PredictionInterval",
+    "CoverageDiagnostics",
     # Predictors
     "SplitConformalPredictor",
     "AdaptiveConformalPredictor",
@@ -859,4 +1063,5 @@ __all__ = [
     # Functions
     "evaluate_interval_quality",
     "walk_forward_conformal",
+    "compute_coverage_diagnostics",
 ]

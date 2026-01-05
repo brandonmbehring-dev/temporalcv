@@ -81,6 +81,7 @@ class TestLagLeakageDetection:
             y=y,
             n_shuffles=5,
             threshold=0.05,
+            method="effect_size",  # Use effect_size mode to test improvement ratio
             random_state=42,
         )
 
@@ -112,6 +113,7 @@ class TestLagLeakageDetection:
             y=y,
             n_shuffles=3,
             threshold=0.05,
+            method="effect_size",  # Use effect_size mode to test improvement ratio
             random_state=42,
         )
 
@@ -143,6 +145,7 @@ class TestLagLeakageDetection:
             y=y,
             n_shuffles=5,
             threshold=0.05,
+            method="effect_size",  # Use effect_size mode to test threshold
             random_state=42,
         )
 
@@ -166,12 +169,14 @@ class TestLagLeakageDetection:
 
         # Strict threshold should catch
         strict = gate_shuffled_target(
-            model, X, y, n_shuffles=3, threshold=0.01, random_state=42
+            model, X, y, n_shuffles=3, threshold=0.01,
+            method="effect_size", random_state=42
         )
 
         # Lenient threshold might not
         lenient = gate_shuffled_target(
-            model, X, y, n_shuffles=3, threshold=0.50, random_state=42
+            model, X, y, n_shuffles=3, threshold=0.50,
+            method="effect_size", random_state=42
         )
 
         # Strict should be at least as severe as lenient
@@ -192,7 +197,7 @@ class TestLagLeakageMetrics:
         model = LeakyModel()
 
         result = gate_shuffled_target(
-            model, X, y, n_shuffles=3, random_state=42
+            model, X, y, n_shuffles=3, method="effect_size", random_state=42
         )
 
         assert "mae_real" in result.details
@@ -213,8 +218,12 @@ class TestLagLeakageMetrics:
 
         model = LeakyModel()
 
-        result1 = gate_shuffled_target(model, X, y, n_shuffles=3, random_state=99)
-        result2 = gate_shuffled_target(model, X, y, n_shuffles=3, random_state=99)
+        result1 = gate_shuffled_target(
+            model, X, y, n_shuffles=3, method="effect_size", random_state=99
+        )
+        result2 = gate_shuffled_target(
+            model, X, y, n_shuffles=3, method="effect_size", random_state=99
+        )
 
         assert result1.metric_value == result2.metric_value
         assert result1.status == result2.status
