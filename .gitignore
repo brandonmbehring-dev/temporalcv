@@ -58,3 +58,7 @@ dmypy.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Benchmark data and intermediate files
+None/
+.tracking/
