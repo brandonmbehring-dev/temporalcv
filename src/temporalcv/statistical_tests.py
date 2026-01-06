@@ -556,19 +556,21 @@ def _sn_pvalue(statistic: float, alternative: str) -> float:
         # Use conservative linear extrapolation
         pvalue = min(1.0, 0.10 + (0.90) * (cv_10 - abs_stat) / cv_10)
 
-    # For one-sided tests, adjust based on sign
+    # For one-sided tests, adjust based on sign of statistic
+    # The interpolated pvalue is based on |statistic| using one-sided critical values
     if alternative == "less":
         # H1: model 1 better (lower loss) => d_bar < 0 => statistic < 0
         if statistic > 0:
-            pvalue = 1.0 - pvalue / 2 if alternative == "two-sided" else 1.0
-        else:
-            pvalue = pvalue / 2 if key_prefix == "two-sided" else pvalue
+            # Statistic in wrong direction - not significant at all
+            pvalue = 1.0
+        # else: statistic <= 0, keep pvalue from one-sided critical values
     elif alternative == "greater":
         # H1: model 2 better => d_bar > 0 => statistic > 0
         if statistic < 0:
-            pvalue = 1.0 - pvalue / 2 if alternative == "two-sided" else 1.0
-        else:
-            pvalue = pvalue / 2 if key_prefix == "two-sided" else pvalue
+            # Statistic in wrong direction - not significant at all
+            pvalue = 1.0
+        # else: statistic >= 0, keep pvalue from one-sided critical values
+    # else: two-sided, keep pvalue as computed from two-sided critical values
 
     return float(np.clip(pvalue, 0.0, 1.0))
 
@@ -2752,6 +2754,15 @@ class RealityCheckResult:
     n_bootstrap: int
     block_size: int
     n: int
+
+    @property
+    def significant_models(self) -> List[str]:
+        """Return models that beat the benchmark (positive test statistics)."""
+        return [
+            model
+            for model, stat in self.individual_statistics.items()
+            if stat > 0
+        ]
 
 
 @dataclass

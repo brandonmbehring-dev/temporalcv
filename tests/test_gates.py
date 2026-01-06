@@ -18,7 +18,7 @@ from temporalcv.gates import (
     GateStatus,
     GateResult,
     ValidationReport,
-    gate_shuffled_target,
+    gate_signal_verification,
     gate_synthetic_ar1,
     gate_suspicious_improvement,
     gate_temporal_boundary,
@@ -262,7 +262,7 @@ class TestValidationReport:
 
 
 # =============================================================================
-# gate_shuffled_target Tests
+# gate_signal_verification Tests
 # =============================================================================
 
 
@@ -276,7 +276,7 @@ class TestGateShuffledTarget:
 
         # Use IID permutation for this test - it tests that a mean predictor
         # doesn't beat a random baseline, which is clearer with IID shuffling
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -287,7 +287,7 @@ class TestGateShuffledTarget:
 
         # Mean predictor shouldn't beat shuffled baseline significantly
         assert result.status in (GateStatus.PASS, GateStatus.WARN)
-        assert "shuffled_target" in result.name
+        assert "signal_verification" in result.name
 
     def test_halt_on_leaky_predictor(self) -> None:
         """Leaky predictor should HALT when X strongly predicts y."""
@@ -301,7 +301,7 @@ class TestGateShuffledTarget:
 
         model = MockModel("leaky")
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -323,7 +323,7 @@ class TestGateShuffledTarget:
         X, y = simple_data
         model = MockModel("mean")
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -341,8 +341,8 @@ class TestGateShuffledTarget:
         X, y = simple_data
         model = MockModel("mean")
 
-        result1 = gate_shuffled_target(model, X, y, n_shuffles=3, random_state=42)
-        result2 = gate_shuffled_target(model, X, y, n_shuffles=3, random_state=42)
+        result1 = gate_signal_verification(model, X, y, n_shuffles=3, random_state=42)
+        result2 = gate_signal_verification(model, X, y, n_shuffles=3, random_state=42)
 
         assert result1.metric_value == result2.metric_value
 
@@ -354,7 +354,7 @@ class TestGateShuffledTarget:
         y = rng.standard_normal(n)
         model = MockModel("mean")
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -376,7 +376,7 @@ class TestGateShuffledTarget:
         y = rng.standard_normal(n)
         model = MockModel("mean")
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -396,7 +396,7 @@ class TestGateShuffledTarget:
         y = rng.standard_normal(100)
         model = MockModel("mean")
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -416,7 +416,7 @@ class TestGateShuffledTarget:
         model = MockModel("mean")
 
         with pytest.raises(ValueError, match="permutation must be"):
-            gate_shuffled_target(
+            gate_signal_verification(
                 model=model,
                 X=X,
                 y=y,
@@ -431,7 +431,7 @@ class TestGateShuffledTarget:
         y = rng.standard_normal(100)
         model = MockModel("mean")
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -453,7 +453,7 @@ class TestGateShuffledTarget:
         y = rng.standard_normal(100)
         model = MockModel("mean")
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -476,7 +476,7 @@ class TestGateShuffledTarget:
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            gate_shuffled_target(
+            gate_signal_verification(
                 model=model,
                 X=X,
                 y=y,
@@ -727,7 +727,7 @@ class TestIntegration:
 
         # Run multiple gates
         gate_results = [
-            gate_shuffled_target(model, X, y, n_shuffles=2, random_state=42),
+            gate_signal_verification(model, X, y, n_shuffles=2, random_state=42),
             gate_suspicious_improvement(
                 model_metric=0.95, baseline_metric=1.0
             ),
@@ -757,7 +757,7 @@ class TestIntegration:
 
         model = MockModel("leaky")
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model, X, y, n_shuffles=3, threshold=0.05,
             method="effect_size",  # Use effect_size mode for this test
             random_state=42
@@ -782,7 +782,7 @@ class TestBootstrapCIIntegration:
         X, y = simple_data
         model = MockModel("mean")
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model, X, y, n_shuffles=3, method="effect_size", random_state=42
         )
 
@@ -796,7 +796,7 @@ class TestBootstrapCIIntegration:
         X, y = simple_data
         model = MockModel("mean")
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model, X, y,
             n_shuffles=3,
             method="effect_size",
@@ -859,7 +859,7 @@ class TestBootstrapCIIntegration:
         X, y = simple_data
         model = MockModel("mean")
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model, X, y,
             n_shuffles=3,
             method="effect_size",
@@ -882,7 +882,7 @@ class TestBootstrapCIIntegration:
         X, y = simple_data
         model = MockModel("mean")
 
-        result1 = gate_shuffled_target(
+        result1 = gate_signal_verification(
             model, X, y,
             n_shuffles=3,
             method="effect_size",
@@ -891,7 +891,7 @@ class TestBootstrapCIIntegration:
             n_bootstrap=50,
         )
 
-        result2 = gate_shuffled_target(
+        result2 = gate_signal_verification(
             model, X, y,
             n_shuffles=3,
             method="effect_size",

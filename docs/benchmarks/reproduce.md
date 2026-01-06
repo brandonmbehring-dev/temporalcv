@@ -105,7 +105,7 @@ python scripts/run_benchmark.py --resume benchmarks/results/run_abc123
 
 ### results.json
 
-```json
+```text
 {
   "metadata": {
     "run_id": "abc12345",

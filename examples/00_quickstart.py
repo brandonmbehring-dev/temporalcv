@@ -18,7 +18,7 @@ import numpy as np
 from sklearn.linear_model import Ridge
 
 from temporalcv.cv import WalkForwardCV
-from temporalcv.gates import gate_shuffled_target, gate_suspicious_improvement, run_gates
+from temporalcv.gates import gate_signal_verification, gate_suspicious_improvement, run_gates
 
 # Generate simple time series data
 rng = np.random.default_rng(42)
@@ -52,7 +52,7 @@ print(f"Improvement: {(1 - model_mae/baseline_mae)*100:.1f}%")
 # Step 3: Run validation gates
 print("\n--- Validation Gates ---")
 gates = [
-    gate_shuffled_target(model, X, y, n_shuffles=100, random_state=42),
+    gate_signal_verification(model, X, y, n_shuffles=100, random_state=42),
     gate_suspicious_improvement(model_mae, baseline_mae, threshold=0.20),
 ]
 report = run_gates(gates)

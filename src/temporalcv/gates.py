@@ -15,7 +15,7 @@ Knowledge Tiers
 [T1] Shuffled target test destroys temporal structure (permutation test principle)
 [T1] AR(1) optimal 1-step MAE = σ√(2/π) ≈ 0.798σ (standard statistics result)
 [T1] Walk-forward validation framework (Tashman 2000)
-[T2] Shuffled target as definitive leakage test (myga-forecasting-v2 validation)
+[T2] Signal verification via shuffled target (myga-forecasting-v2 validation)
 [T2] "External-first" validation ordering (synthetic → shuffled → internal)
 [T3] 20% improvement threshold = "too good to be true" heuristic (empirical)
 [T3] 5% p-value threshold for shuffled comparison (standard but arbitrary)
@@ -23,16 +23,18 @@ Knowledge Tiers
 
 Example
 -------
->>> from temporalcv.gates import run_gates, gate_shuffled_target
+>>> from temporalcv.gates import run_gates, gate_signal_verification
 >>>
->>> report = run_gates(
-...     model=my_model,
-...     X=X, y=y,
-...     gates=[
-...         gate_shuffled_target(n_shuffles=5),
-...         gate_suspicious_improvement(threshold=0.20),
-...     ]
-... )
+>>> # Signal verification: does model have predictive power?
+>>> signal_result = gate_signal_verification(model, X, y)
+>>> if signal_result.status.name == "HALT":
+...     print("Model has signal - investigate if legitimate or leakage")
+>>>
+>>> # Run multiple gates
+>>> report = run_gates(gates=[
+...     gate_signal_verification(model, X, y),
+...     gate_suspicious_improvement(model_mae, baseline_mae, threshold=0.20),
+... ])
 >>> if report.status == "HALT":
 ...     raise ValueError(f"Validation failed: {report.failures}")
 
@@ -193,11 +195,93 @@ class FitPredictModel(Protocol):
 
 
 # =============================================================================
+# DRY Helper: Centralized CV Metric Computation
+# =============================================================================
+
+
+def _clone_model(model: Any) -> Any:
+    """Clone model if possible, otherwise return original.
+
+    Handles sklearn models and mock objects gracefully.
+    """
+    try:
+        from sklearn.base import clone
+
+        return clone(model)
+    except (ImportError, TypeError):
+        # ImportError: sklearn not available
+        # TypeError: model doesn't support cloning (e.g., mock objects)
+        return model
+
+
+def _compute_cv_mae(
+    model: FitPredictModel,
+    X: np.ndarray,
+    y: np.ndarray,
+    n_cv_splits: int = 3,
+    extra_gap: int = 0,
+    return_errors: bool = False,
+) -> Union[float, tuple[float, np.ndarray]]:
+    """Compute out-of-sample MAE using walk-forward CV.
+
+    Centralized CV computation to avoid duplication across gate functions.
+    Clones model per fold to prevent state contamination from warm-start
+    or incremental learning algorithms.
+
+    Parameters
+    ----------
+    model : FitPredictModel
+        Model with fit(X, y) and predict(X) methods.
+    X : np.ndarray
+        Feature matrix.
+    y : np.ndarray
+        Target array.
+    n_cv_splits : int, default=3
+        Number of walk-forward splits.
+    extra_gap : int, default=0
+        Extra gap between train and test (in addition to horizon).
+    return_errors : bool, default=False
+        If True, return (mae, errors_array) instead of just mae.
+
+    Returns
+    -------
+    mae : float
+        Mean absolute error across all folds.
+    errors : np.ndarray, optional
+        Raw absolute errors (only if return_errors=True).
+    """
+    from temporalcv.cv import WalkForwardCV
+
+    n = len(y)
+    cv = WalkForwardCV(
+        n_splits=n_cv_splits,
+        window_type="expanding",
+        extra_gap=extra_gap,
+        test_size=max(1, n // (n_cv_splits + 1)),
+    )
+
+    all_errors: List[float] = []
+    for train_idx, test_idx in cv.split(X, y):
+        fold_model = _clone_model(model)
+        fold_model.fit(X[train_idx], y[train_idx])
+        preds = np.asarray(fold_model.predict(X[test_idx]))
+        errors = np.abs(y[test_idx] - preds)
+        all_errors.extend(errors.tolist())
+
+    errors_arr = np.array(all_errors) if all_errors else np.array([])
+    mae = float(np.mean(errors_arr)) if len(errors_arr) > 0 else 0.0
+
+    if return_errors:
+        return mae, errors_arr
+    return mae
+
+
+# =============================================================================
 # Stage 1: External Validation Gates
 # =============================================================================
 
 
-def gate_shuffled_target(
+def gate_signal_verification(
     model: FitPredictModel,
     X: ArrayLike,
     y: ArrayLike,
@@ -217,13 +301,16 @@ def gate_shuffled_target(
     bootstrap_block_length: Union[int, Literal["auto"]] = "auto",
 ) -> GateResult:
     """
-    Shuffled target test: definitive leakage detection.
+    Signal verification test: confirm model has predictive power.
 
-    If a model performs better on real target than shuffled target,
-    features may contain information about target ordering (leakage).
+    Tests whether a model significantly outperforms a shuffled-target
+    baseline. HALT indicates the model has learned signal — this could
+    be legitimate temporal patterns OR data leakage.
 
-    A model should NOT beat shuffled baseline - the temporal relationship
-    between X and y should be destroyed by shuffling.
+    Interpretation:
+    - HALT: Model has signal → investigate source (leakage vs legitimate)
+    - PASS: Model has no signal → concerning (learned nothing)
+    - WARN: Marginal signal → proceed with caution
 
     Parameters
     ----------
@@ -286,13 +373,22 @@ def gate_shuffled_target(
     Returns
     -------
     GateResult
-        HALT if model significantly beats shuffled baseline
+        HALT if model significantly beats shuffled baseline (has signal)
 
     Notes
     -----
-    This is the definitive leakage test. If your model beats a shuffled
-    target, something is wrong - either features leak future information
-    or there's a bug in the evaluation pipeline.
+    **Signal Verification vs Leakage Detection**:
+
+    This gate answers: "Does my model have predictive signal?" A HALT result
+    means yes — but signal can come from legitimate temporal patterns OR
+    data leakage. Use this as a diagnostic:
+
+    - **HALT → Investigate**: Confirm signal is legitimate (e.g., AR model
+      with proper lagged features) or identify leakage source
+    - **PASS → Concerning**: Model learned nothing from features
+
+    For legitimate temporal models (e.g., AR with proper lagged features),
+    HALT is expected and confirms the gate is working correctly.
 
     **Method Selection Guide**:
 
@@ -304,10 +400,10 @@ def gate_shuffled_target(
     Uses WalkForwardCV internally to compute out-of-sample MAE, avoiding
     the bias of in-sample evaluation that could mask or exaggerate leakage.
 
-    The block permutation (default) preserves local autocorrelation structure,
-    which is important for time series with persistence. IID permutation
-    may produce false positives on persistent series because any model
-    with legitimate predictive ability should beat a fully shuffled target.
+    The block permutation (default) preserves local autocorrelation structure
+    per Kunsch (1989), which is important for time series with persistence.
+    IID permutation may produce false positives on persistent series because
+    any model with legitimate predictive ability should beat a fully shuffled target.
 
     Models are cloned for each shuffle to prevent state leakage from
     warm-start or incremental learning algorithms.
@@ -329,13 +425,22 @@ def gate_shuffled_target(
     --------
     Quick check during development (effect size mode):
 
-    >>> result = gate_shuffled_target(model, X, y, method="effect_size")
+    >>> result = gate_signal_verification(model, X, y, method="effect_size")
     >>> print(f"Improvement: {result.metric_value:.1%}")
 
     Rigorous testing for publication (permutation mode, default):
 
-    >>> result = gate_shuffled_target(model, X, y, method="permutation", strict=True)
+    >>> result = gate_signal_verification(model, X, y, method="permutation", strict=True)
     >>> print(f"p-value: {result.details['pvalue']:.4f}")
+
+    Interpreting results:
+
+    >>> if result.status == GateStatus.HALT:
+    ...     # Model has signal - could be legitimate or leakage
+    ...     print("Model has signal - investigate source")
+    ... else:
+    ...     # Model has NO signal - concerning
+    ...     print("Model learned nothing from features")
 
     See Also
     --------
@@ -439,41 +544,9 @@ def gate_shuffled_target(
         permuted_indices = [idx for block in block_indices for idx in block]
         return arr[permuted_indices]
 
-    # Set up walk-forward CV for out-of-sample evaluation
-    cv = WalkForwardCV(
-        n_splits=n_cv_splits,
-        window_type="expanding",
-        extra_gap=0,  # No extra_gap needed for leakage detection
-        test_size=max(1, n // (n_cv_splits + 1)),  # Reasonable test size
-    )
-
-    def compute_cv_mae_with_errors(
-        X_data: np.ndarray, y_data: np.ndarray, model_instance: FitPredictModel
-    ) -> tuple[float, np.ndarray]:
-        """Compute out-of-sample MAE using walk-forward CV.
-
-        Returns both MAE and raw errors array for bootstrap CI.
-        """
-        all_errors: List[float] = []
-        for train_idx, test_idx in cv.split(X_data, y_data):
-            # Clone model for each fold to prevent state leakage
-            try:
-                from sklearn.base import clone
-                fold_model = clone(model_instance)
-            except (ImportError, TypeError):
-                # Fall back to using same instance if clone not available
-                fold_model = model_instance
-
-            fold_model.fit(X_data[train_idx], y_data[train_idx])
-            preds = np.asarray(fold_model.predict(X_data[test_idx]))
-            errors = np.abs(y_data[test_idx] - preds)
-            all_errors.extend(errors.tolist())
-        errors_arr = np.array(all_errors) if all_errors else np.array([])
-        mae = float(np.mean(errors_arr)) if len(errors_arr) > 0 else 0.0
-        return mae, errors_arr
-
-    # Compute out-of-sample MAE on real target
-    mae_real, errors_real = compute_cv_mae_with_errors(X, y, model)
+    # Compute out-of-sample MAE on real target using DRY helper
+    result = _compute_cv_mae(model, X, y, n_cv_splits=n_cv_splits, return_errors=True)
+    mae_real, errors_real = result  # type: ignore[misc]
 
     # Compute out-of-sample MAE on shuffled targets
     shuffled_maes: List[float] = []
@@ -484,15 +557,12 @@ def gate_shuffled_target(
         else:
             y_shuffled = rng.permutation(y)
 
-        # Clone model for each shuffle to prevent state leakage
-        try:
-            from sklearn.base import clone
-            shuffle_model = clone(model)
-        except (ImportError, TypeError):
-            shuffle_model = model
-
-        mae_shuffled, _ = compute_cv_mae_with_errors(X, y_shuffled, shuffle_model)
-        shuffled_maes.append(mae_shuffled)
+        # Use DRY helper (model cloning happens inside)
+        shuffle_model = _clone_model(model)
+        mae_shuffled = _compute_cv_mae(
+            shuffle_model, X, y_shuffled, n_cv_splits=n_cv_splits
+        )
+        shuffled_maes.append(float(mae_shuffled))
 
     mae_shuffled_avg = float(np.mean(shuffled_maes))
 
@@ -558,44 +628,54 @@ def gate_shuffled_target(
     # Decision logic depends on method
     if method == "permutation":
         # True permutation test: HALT if p-value < alpha
-        # Low p-value means model reliably beats shuffled (suspicious)
+        # Low p-value means model reliably beats shuffled (has signal)
         if pvalue < alpha:
             return GateResult(
-                name="shuffled_target",
+                name="signal_verification",
                 status=GateStatus.HALT,
-                message=f"Permutation test: p={pvalue:.4f} < α={alpha} (model beats shuffled)",
+                message=f"Permutation test: p={pvalue:.4f} < α={alpha} (model has signal)",
                 metric_value=pvalue,
                 threshold=alpha,
                 details=details,
-                recommendation="Check for data leakage. Model should NOT beat shuffled target.",
+                recommendation=(
+                    "Model has predictive signal. Investigate source: "
+                    "legitimate temporal patterns (expected for AR models) "
+                    "OR data leakage (check feature engineering)."
+                ),
             )
         return GateResult(
-            name="shuffled_target",
+            name="signal_verification",
             status=GateStatus.PASS,
-            message=f"Permutation test: p={pvalue:.4f} >= α={alpha} (no significant leakage)",
+            message=f"Permutation test: p={pvalue:.4f} >= α={alpha} (no significant signal)",
             metric_value=pvalue,
             threshold=alpha,
             details=details,
+            recommendation="Model shows no predictive signal. Check feature relevance.",
         )
     else:
         # Effect size mode: HALT if improvement_ratio > threshold
         if improvement_ratio > threshold:
             return GateResult(
-                name="shuffled_target",
+                name="signal_verification",
                 status=GateStatus.HALT,
-                message=f"Model beats shuffled by {improvement_ratio:.1%} (max: {threshold:.0%})",
+                message=f"Model beats shuffled by {improvement_ratio:.1%} (has signal)",
                 metric_value=improvement_ratio,
                 threshold=threshold,
                 details=details,
-                recommendation="Check for data leakage. Model should NOT beat shuffled target.",
+                recommendation=(
+                    "Model has predictive signal. Investigate source: "
+                    "legitimate temporal patterns (expected for AR models) "
+                    "OR data leakage (check feature engineering)."
+                ),
             )
         return GateResult(
-            name="shuffled_target",
+            name="signal_verification",
             status=GateStatus.PASS,
-            message=f"Model improvement {improvement_ratio:.1%} is acceptable",
+            message=f"Model improvement {improvement_ratio:.1%} shows no significant signal",
             metric_value=improvement_ratio,
             threshold=threshold,
             details=details,
+            recommendation="Model shows no predictive signal. Check feature relevance.",
         )
 
 
@@ -676,7 +756,7 @@ def gate_synthetic_ar1(
 
     See Also
     --------
-    gate_shuffled_target : Definitive leakage test via permutation.
+    gate_signal_verification : Signal verification via permutation test.
     gate_theoretical_bounds : Test against estimated AR(1) from real data.
     """
     # Validate phi for stationarity
@@ -708,37 +788,9 @@ def gate_synthetic_ar1(
 
     n = len(y)
 
-    # Set up walk-forward CV for out-of-sample evaluation
-    cv = WalkForwardCV(
-        n_splits=n_cv_splits,
-        window_type="expanding",
-        extra_gap=0,
-        test_size=max(1, n // (n_cv_splits + 1)),
-    )
-
-    # Compute out-of-sample MAE using walk-forward CV
-    # Clone model per fold to avoid state contamination
-    def _clone_model(model: Any) -> Any:
-        """Clone model if possible, otherwise return original."""
-        try:
-            from sklearn.base import clone
-            return clone(model)
-        except (ImportError, TypeError):
-            # ImportError: sklearn not available
-            # TypeError: model doesn't support cloning (e.g., mock objects)
-            return model
-
-    all_errors: List[float] = []
-    for train_idx, test_idx in cv.split(X, y):
-        # Clone model for each fold to ensure independence
-        fold_model = _clone_model(model)
-        fold_model.fit(X[train_idx], y[train_idx])
-        preds = np.asarray(fold_model.predict(X[test_idx]))
-        errors = np.abs(y[test_idx] - preds)
-        all_errors.extend(errors.tolist())
-
-    errors_arr = np.array(all_errors) if all_errors else np.array([])
-    model_mae = float(np.mean(errors_arr)) if len(errors_arr) > 0 else 0.0
+    # Compute out-of-sample MAE using DRY helper
+    result = _compute_cv_mae(model, X, y, n_cv_splits=n_cv_splits, return_errors=True)
+    model_mae, errors_arr = result  # type: ignore[misc]
 
     # Theoretical optimal MAE for AR(1) 1-step forecast
     # Optimal predictor is phi * y_{t-1}, error is sigma * epsilon
@@ -843,7 +895,7 @@ def gate_suspicious_improvement(
 
     See Also
     --------
-    gate_shuffled_target : Definitive test if improvement seems too good.
+    gate_signal_verification : Signal verification if improvement seems too good.
     gate_theoretical_bounds : Check against AR(1) theoretical minimum.
     """
     if baseline_metric <= 0:
@@ -1115,7 +1167,7 @@ def gate_residual_diagnostics(
 
     See Also
     --------
-    gate_shuffled_target : Run before residual diagnostics for leakage check.
+    gate_signal_verification : Run before residual diagnostics for signal check.
     dm_test : Uses similar autocorrelation concepts via HAC variance.
     """
     from scipy import stats
@@ -1435,7 +1487,7 @@ def run_gates(
     Example
     -------
     >>> results = [
-    ...     gate_shuffled_target(model, X, y),
+    ...     gate_signal_verification(model, X, y),
     ...     gate_suspicious_improvement(model_mae, persistence_mae),
     ... ]
     >>> report = run_gates(results)
@@ -1602,7 +1654,7 @@ def run_gates_stratified(
     Example
     -------
     >>> overall = [
-    ...     gate_shuffled_target(model, X, y),
+    ...     gate_signal_verification(model, X, y),
     ...     gate_suspicious_improvement(model_mae, persistence_mae),
     ... ]
     >>> report = run_gates_stratified(
@@ -1724,7 +1776,7 @@ __all__ = [
     "ValidationReport",
     "StratifiedValidationReport",
     # Gate functions
-    "gate_shuffled_target",
+    "gate_signal_verification",
     "gate_synthetic_ar1",
     "gate_suspicious_improvement",
     "gate_temporal_boundary",

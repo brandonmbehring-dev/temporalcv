@@ -252,7 +252,7 @@ if result.pvalue < 0.05:
 **Key considerations**:
 - Use HAC variance for autocorrelated errors
 - For h > 1, set `horizon=h` to adjust variance
-- See [DM Test Limitations](../api/statistical_tests.md#dm-test-limitations)
+- See [Statistical Tests API](../api/statistical_tests.md) for full documentation
 
 ### Clark-West Test [T1]
 

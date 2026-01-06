@@ -14,7 +14,7 @@ from temporalcv import WalkForwardCV
 from temporalcv.bagging import create_block_bagger
 from temporalcv.conformal import AdaptiveConformalPredictor
 from temporalcv.gates import (
-    gate_shuffled_target,
+    gate_signal_verification,
     gate_suspicious_improvement,
     gate_temporal_boundary,
     GateStatus,

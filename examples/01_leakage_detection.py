@@ -50,7 +50,7 @@ from sklearn.linear_model import Ridge
 
 from temporalcv.gates import (
     GateStatus,
-    gate_shuffled_target,
+    gate_signal_verification,
     gate_suspicious_improvement,
     run_gates,
 )
@@ -229,7 +229,7 @@ def demonstrate_leakage_detection():
     # For high-persistence data, models WILL beat shuffled significantly
     # because lag features genuinely predict the target
     # Note: With permutation mode, metric_value is the p-value
-    result_clean = gate_shuffled_target(
+    result_clean = gate_signal_verification(
         model=model_clean,
         X=X_clean,
         y=y_clean,
@@ -259,7 +259,7 @@ def demonstrate_leakage_detection():
     # Use same model for fair comparison
     model_leaky = Ridge(alpha=1.0)
 
-    result_leaky = gate_shuffled_target(
+    result_leaky = gate_signal_verification(
         model=model_leaky,
         X=X_leaky,
         y=y_leaky,
@@ -320,7 +320,7 @@ def demonstrate_leakage_detection():
 
     # Run multiple gates with production thresholds
     # In permutation mode (default), gate HALTs if p-value < alpha (0.05)
-    result_shuffled = gate_shuffled_target(
+    result_shuffled = gate_signal_verification(
         model=Ridge(alpha=1.0),
         X=X_leaky,  # Test the LEAKY features
         y=y_leaky,

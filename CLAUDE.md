@@ -1,6 +1,6 @@
 # CLAUDE.md - temporalcv
 
-**Version**: 0.1.0 | **Status**: Phase 5 Complete (v1.0 Preparation)
+**Version**: 1.0.0-rc1 | **Status**: v1.0 Release Candidate
 
 ---
 
@@ -58,15 +58,16 @@ src/temporalcv/
 
 ---
 
-## Exit Codes (CLI)
+## Gate Status Codes
 
-```python
-EXIT_OK = 0       # All gates passed
-EXIT_HALT = 1     # Gate failure - stop pipeline
-EXIT_WARN = 2     # Gate warning - continue with caution
-EXIT_SKIP = 3     # Gate skipped - insufficient data
-EXIT_ERROR = 4    # Unexpected error
-```
+The validation gates return status codes for programmatic use:
+
+| Status | Meaning |
+|--------|---------|
+| PASS | All checks passed |
+| HALT | Critical failure - stop and investigate |
+| WARN | Caution - proceed with verification |
+| SKIP | Insufficient data for test |
 
 ---
 
@@ -197,12 +198,12 @@ This project follows patterns from:
 |-----------|-----------|-------------|-----------------|
 | Improvement over persistence | >20% | `gate_suspicious_improvement()` | Leakage, overfitting |
 | MAE below theoretical minimum | <0.67σ | `gate_synthetic_ar1()` | Lookahead bias |
-| Model beats shuffled target | p < 0.05 | `gate_shuffled_target()` | Feature-target alignment |
+| Model beats shuffled target | p < 0.05 | `gate_signal_verification()` | Feature-target alignment |
 | h=1 >> h=2,3,4 performance | >2x better | `gate_temporal_boundary()` | Gap enforcement failure |
 
 **Decision flowchart**:
 ```
-1. Run gate_shuffled_target() FIRST
+1. Run gate_signal_verification() FIRST
    └─ HALT? → Feature encodes target position → FIX
    └─ PASS? → Continue
 

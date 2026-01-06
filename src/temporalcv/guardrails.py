@@ -172,7 +172,7 @@ def check_suspicious_improvement(
             recommendations=[
                 "Verify feature engineering does not use future information",
                 "Check train/test split respects temporal order",
-                "Run gate_shuffled_target() for definitive leakage test",
+                "Run gate_signal_verification() to check for signal/leakage",
             ],
         )
 

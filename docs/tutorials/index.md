@@ -41,7 +41,7 @@ If you understand ACF, stationarity, and temporal dependence, skip Tier 0:
 | 2 | [05_shuffled_target_gate](../../notebooks/05_shuffled_target_gate.ipynb) | Definitive leakage detection |
 | 3 | [08_validation_workflow](../../notebooks/08_validation_workflow.ipynb) | Complete HALT/WARN/PASS pipeline |
 
-See [notebooks/README.md](../../notebooks/README.md) for the complete 14-hour curriculum.
+See the [notebooks README](https://github.com/brandonmbehring-dev/temporalcv/blob/main/notebooks/README.md) for the complete 14-hour curriculum.
 
 ---
 

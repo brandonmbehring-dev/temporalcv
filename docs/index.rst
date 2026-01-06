@@ -19,11 +19,11 @@ Quick Example
 .. code-block:: python
 
    from temporalcv import run_gates, WalkForwardCV
-   from temporalcv.gates import gate_shuffled_target
+   from temporalcv.gates import gate_signal_verification
 
-   # Run leakage detection gates
+   # Run signal verification gate
    # Note: n_shuffles>=100 required for statistical power in permutation mode
-   gate_result = gate_shuffled_target(my_model, X, y, n_shuffles=100)
+   gate_result = gate_signal_verification(my_model, X, y, n_shuffles=100)
    report = run_gates([gate_result])
    if report.status == "HALT":
        raise ValueError(f"Leakage detected: {report.failures}")
@@ -68,30 +68,12 @@ Installation
    api/bagging
    api/diagnostics
    api/changepoint
+   api/inference
+   api/metrics
+   api/benchmarks
+   api/compare
 
-.. toctree::
-   :maxdepth: 2
-   :caption: API Reference
-
-   api_reference/gates
-   api_reference/guardrails
-   api_reference/cv
-   api_reference/cv_financial
-   api_reference/statistical_tests
-   api_reference/stationarity
-   api_reference/lag_selection
-   api_reference/conformal
-   api_reference/persistence
-   api_reference/regimes
-   api_reference/bagging
-   api_reference/diagnostics
-   api_reference/changepoint
-   api_reference/inference
-   api_reference/metrics
-   api_reference/benchmarks
-   api_reference/compare
-
-.. toctree::
+.. toctree:
    :maxdepth: 1
    :caption: Reference
 

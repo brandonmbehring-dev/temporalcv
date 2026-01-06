@@ -17,7 +17,7 @@ from temporalcv import WalkForwardCV
 from temporalcv.bagging import create_block_bagger
 from temporalcv.conformal import AdaptiveConformalPredictor
 from temporalcv.gates import (
-    gate_shuffled_target,
+    gate_signal_verification,
     gate_suspicious_improvement,
     gate_temporal_boundary,
     GateStatus,
@@ -263,7 +263,7 @@ class TestLeakageDetectionPipeline:
 
         # Shuffled target gate
         model = Ridge(alpha=1.0)
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X_leaky,
             y=y_leaky,

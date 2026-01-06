@@ -92,4 +92,4 @@ A model with `break_even_gap=1` is concerning—performance drops immediately wi
 
 ## API Reference
 
-See the [API Reference](../api_reference/diagnostics.rst) for complete function signatures.
+See the function signatures below for complete documentation.

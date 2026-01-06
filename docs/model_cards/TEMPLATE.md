@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # [Component Name] Model Card
 
 **Version**: 1.0.0
@@ -162,7 +166,7 @@ from temporalcv.[module] import [ComponentName]
 
 ### Academic Sources [T1]
 
-1. **[Primary Paper]**: [Author] ([Year]). "[Title]." *[Journal]* [Volume]([Issue]): [Pages].
+1. **\[Primary Paper\]**: \[Author\] (\[Year\]). "\[Title\]." *\[Journal\]* \[Volume\](\[Issue\]): \[Pages\].
    - **DOI**: [doi]
    - **Key Contribution**: [What this paper establishes]
 
@@ -191,9 +195,9 @@ from temporalcv.[module] import [ComponentName]
 
 ## See Also
 
-- [Related Component 1](link.md) - [How it relates]
-- [Related Component 2](link.md) - [How it relates]
-- [API Documentation](../api/module.md) - [Full API reference]
+- `[Related Component 1](link.md)` - \[How it relates\]
+- `[Related Component 2](link.md)` - \[How it relates\]
+- `[API Documentation](../api/module.md)` - \[Full API reference\]
 
 ---
 

@@ -537,7 +537,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
 
     Examples
     --------
-    >>> cv = WalkForwardCV(n_splits=5, gap=2)
+    >>> cv = WalkForwardCV(n_splits=5, extra_gap=2)
     >>> for train, test in cv.split(X):
     ...     print(f"Train: {train[0]}-{train[-1]}, Test: {test[0]}-{test[-1]}")
 

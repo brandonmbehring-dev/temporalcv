@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from temporalcv.gates import (
-    gate_shuffled_target,
+    gate_signal_verification,
     gate_synthetic_ar1,
     gate_suspicious_improvement,
     gate_temporal_boundary,
@@ -62,7 +62,7 @@ class TestShuffledTargetGateBenchmarks:
         model = DummyModel()
 
         def run_gate() -> object:
-            return gate_shuffled_target(
+            return gate_signal_verification(
                 model=model, X=X, y=y, n_shuffles=10, random_state=42
             )
 
@@ -77,7 +77,7 @@ class TestShuffledTargetGateBenchmarks:
         model = DummyModel()
 
         def run_gate() -> object:
-            return gate_shuffled_target(
+            return gate_signal_verification(
                 model=model, X=X, y=y, n_shuffles=50, random_state=42
             )
 
@@ -92,7 +92,7 @@ class TestShuffledTargetGateBenchmarks:
         model = DummyModel()
 
         def run_gate() -> object:
-            return gate_shuffled_target(
+            return gate_signal_verification(
                 model=model, X=X, y=y, n_shuffles=100, random_state=42
             )
 
@@ -239,7 +239,7 @@ class TestRunGatesBenchmarks:
 
         # Pre-compute gates
         gates = [
-            gate_shuffled_target(model=model, X=X, y=y, n_shuffles=10, random_state=42),
+            gate_signal_verification(model=model, X=X, y=y, n_shuffles=10, random_state=42),
             gate_suspicious_improvement(
                 model_metric=model_mae,
                 baseline_metric=baseline_mae,

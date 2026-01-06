@@ -118,4 +118,8 @@ copybutton_prompt_is_regexp = True
 
 # -- Suppress warnings -------------------------------------------------------
 
-suppress_warnings = ["myst.header"]
+suppress_warnings = [
+    "myst.header",
+    "toc.not_included",  # Internal planning/knowledge docs not in toctree
+    "docutils",  # Transition issues in internal docs
+]

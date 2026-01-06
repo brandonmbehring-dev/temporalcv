@@ -20,7 +20,7 @@ import pytest
 
 from temporalcv.gates import (
     GateStatus,
-    gate_shuffled_target,
+    gate_signal_verification,
 )
 
 
@@ -75,7 +75,7 @@ class TestShuffledTargetValidation:
 
         model = MockMeanPredictor()
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -122,7 +122,7 @@ class TestShuffledTargetValidation:
 
         model = MockLag1Predictor(coefficient=phi)
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -151,7 +151,7 @@ class TestShuffledTargetValidation:
 
         model = MockMeanPredictor()
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -172,7 +172,7 @@ class TestShuffledTargetValidation:
 
         model = MockMeanPredictor()
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -193,7 +193,7 @@ class TestShuffledTargetValidation:
 
         model = MockMeanPredictor()
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -221,7 +221,7 @@ class TestShuffledTargetStatistics:
 
         model = MockMeanPredictor()
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -247,7 +247,7 @@ class TestShuffledTargetStatistics:
 
         model = MockMeanPredictor()
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -272,7 +272,7 @@ class TestShuffledTargetEdgeCases:
 
         model = MockMeanPredictor()
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -292,7 +292,7 @@ class TestShuffledTargetEdgeCases:
 
         model = MockMeanPredictor()
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,

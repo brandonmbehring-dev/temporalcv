@@ -15,13 +15,18 @@ including:
 Example
 -------
 >>> from temporalcv import run_gates, WalkForwardCV
->>> from temporalcv.gates import gate_shuffled_target
+>>> from temporalcv.gates import gate_signal_verification
 >>>
->>> # Pre-compute gates, then aggregate
->>> gates = [gate_shuffled_target(model=my_model, X=X, y=y, n_shuffles=5, random_state=42)]
->>> report = run_gates(gates)
+>>> # Signal verification: does model have predictive power?
+>>> result = gate_signal_verification(model=my_model, X=X, y=y, random_state=42)
+>>> if result.status.name == "HALT":
+...     # Model has signal - could be legitimate or leakage
+...     print("Model has signal - investigate source")
+>>>
+>>> # Aggregate multiple gates
+>>> report = run_gates([result])
 >>> if report.status == "HALT":
-...     raise ValueError(f"Leakage detected: {report.failures}")
+...     print(f"Investigation needed: {report.failures}")
 
 >>> # Move-conditional metrics for high-persistence series
 >>> from temporalcv import compute_move_threshold, compute_move_conditional_metrics
@@ -47,7 +52,7 @@ from temporalcv.gates import (
     GateResult,
     ValidationReport,
     StratifiedValidationReport,
-    gate_shuffled_target,
+    gate_signal_verification,
     gate_synthetic_ar1,
     gate_suspicious_improvement,
     gate_temporal_boundary,
@@ -289,7 +294,7 @@ __all__ = [
     "GateResult",
     "ValidationReport",
     "StratifiedValidationReport",
-    "gate_shuffled_target",
+    "gate_signal_verification",
     "gate_synthetic_ar1",
     "gate_suspicious_improvement",
     "gate_temporal_boundary",

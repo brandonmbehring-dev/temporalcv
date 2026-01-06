@@ -6,7 +6,7 @@ Verifies that stochastic functions produce identical results with the same seed.
 import numpy as np
 import pytest
 
-from temporalcv.gates import gate_shuffled_target, gate_synthetic_ar1
+from temporalcv.gates import gate_signal_verification, gate_synthetic_ar1
 from temporalcv.bagging import (
     MovingBlockBootstrap,
     StationaryBootstrap,
@@ -53,10 +53,10 @@ class TestShuffledTargetGateDeterminism:
         X, y = data
         model = DummyModel()
 
-        result1 = gate_shuffled_target(
+        result1 = gate_signal_verification(
             model=model, X=X, y=y, n_shuffles=20, random_state=seed
         )
-        result2 = gate_shuffled_target(
+        result2 = gate_signal_verification(
             model=model, X=X, y=y, n_shuffles=20, random_state=seed
         )
 
@@ -73,10 +73,10 @@ class TestShuffledTargetGateDeterminism:
         X, y = data
         model = DummyModel()
 
-        result1 = gate_shuffled_target(
+        result1 = gate_signal_verification(
             model=model, X=X, y=y, n_shuffles=20, random_state=seed
         )
-        result2 = gate_shuffled_target(
+        result2 = gate_signal_verification(
             model=model, X=X, y=y, n_shuffles=20, random_state=seed + 100
         )
 

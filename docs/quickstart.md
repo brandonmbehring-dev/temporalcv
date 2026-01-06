@@ -43,14 +43,14 @@ y = y[2:]
 
 ```python
 from temporalcv import run_gates
-from temporalcv.gates import gate_shuffled_target, gate_suspicious_improvement
+from temporalcv.gates import gate_signal_verification, gate_suspicious_improvement
 
 # Create a simple model
 model = Ridge(alpha=1.0)
 
 # Run the shuffled target test (permutation mode - default)
 # n_shuffles>=100 required for statistical power in permutation mode
-shuffled_result = gate_shuffled_target(
+shuffled_result = gate_signal_verification(
     model=model,
     X=X,
     y=y,
@@ -210,7 +210,7 @@ from temporalcv import (
     compute_move_threshold,
     compute_move_conditional_metrics,
 )
-from temporalcv.gates import gate_shuffled_target
+from temporalcv.gates import gate_signal_verification
 
 # 1. Generate data
 np.random.seed(42)
@@ -224,7 +224,7 @@ y = y[5:]
 
 # 2. Validate - no leakage
 model = Ridge(alpha=1.0)
-gate_result = gate_shuffled_target(model, X, y, random_state=42)
+gate_result = gate_signal_verification(model, X, y, random_state=42)
 assert gate_result.status.name != "HALT", "Leakage detected!"
 
 # 3. Walk-forward evaluation
@@ -247,9 +247,12 @@ persistence_errors = actuals_all  # Persistence predicts 0
 dm_result = dm_test(model_errors, persistence_errors, h=2, loss="absolute")
 print(f"DM test p-value: {dm_result.pvalue:.4f}")
 
-# 5. Move-conditional metrics
-threshold = compute_move_threshold(y[:200], percentile=70)
-mc = compute_move_conditional_metrics(predictions_all, actuals_all, threshold)
+# 5. Move-conditional metrics (CHANGES, not levels)
+train_changes = np.diff(y[:200])
+threshold = compute_move_threshold(train_changes, percentile=70)
+pred_changes = np.diff(predictions_all)
+actual_changes = np.diff(actuals_all)
+mc = compute_move_conditional_metrics(pred_changes, actual_changes, threshold)
 print(f"MC-SS: {mc.skill_score:.3f}")
 
 print("\n✓ Validation complete!")

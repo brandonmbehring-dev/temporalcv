@@ -9,7 +9,7 @@ Lag leakage occurs when future information leaks into features through:
 These tests verify that temporalcv gates correctly detect these patterns.
 
 Bug Category: #1 from lever_of_archimedes/patterns/data_leakage_prevention.md
-Gate: gate_shuffled_target
+Gate: gate_signal_verification
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import pytest
 
 from temporalcv.gates import (
     GateStatus,
-    gate_shuffled_target,
+    gate_signal_verification,
 )
 
 
@@ -75,7 +75,7 @@ class TestLagLeakageDetection:
 
         model = LeakyModel()
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -107,7 +107,7 @@ class TestLagLeakageDetection:
 
         model = LeakyModel()
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -139,7 +139,7 @@ class TestLagLeakageDetection:
 
         model = LeakyModel()
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model=model,
             X=X,
             y=y,
@@ -168,13 +168,13 @@ class TestLagLeakageDetection:
         model = LeakyModel()
 
         # Strict threshold should catch
-        strict = gate_shuffled_target(
+        strict = gate_signal_verification(
             model, X, y, n_shuffles=3, threshold=0.01,
             method="effect_size", random_state=42
         )
 
         # Lenient threshold might not
-        lenient = gate_shuffled_target(
+        lenient = gate_signal_verification(
             model, X, y, n_shuffles=3, threshold=0.50,
             method="effect_size", random_state=42
         )
@@ -196,7 +196,7 @@ class TestLagLeakageMetrics:
 
         model = LeakyModel()
 
-        result = gate_shuffled_target(
+        result = gate_signal_verification(
             model, X, y, n_shuffles=3, method="effect_size", random_state=42
         )
 
@@ -218,10 +218,10 @@ class TestLagLeakageMetrics:
 
         model = LeakyModel()
 
-        result1 = gate_shuffled_target(
+        result1 = gate_signal_verification(
             model, X, y, n_shuffles=3, method="effect_size", random_state=99
         )
-        result2 = gate_shuffled_target(
+        result2 = gate_signal_verification(
             model, X, y, n_shuffles=3, method="effect_size", random_state=99
         )
 

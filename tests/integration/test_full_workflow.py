@@ -20,7 +20,7 @@ from temporalcv.gates import (
     GateStatus,
     GateResult,
     run_gates,
-    gate_shuffled_target,
+    gate_signal_verification,
     gate_suspicious_improvement,
     gate_temporal_boundary,
     gate_synthetic_ar1,
@@ -69,7 +69,7 @@ class TestFullValidationPipeline:
 
         # Run all gates
         gate_results = [
-            gate_shuffled_target(model, X, y, n_shuffles=3, random_state=42),
+            gate_signal_verification(model, X, y, n_shuffles=3, random_state=42),
             gate_suspicious_improvement(
                 model_metric=1.05,   # Worse than baseline
                 baseline_metric=1.0,
@@ -103,7 +103,7 @@ class TestFullValidationPipeline:
 
         # Run shuffled target gate (should catch leakage)
         gate_results = [
-            gate_shuffled_target(
+            gate_signal_verification(
                 model, X, y, n_shuffles=3, threshold=0.05,
                 method="effect_size",  # Use effect_size mode for this test
                 random_state=42
@@ -293,7 +293,7 @@ class TestSyntheticDataValidation:
         model = SimpleLSModel()
 
         # This should pass - legitimate temporal model
-        shuffled_result = gate_shuffled_target(
+        shuffled_result = gate_signal_verification(
             model, X, y, n_shuffles=5, threshold=0.05, random_state=42
         )
 

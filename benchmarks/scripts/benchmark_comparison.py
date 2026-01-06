@@ -96,7 +96,7 @@ def check_window_types(n: int = 1000) -> BenchmarkResult:
 def check_leakage_detection() -> BenchmarkResult:
     """Check if leakage detection is available."""
     # temporalcv has gates
-    from temporalcv.gates import gate_shuffled_target, gate_suspicious_improvement
+    from temporalcv.gates import gate_signal_verification, gate_suspicious_improvement
 
     tcv_has_gates = True
 
@@ -105,7 +105,7 @@ def check_leakage_detection() -> BenchmarkResult:
 
     return BenchmarkResult(
         name="Leakage Detection",
-        temporalcv_value="gate_shuffled_target, gate_suspicious_improvement, gate_synthetic_ar1",
+        temporalcv_value="gate_signal_verification, gate_suspicious_improvement, gate_synthetic_ar1",
         sklearn_value="None (external tools needed)",
         winner="temporalcv",
         notes="temporalcv's unique value proposition",
