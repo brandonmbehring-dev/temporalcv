@@ -44,7 +44,7 @@ Example
 
 from __future__ import annotations
 
-__version__ = "1.0.0-rc1"
+__version__ = "1.0.0"
 
 # Gates module exports
 from temporalcv.gates import (
