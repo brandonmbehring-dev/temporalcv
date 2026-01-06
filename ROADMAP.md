@@ -63,22 +63,19 @@
 - [x] Forecast encompassing test — `forecast_encompassing_test()`, `forecast_encompassing_bidirectional()`
 
 ### Integration
-- [x] research-kb integration hooks — MCP-based, documented in CLAUDE.md
+- [x] research-kb integration hooks — MCP-based, documented in AI_CONTEXT.md
 - [ ] Julia package registered in General
 
 ---
 
 ## Julia Package
 
-### Current: v0.1.0
-- Feature parity ~95% with Python
-- 63 modules implemented
-- 37 test files
+The Julia implementation has been moved to a standalone repository: **[temporalcv.jl](https://github.com/brandondebehring/temporalcv.jl)**.
 
-### v1.0.0 (Target: Q1 2025)
-- [ ] Benchmark dataset loaders (idiomatic Julia)
-- [ ] Register in Julia General registry
-- [ ] Documentation site (Documenter.jl)
+This ensures:
+- Independent versioning
+- Standard Julia CI/CD (GitHub Actions)
+- Compatibility with Julia General Registry standards
 
 ---
 

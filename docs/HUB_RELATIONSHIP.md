@@ -25,7 +25,7 @@ temporalcv is a **spoke** project in the lever_of_archimedes hub-and-spoke archi
 | Data leakage prevention | ✅ Complete | All 10 bug categories addressed in gates |
 | Knowledge tiers | ✅ Complete | [T1]/[T2]/[T3] in `docs/knowledge/` |
 | Session workflow | ✅ Complete | CURRENT_WORK.md at project root |
-| Precision feedback | ✅ Complete | CLAUDE.md output style integration |
+| Precision feedback | ✅ Complete | AI_CONTEXT.md output style integration |
 | Git workflow | ✅ Complete | Conventional commits in practice |
 
 ---
@@ -77,7 +77,7 @@ temporalcv provides **temporal cross-validation primitives** for the ML ecosyste
 
 ### Templates Followed
 
-- CLAUDE.md structure from hub template
+- AI_CONTEXT.md structure from hub template
 - SPECIFICATION.md pattern (frozen parameters)
 - Episode documentation from myga-forecasting-v4
 
@@ -125,8 +125,8 @@ temporalcv provides **temporal cross-validation primitives** for the ML ecosyste
 
 ## Verification Checklist
 
-- [x] CLAUDE.md references hub patterns
-- [x] Hub Integration section in CLAUDE.md
+- [x] AI_CONTEXT.md references hub patterns
+- [x] Hub Integration section in AI_CONTEXT.md
 - [x] HUB_RELATIONSHIP.md exists (this file)
 - [x] Knowledge tiers applied to documentation
 - [x] Pattern compliance documented above

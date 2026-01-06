@@ -290,4 +290,4 @@ When a new leakage bug is discovered:
 5. **Add test case**: Create regression test to prevent recurrence
 6. **Update this document**: Add to Lessons Learned
 
-Follow the Amendment Process in CLAUDE.md for any changes.
+Follow the Amendment Process in AI_CONTEXT.md for any changes.

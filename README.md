@@ -92,6 +92,14 @@ temporalcv provides **validation gates** that catch these bugs before they corru
 
 ---
 
+## Julia Implementation
+
+The Julia version of this library is available in a separate repository: **[temporalcv.jl](https://github.com/brandondebehring/temporalcv.jl)**.
+
+It provides native Julia implementations of the same core validation gates and statistical tests.
+
+---
+
 ## Comparison vs sklearn TimeSeriesSplit
 
 | Feature | temporalcv | sklearn | Winner |

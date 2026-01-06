@@ -74,7 +74,7 @@ Advanced statistical tests and conformal prediction methods.
 - `initialize()`, `predict_interval()`, `predict_intervals_batch()` methods
 
 #### Research-kb Integration
-- MCP-based integration hooks documented in CLAUDE.md
+- MCP-based integration hooks documented in AI_CONTEXT.md
 - Example usage for querying methodological background
 
 ### Technical Notes
@@ -399,7 +399,7 @@ Major metrics expansion release with comprehensive evaluation toolkit.
 - pyproject.toml with hatchling build
 - Pre-commit hooks (ruff, mypy)
 - GitHub Actions CI (Python 3.9-3.12)
-- CLAUDE.md with project principles
+- AI_CONTEXT.md with project principles
 - Knowledge tier system documentation
 
 ### Technical Notes

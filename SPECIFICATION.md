@@ -3,7 +3,7 @@
 **Version**: 1.0.0-rc1 | **Last Updated**: 2025-01-05
 **Status**: AUTHORITATIVE (changes require Amendment Process)
 
-This document freezes all parameters, thresholds, and mathematical definitions. Changes must follow the Amendment Process in CLAUDE.md.
+This document freezes all parameters, thresholds, and mathematical definitions. Changes must follow the Amendment Process in AI_CONTEXT.md.
 
 ---
 

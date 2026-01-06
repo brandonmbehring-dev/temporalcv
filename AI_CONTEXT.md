@@ -1,4 +1,4 @@
-# CLAUDE.md - temporalcv
+# AI_CONTEXT.md - temporalcv
 
 **Version**: 1.0.0-rc1 | **Status**: v1.0 Release Candidate
 
