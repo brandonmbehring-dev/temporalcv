@@ -46,9 +46,17 @@ Installation
 
 .. toctree::
    :maxdepth: 2
-   :caption: User Guide
+   :caption: Getting Started
 
    quickstart
+   guide/why_time_series_is_different
+   guide/common_pitfalls
+   guide/algorithm_decision_tree
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Tutorials
+
    tutorials/index
 
 .. toctree::

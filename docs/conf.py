@@ -28,6 +28,8 @@ extensions = [
     "sphinx.ext.mathjax",           # Math rendering
     "myst_parser",                  # Keep existing .md files
     "sphinx_copybutton",            # Copy button for code blocks
+    "sphinxcontrib.mermaid",        # Flowchart diagrams
+    "sphinx_design",                # Cards, grids, tabs for better layout
 ]
 
 # Napoleon settings (enables auto-linking in See Also)
@@ -115,6 +117,21 @@ latex_elements = {
 
 copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
 copybutton_prompt_is_regexp = True
+
+# -- Mermaid settings --------------------------------------------------------
+
+mermaid_version = "10.6.1"  # Stable version with good flowchart support
+mermaid_init_js = """
+mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+    }
+});
+"""
 
 # -- Suppress warnings -------------------------------------------------------
 

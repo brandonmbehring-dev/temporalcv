@@ -1,0 +1,7 @@
+case,n,h,alternative,statistic,pvalue,seed,description
+iid_equal,100,1,two.sided,0.23,0.82,42,"IID errors with equal variance - null hypothesis true"
+model1_better,100,1,two.sided,-4.21,0.0001,43,"Model 1 has variance 0.5 vs model 2 variance 1.5"
+h4_horizon,100,4,two.sided,-1.87,0.064,44,"Multi-step h=4 with biased model 2"
+one_sided_greater,100,1,greater,-2.15,0.983,45,"One-sided test where model 2 is worse (so p near 1 for greater)"
+small_sample,30,1,two.sided,-1.92,0.065,46,"Small sample n=30 with model 2 having larger variance"
+mae_power1,100,1,two.sided,-1.58,0.117,47,"Using MAE (power=1) instead of MSE"

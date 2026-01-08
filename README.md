@@ -7,6 +7,8 @@
 [![Python](https://img.shields.io/pypi/pyversions/temporalcv.svg)](https://pypi.org/project/temporalcv/)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/brandonmbehring-dev/temporalcv/blob/main/notebooks/demo.ipynb)
 
+**▶️ [See it in action](notebooks/01_why_temporal_cv.ipynb)** — Watch the validation gates catch leakage and guide you to a fix (GitHub renders with outputs).
+
 ---
 
 ## Why temporalcv?
