@@ -4,6 +4,44 @@ Specialized tools for evaluating forecasts on high-persistence time series.
 
 ---
 
+## When to Use
+
+```mermaid
+graph TD
+    A[Evaluate forecasts] --> B{Check ACF at lag 1}
+
+    B -->|ACF < 0.5| C[Standard metrics OK]
+    B -->|0.5 ≤ ACF < 0.8| D[Consider MC-SS]
+    B -->|ACF ≥ 0.8| E[MUST use MC-SS]
+
+    E --> F{Persistence beats model?}
+    F -->|Yes| G[Model has no skill]
+    F -->|No| H[Compute MC-SS]
+
+    H --> I{MC-SS interpretation}
+    I -->|< 0| J[Worse than persistence]
+    I -->|0-0.1| K[Marginal skill]
+    I -->|> 0.1| L[Meaningful skill]
+```
+
+### Common Mistakes
+
+- **Using MAE on near-unit-root data**
+  - Persistence (predict no change) gets low MAE on sticky series
+  - Model must beat persistence, not just have "good" MAE
+
+- **Computing threshold on full dataset**
+  - `compute_move_threshold()` must use training data only
+  - Using test data leaks information about future volatility
+
+- **Ignoring `is_reliable` flag**
+  - MC-SS needs n_up ≥ 10 and n_down ≥ 10
+  - Small sample sizes produce unreliable estimates
+
+**See Also**: [High Persistence Tutorial](../tutorials/high_persistence.md), [Example 04](../tutorials/examples_index.md#04-high-persistence)
+
+---
+
 ## Enums
 
 ### `MoveDirection`

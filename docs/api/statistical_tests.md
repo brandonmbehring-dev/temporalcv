@@ -4,6 +4,56 @@ Statistical tests for forecast evaluation with proper corrections.
 
 ---
 
+## When to Use
+
+```mermaid
+graph TD
+    A[Compare forecasts] --> B{Model relationship?}
+
+    B -->|Non-nested| C[dm_test]
+    B -->|Nested| D[cw_test]
+    B -->|Unknown| E[Use cw_test - conservative]
+
+    C --> F{Question type?}
+    D --> F
+
+    F -->|Which is better overall?| G[DM or CW test]
+    F -->|Can I predict which wins?| H[gw_test]
+    F -->|Is direction accuracy real?| I[pt_test]
+
+    G --> J{Multi-horizon?}
+    J -->|Yes| K[compare_horizons]
+    J -->|No| L[Single dm_test/cw_test]
+```
+
+### Test Selection Guide
+
+| Situation | Test | Reason |
+|-----------|------|--------|
+| RF vs XGBoost | `dm_test` | Non-nested models |
+| AR(2) vs AR(1) | `cw_test` | Nested models |
+| Full model vs subset | `cw_test` | Nested models |
+| Model switching strategy | `gw_test` | Conditional predictive ability |
+| Direction forecasting | `pt_test` | Tests sign/direction accuracy |
+
+### Common Mistakes
+
+- **Using DM test for nested models**
+  - DM is biased when one model nests another
+  - Example 18 shows Monte Carlo evidence of bias
+
+- **Ignoring h in multi-step forecasts**
+  - `dm_test(errors1, errors2, h=5)` for 5-step forecasts
+  - HAC variance needs correct horizon for bandwidth
+
+- **Comparing raw p-values across horizons**
+  - Use `compare_horizons()` for consistent comparison
+  - Accounts for sample size differences
+
+**See Also**: [Example 03](../tutorials/examples_index.md#03-statistical-tests), [Example 13](../tutorials/examples_index.md#13-macro-gdp), [Example 18](../tutorials/examples_index.md#18-nested-dm-test-failure)
+
+---
+
 ## Data Classes
 
 ### `DMTestResult`

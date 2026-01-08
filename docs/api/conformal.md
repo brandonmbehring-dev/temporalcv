@@ -6,6 +6,50 @@ Distribution-free prediction intervals with coverage guarantees.
 
 ---
 
+## When to Use
+
+```mermaid
+graph TD
+    A[Need prediction intervals?] --> B{Data stationarity?}
+
+    B -->|Stationary| C[SplitConformalPredictor]
+    B -->|Non-stationary/drift| D[AdaptiveConformalPredictor]
+    B -->|Unknown| E[Start with Adaptive]
+
+    C --> F{Coverage sufficient?}
+    D --> F
+
+    F -->|Yes| G[Deploy]
+    F -->|No, undercoverage| H[Increase alpha or use Adaptive]
+    F -->|Regime-dependent| I[Check per-regime coverage]
+```
+
+### Method Comparison
+
+| Method | Best For | Tradeoff |
+|--------|----------|----------|
+| `SplitConformalPredictor` | Stationary data | Tighter intervals, coverage guarantee |
+| `AdaptiveConformalPredictor` | Regime shifts, drift | Adapts to changes, no finite-sample guarantee |
+| `BootstrapUncertainty` | Model uncertainty | Computationally expensive |
+
+### Common Mistakes
+
+- **Using Split conformal during regime changes**
+  - Fixed quantile fails when volatility spikes
+  - Example 15 shows Adaptive maintaining coverage during crashes
+
+- **Evaluating coverage on calibration set**
+  - Coverage must be evaluated on holdout only
+  - `walk_forward_conformal()` handles this correctly
+
+- **Ignoring `undercoverage_warning`**
+  - Check `CoverageDiagnostics.undercoverage_warning`
+  - Persistent undercoverage indicates distribution shift
+
+**See Also**: [Uncertainty Tutorial](../tutorials/uncertainty.md), [Example 05](../tutorials/examples_index.md#05-conformal-prediction), [Example 15](../tutorials/examples_index.md#15-crypto-volatility)
+
+---
+
 ## Data Classes
 
 ### `PredictionInterval`

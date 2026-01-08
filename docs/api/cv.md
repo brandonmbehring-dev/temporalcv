@@ -4,6 +4,44 @@ sklearn-compatible temporal cross-validation with gap enforcement for h-step for
 
 ---
 
+## When to Use
+
+```mermaid
+graph TD
+    A[Time Series CV?] --> B{Data characteristics}
+
+    B -->|Recent data more relevant| C[sliding window]
+    B -->|More data always helps| D[expanding window]
+    B -->|Financial with overlap| E[PurgedKFold]
+
+    C --> F{Multi-step forecast?}
+    D --> F
+    F -->|Yes, h > 1| G[Set horizon=h]
+    F -->|No, h=1| H[horizon=1 or None]
+
+    G --> I{Extra safety?}
+    I -->|Yes| J[extra_gap > 0]
+    I -->|No| K[extra_gap=0]
+```
+
+### Common Mistakes
+
+- **No gap for h-step forecasting**
+  - For h=5 forecast: `WalkForwardCV(horizon=5)` required
+  - Without gap, target leaks into training features
+
+- **Using KFold on time series**
+  - Random splits destroy temporal order → 47%+ fake improvement
+  - Always use `WalkForwardCV` or `TimeSeriesSplit`
+
+- **Sliding window too small**
+  - Window must be larger than model's memory
+  - Rule of thumb: `window_size >= 5 * n_features`
+
+**See Also**: [Walk-Forward Tutorial](../tutorials/walk_forward_cv.md), [Example 07](../tutorials/examples_index.md#07-nested-cv-tuning), [Example 20](../tutorials/examples_index.md#20-kfold-trap-failure)
+
+---
+
 ## Data Classes
 
 ### `SplitInfo`

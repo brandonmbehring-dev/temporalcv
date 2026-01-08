@@ -33,6 +33,9 @@ Key Concepts
 
 from __future__ import annotations
 
+# sphinx_gallery_thumbnail_number = 1
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold, cross_val_score
@@ -362,3 +365,73 @@ KFold is for i.i.d. data only.
 print("\n" + "=" * 70)
 print("Example 20 complete.")
 print("=" * 70)
+
+# %%
+# Visualization: KFold vs WalkForward Performance Comparison
+# -----------------------------------------------------------
+# This plot shows the dramatic difference between KFold (leaky) and
+# WalkForwardCV (correct) cross-validation for time series data.
+
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+# Left: MAE comparison showing fake improvement
+ax1 = axes[0]
+methods = ['KFold\n(WRONG)', 'WalkForward\n(CORRECT)']
+maes = [-kfold_scores.mean(), -wfcv_scores.mean()]
+colors = ['#d62728', '#2ca02c']
+bars = ax1.bar(methods, maes, color=colors, edgecolor='black', linewidth=1.5)
+ax1.set_ylabel('Mean Absolute Error (MAE)')
+ax1.set_title('Cross-Validation MAE Comparison')
+
+# Add value labels and percentage difference
+for bar, mae in zip(bars, maes):
+    ax1.annotate(f'{mae:.4f}',
+                 xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
+                 xytext=(0, 3), textcoords="offset points",
+                 ha='center', va='bottom', fontsize=11, fontweight='bold')
+
+# Add arrow showing fake improvement
+fake_improvement = (maes[1] - maes[0]) / maes[0] * 100
+ax1.annotate(f'{abs(fake_improvement):.1f}% "improvement"\nis FAKE leakage',
+             xy=(0.5, (maes[0] + maes[1]) / 2),
+             fontsize=10, ha='center', color='#d62728', fontweight='bold')
+
+# Right: CV fold structure visualization
+ax2 = axes[1]
+
+# Show KFold structure (top 3 bars)
+kfold_viz = KFold(n_splits=3, shuffle=True, random_state=42)
+n_samples = len(X)
+y_positions_kfold = [2.5, 2.0, 1.5]
+for fold_idx, (train_idx, test_idx) in enumerate(kfold_viz.split(X)):
+    # Plot train segments (scattered due to shuffle)
+    train_dates = df.index[train_idx]
+    test_dates = df.index[test_idx]
+    ax2.scatter(train_idx, [y_positions_kfold[fold_idx]] * len(train_idx),
+                c='#1f77b4', s=2, alpha=0.5)
+    ax2.scatter(test_idx, [y_positions_kfold[fold_idx]] * len(test_idx),
+                c='#ff7f0e', s=3, alpha=0.8)
+
+# Show WalkForward structure (bottom 3 bars)
+wfcv_viz = WalkForwardCV(window_type="expanding", window_size=100, horizon=1, test_size=50, n_splits=3)
+y_positions_wfcv = [0.5, 0.0, -0.5]
+for fold_idx, (train_idx, test_idx) in enumerate(wfcv_viz.split(X)):
+    ax2.barh(y_positions_wfcv[fold_idx], len(train_idx), left=min(train_idx),
+             height=0.35, color='#1f77b4', alpha=0.8,
+             label='Train' if fold_idx == 0 else '')
+    ax2.barh(y_positions_wfcv[fold_idx], len(test_idx), left=min(test_idx),
+             height=0.35, color='#ff7f0e', alpha=0.8,
+             label='Test' if fold_idx == 0 else '')
+
+ax2.axhline(1.0, color='black', linestyle='--', linewidth=1)
+ax2.text(-30, 2.0, 'KFold\n(shuffled)', ha='right', va='center', fontsize=10, fontweight='bold', color='#d62728')
+ax2.text(-30, 0.0, 'WalkForward\n(temporal)', ha='right', va='center', fontsize=10, fontweight='bold', color='#2ca02c')
+ax2.set_xlabel('Sample Index (Time →)')
+ax2.set_title('CV Fold Structure: Shuffled vs Temporal')
+ax2.set_yticks([])
+ax2.set_xlim(-80, n_samples + 10)
+ax2.legend(loc='upper right')
+
+plt.tight_layout()
+plt.suptitle('FAILURE CASE: KFold Leaks Future Information to Training', y=1.02, fontsize=14)
+plt.show()

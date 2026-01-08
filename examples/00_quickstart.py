@@ -14,6 +14,9 @@ What you'll learn:
     3. Basic walk-forward cross-validation
 """
 
+# sphinx_gallery_thumbnail_number = 1
+
+import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import Ridge
 
@@ -65,3 +68,38 @@ elif report.status == "WARN":
     print("\n⚠️  WARN: Proceed with caution")
 else:
     print("\n✅ PASS: Safe to continue")
+
+# %%
+# Visualize Walk-Forward CV Folds
+# --------------------------------
+# This plot shows how WalkForwardCV splits the data temporally,
+# with training (blue) and test (orange) sets, and the gap between them.
+
+fig, ax = plt.subplots(figsize=(10, 4))
+
+cv = WalkForwardCV(n_splits=5, extra_gap=1, test_size=20)
+n_samples = len(X)
+
+for fold_idx, (train_idx, test_idx) in enumerate(cv.split(X, y)):
+    # Training set
+    ax.barh(fold_idx, len(train_idx), left=train_idx[0], height=0.6,
+            color='#1f77b4', alpha=0.8, label='Train' if fold_idx == 0 else '')
+    # Gap
+    gap_start = train_idx[-1] + 1
+    gap_end = test_idx[0]
+    ax.barh(fold_idx, gap_end - gap_start, left=gap_start, height=0.6,
+            color='#d62728', alpha=0.5, label='Gap' if fold_idx == 0 else '')
+    # Test set
+    ax.barh(fold_idx, len(test_idx), left=test_idx[0], height=0.6,
+            color='#ff7f0e', alpha=0.8, label='Test' if fold_idx == 0 else '')
+
+ax.set_xlabel('Sample Index')
+ax.set_ylabel('CV Fold')
+ax.set_yticks(range(5))
+ax.set_yticklabels([f'Fold {i+1}' for i in range(5)])
+ax.set_title('Walk-Forward Cross-Validation with Gap Enforcement')
+ax.legend(loc='upper left')
+ax.set_xlim(0, n_samples)
+
+plt.tight_layout()
+plt.show()

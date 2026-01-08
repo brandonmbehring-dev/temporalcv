@@ -30,8 +30,11 @@ Requirements
 
 from __future__ import annotations
 
+# sphinx_gallery_thumbnail_number = 1
+
 import warnings
 
+import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import Ridge
@@ -275,3 +278,82 @@ def demonstrate_high_persistence():
 
 if __name__ == "__main__":
     demonstrate_high_persistence()
+
+# %%
+# Visualization: High-Persistence Metrics Comparison
+# ---------------------------------------------------
+# This plot shows why MASE matters for high-persistence series
+# and compares model performance relative to the persistence baseline.
+
+# Generate data and fit models for visualization
+series = generate_high_persistence_data()
+X, y = create_features(series)
+train_size = int(0.7 * len(y))
+X_train, X_test = X[:train_size], X[train_size:]
+y_train, y_test = y[:train_size], y[train_size:]
+
+# Fit models
+ridge = Ridge(alpha=1.0)
+ridge.fit(X_train, y_train)
+ridge_preds = ridge.predict(X_test)
+
+gbm = GradientBoostingRegressor(n_estimators=50, max_depth=2, random_state=42)
+gbm.fit(X_train, y_train)
+gbm_preds = gbm.predict(X_test)
+
+# Persistence baseline
+persistence_preds = X_test[:, 0]
+
+# Compute metrics
+persistence_mae = np.mean(np.abs(y_test - persistence_preds))
+ridge_mae = np.mean(np.abs(y_test - ridge_preds))
+gbm_mae = np.mean(np.abs(y_test - gbm_preds))
+
+ridge_mase = compute_mase(y_test, ridge_preds, train_data=y_train)
+gbm_mase = compute_mase(y_test, gbm_preds, train_data=y_train)
+
+# Create visualization
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+# Left: MAE comparison (shows why raw MAE is misleading)
+ax1 = axes[0]
+models = ['Persistence\n(Baseline)', 'Ridge\n(Simple)', 'GBM\n(Complex)']
+maes = [persistence_mae, ridge_mae, gbm_mae]
+colors = ['#7f7f7f', '#1f77b4', '#ff7f0e']
+bars = ax1.bar(models, maes, color=colors, edgecolor='black', linewidth=1.5)
+ax1.set_ylabel('Mean Absolute Error (MAE)')
+ax1.set_title('Raw MAE: All Appear Nearly Identical')
+ax1.set_ylim(0, max(maes) * 1.3)
+
+for bar, mae in zip(bars, maes):
+    ax1.annotate(f'{mae:.5f}',
+                 xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
+                 xytext=(0, 3), textcoords="offset points",
+                 ha='center', va='bottom', fontsize=10)
+
+# Right: MASE comparison (reveals true relative performance)
+ax2 = axes[1]
+models_mase = ['Persistence', 'Ridge', 'GBM']
+mases = [1.0, ridge_mase, gbm_mase]
+colors_mase = ['#7f7f7f',
+               '#2ca02c' if ridge_mase < 1 else '#d62728',
+               '#2ca02c' if gbm_mase < 1 else '#d62728']
+bars2 = ax2.bar(models_mase, mases, color=colors_mase, edgecolor='black', linewidth=1.5)
+ax2.axhline(1.0, color='black', linestyle='--', linewidth=2, label='MASE = 1.0 (no better than naive)')
+ax2.set_ylabel('MASE (Mean Absolute Scaled Error)')
+ax2.set_title('MASE: Reveals True Relative Performance')
+ax2.set_ylim(0, max(mases) * 1.3)
+ax2.legend(loc='upper right')
+
+for bar, mase in zip(bars2, mases):
+    label = f'{mase:.3f}'
+    if mase < 1:
+        label += ' ✓'
+    ax2.annotate(label,
+                 xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
+                 xytext=(0, 3), textcoords="offset points",
+                 ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+plt.tight_layout()
+plt.suptitle('High-Persistence Series: Why MASE Matters More Than MAE', y=1.02, fontsize=14)
+plt.show()

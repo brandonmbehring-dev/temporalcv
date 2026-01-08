@@ -55,6 +55,12 @@ Installation
 
 .. toctree::
    :maxdepth: 2
+   :caption: Examples Gallery
+
+   auto_examples/index
+
+.. toctree::
+   :maxdepth: 2
    :caption: Tutorials
 
    tutorials/index

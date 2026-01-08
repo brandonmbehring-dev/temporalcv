@@ -224,15 +224,50 @@ for train_idx, test_idx in cv.split(X, y):
 
 ## Examples
 
-Real-world case studies demonstrating key features:
+21 real-world case studies organized by use case. See [Examples Index](docs/tutorials/examples_index.md) for full descriptions.
 
-| Example | Description |
-|---------|-------------|
-| [01_leakage_detection.py](examples/01_leakage_detection.py) | Shuffled target test catches lookahead bias |
-| [02_walk_forward_cv.py](examples/02_walk_forward_cv.py) | Gap enforcement for h-step forecasting |
-| [03_statistical_tests.py](examples/03_statistical_tests.py) | DM test: is improvement significant? |
-| [04_high_persistence.py](examples/04_high_persistence.py) | MASE metrics for sticky series |
-| [05_conformal_prediction.py](examples/05_conformal_prediction.py) | Adaptive intervals under distribution shift |
+### Core Concepts
+
+| # | Example | Key Concept |
+|---|---------|-------------|
+| 00 | [Quickstart](examples/00_quickstart.py) | Basic WalkForwardCV + validation gates |
+| 01 | [Leakage Detection](examples/01_leakage_detection.py) | Shuffled target test catches lookahead bias |
+| 02 | [Walk-Forward CV](examples/02_walk_forward_cv.py) | Gap enforcement for h-step forecasting |
+| 03 | [Statistical Tests](examples/03_statistical_tests.py) | DM test: is improvement significant? |
+| 04 | [High Persistence](examples/04_high_persistence.py) | MASE metrics for sticky series |
+| 05 | [Conformal Prediction](examples/05_conformal_prediction.py) | Adaptive intervals under distribution shift |
+
+### Production Workflows
+
+| # | Example | Key Concept |
+|---|---------|-------------|
+| 06 | [Financial CV](examples/06_financial_cv.py) | PurgedKFold, embargo, label overlap |
+| 07 | [Nested CV Tuning](examples/07_nested_cv_tuning.py) | Hyperparameter selection without leakage |
+| 08 | [Regime Stratified](examples/08_regime_stratified.py) | Volatility regimes, stratified gates |
+| 09 | [Multi-Horizon](examples/09_multi_horizon.py) | `compare_horizons()`, predictability horizon |
+| 10 | [End-to-End Pipeline](examples/10_end_to_end_pipeline.py) | Full data→gates→CV→deploy |
+
+### Domain-Specific
+
+| # | Example | Domain | Challenge |
+|---|---------|--------|-----------|
+| 11 | [Web Traffic](examples/11_web_traffic.py) | Web/Tech | Weekly seasonality, MASE |
+| 12 | [IoT Sensor](examples/12_iot_sensor.py) | IoT | Anomaly-aware features |
+| 13 | [Macro GDP](examples/13_macro_gdp.py) | Macro | Low-frequency, CW test |
+| 14 | [Energy Load](examples/14_energy_load.py) | Energy | Calendar effects, multi-step |
+| 15 | [Crypto Volatility](examples/15_crypto_volatility.py) | Crypto | Adaptive conformal |
+
+### ⚠️ Failure Cases (Learn from Mistakes)
+
+| # | Example | What Goes Wrong |
+|---|---------|-----------------|
+| 16 | [Rolling Stats](examples/16_failure_rolling_stats.py) | Leakage from `.rolling()` without `.shift()` |
+| 17 | [Threshold Leak](examples/17_failure_threshold_leak.py) | Regime boundary computed on full data |
+| 18 | [Nested DM Test](examples/18_failure_nested_dm.py) | DM bias for nested models (use CW test) |
+| 19 | [Missing Gap](examples/19_failure_missing_gap.py) | No gap for h-step forecasting |
+| 20 | [KFold Trap](examples/20_failure_kfold.py) | 47.8% fake improvement from random CV |
+
+See [Failure Cases Guide](docs/tutorials/failure_cases.md) for detailed lessons.
 
 **Interactive Demo**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/brandonmbehring-dev/temporalcv/blob/main/notebooks/demo.ipynb)
 

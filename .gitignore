@@ -40,6 +40,11 @@ htmlcov/
 # Sphinx build output
 docs/_build/
 
+# sphinx-gallery generated output
+docs/auto_examples/
+docs/gen_modules/
+docs/sg_execution_times.rst
+
 # mypy
 .mypy_cache/
 .dmypy.json

@@ -4,6 +4,41 @@ Three-stage validation framework with HALT/PASS/WARN/SKIP decisions for leakage 
 
 ---
 
+## When to Use
+
+```mermaid
+graph TD
+    A[New Pipeline] --> B{Which leakage type?}
+
+    B -->|Features encode target| C[gate_shuffled_target]
+    B -->|Train/test overlap| D[gate_temporal_boundary]
+    B -->|Too-good results| E[gate_suspicious_improvement]
+    B -->|Model beats theory| F[gate_synthetic_ar1]
+    B -->|Unsure| G[Run all gates]
+
+    C -->|HALT| H[Fix: Check .shift on rolling features]
+    D -->|HALT| I[Fix: Set horizon parameter]
+    E -->|HALT| J[Fix: Investigate data pipeline]
+```
+
+### Common Mistakes
+
+- **Using `n_shuffles=10`** for permutation testing
+  - Minimum p-value is 1/11 ≈ 0.09, can't detect leakage
+  - Use `n_shuffles >= 100` for statistical power
+
+- **Ignoring WARN status**
+  - WARNs often precede HALTs in production
+  - Always investigate WARNs before deployment
+
+- **Running gates after training**
+  - Gates should run *before* investing time in model development
+  - Pattern: validate → develop → validate again
+
+**See Also**: [Guardrails Tutorial](../tutorials/guardrails.md), [Example 16-20](../tutorials/examples_index.md#failure-cases)
+
+---
+
 ## Enums
 
 ### `GateStatus`

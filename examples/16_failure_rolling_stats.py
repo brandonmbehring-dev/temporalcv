@@ -27,6 +27,9 @@ Key Concepts
 
 from __future__ import annotations
 
+# sphinx_gallery_thumbnail_number = 1
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
@@ -345,3 +348,53 @@ The pattern: ensure features at time t use ONLY information from [0, t-1].
 print("\n" + "=" * 70)
 print("Example 16 complete.")
 print("=" * 70)
+
+# %%
+# Visualization: WRONG vs CORRECT Approaches
+# ------------------------------------------
+# This plot illustrates the danger of rolling features without .shift()
+# and shows the fix produces realistic (not artificially good) results.
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+# Left: MAE Comparison
+ax1 = axes[0]
+bars = ax1.bar(
+    ['Persistence\n(Baseline)', 'WRONG\n(Leaky Features)', 'CORRECT\n(.shift() used)'],
+    [persistence_mae, mae_wrong, mae_correct],
+    color=['#7f7f7f', '#d62728', '#2ca02c'],
+    edgecolor='black',
+    linewidth=1.5
+)
+ax1.set_ylabel('Mean Absolute Error (MAE)')
+ax1.set_title('Feature Engineering Impact on MAE')
+
+# Add value labels
+for bar in bars:
+    height = bar.get_height()
+    ax1.annotate(f'{height:.3f}',
+                 xy=(bar.get_x() + bar.get_width() / 2, height),
+                 xytext=(0, 3), textcoords="offset points",
+                 ha='center', va='bottom', fontsize=11)
+
+# Right: Gate Decision
+ax2 = axes[1]
+gate_statuses = ['WRONG Approach', 'CORRECT Approach']
+gate_colors = ['#d62728' if 'HALT' in str(gate_result_wrong.status) else '#2ca02c',
+               '#d62728' if 'HALT' in str(gate_result_correct.status) else '#2ca02c']
+gate_labels = [str(gate_result_wrong.status).split('.')[-1],
+               str(gate_result_correct.status).split('.')[-1]]
+
+ax2.barh(gate_statuses, [1, 1], color=gate_colors, edgecolor='black', linewidth=1.5)
+ax2.set_xlim(0, 1.2)
+ax2.set_xlabel('')
+ax2.set_title('Validation Gate Decision')
+ax2.set_xticks([])
+
+for i, (status, label) in enumerate(zip(gate_statuses, gate_labels)):
+    ax2.text(0.5, i, label, ha='center', va='center', fontsize=14,
+             fontweight='bold', color='white')
+
+plt.tight_layout()
+plt.suptitle('FAILURE CASE: Rolling Features Without .shift()', y=1.02, fontsize=14)
+plt.show()

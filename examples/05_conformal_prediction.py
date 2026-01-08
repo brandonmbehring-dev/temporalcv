@@ -40,9 +40,12 @@ Requirements
 
 from __future__ import annotations
 
+# sphinx_gallery_thumbnail_number = 1
+
 import warnings
 from typing import Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import Ridge
 
@@ -386,3 +389,63 @@ def demonstrate_conformal_prediction():
 
 if __name__ == "__main__":
     demonstrate_conformal_prediction()
+
+# %%
+# Visualization: Prediction Intervals with Coverage
+# --------------------------------------------------
+# This plot shows conformal prediction intervals with actual values overlaid,
+# demonstrating coverage and interval width for time series forecasting.
+
+# Generate data and predictions for visualization
+series = generate_ar1_data(n=300, phi=0.8)
+X, y = create_features(series)
+predictions, actuals = walk_forward_predict(X, y, n_splits=4, test_size=30)
+
+# Split and calibrate
+cal_size = int(0.3 * len(predictions))
+cal_preds, cal_actuals = predictions[:cal_size], actuals[:cal_size]
+holdout_preds, holdout_actuals = predictions[cal_size:], actuals[cal_size:]
+
+# Fit conformal predictor
+conformal = SplitConformalPredictor(alpha=0.10)
+conformal.calibrate(cal_preds, cal_actuals)
+intervals = conformal.predict_interval(holdout_preds)
+
+# Compute coverage
+covered = (holdout_actuals >= intervals.lower) & (holdout_actuals <= intervals.upper)
+coverage = covered.mean()
+
+# Create visualization
+fig, axes = plt.subplots(2, 1, figsize=(12, 8))
+
+# Top: Prediction intervals with actuals
+ax1 = axes[0]
+x_range = np.arange(len(holdout_preds))
+ax1.fill_between(x_range, intervals.lower, intervals.upper,
+                 alpha=0.3, color='#1f77b4', label='90% Prediction Interval')
+ax1.plot(x_range, holdout_preds, 'b-', linewidth=1.5, label='Predictions')
+ax1.scatter(x_range[covered], holdout_actuals[covered],
+            c='#2ca02c', s=30, zorder=5, label=f'Covered ({coverage:.1%})')
+ax1.scatter(x_range[~covered], holdout_actuals[~covered],
+            c='#d62728', s=50, marker='x', zorder=5, label='Not Covered')
+ax1.set_xlabel('Test Index')
+ax1.set_ylabel('Value')
+ax1.set_title(f'Conformal Prediction Intervals (90% Target Coverage, {coverage:.1%} Achieved)')
+ax1.legend(loc='upper right')
+ax1.grid(True, alpha=0.3)
+
+# Bottom: Interval width over time
+ax2 = axes[1]
+widths = intervals.upper - intervals.lower
+ax2.bar(x_range, widths, color='#1f77b4', alpha=0.7, edgecolor='none')
+ax2.axhline(widths.mean(), color='#d62728', linestyle='--', linewidth=2,
+            label=f'Mean Width: {widths.mean():.3f}')
+ax2.set_xlabel('Test Index')
+ax2.set_ylabel('Interval Width')
+ax2.set_title('Prediction Interval Width (Constant for Split Conformal)')
+ax2.legend(loc='upper right')
+ax2.grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.suptitle('Conformal Prediction for Time Series Forecasting', y=1.02, fontsize=14)
+plt.show()

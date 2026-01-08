@@ -52,6 +52,11 @@ Quick-reference markdown tutorials for specific topics:
 ```{toctree}
 :maxdepth: 1
 
+examples_index
+failure_cases
+guardrails
+lag_selection
+multi_horizon
 feature_engineering_safety
 metric_selection
 diagnostic_flowchart
@@ -63,8 +68,17 @@ uncertainty
 
 ### By Topic
 
-**New Guides for Newcomers:**
-- **[Feature Engineering Safety](feature_engineering_safety.md)** — Safe vs dangerous features, decision tree
+**Examples & Case Studies:**
+- **[Examples Index](examples_index.md)** — All 21 examples with descriptions
+- **[Failure Cases](failure_cases.md)** — Learn from common mistakes (Examples 16-20)
+
+**Workflow Guides:**
+- **[Guardrails](guardrails.md)** — The HALT/WARN/PASS framework decision tree
+- **[Lag Selection](lag_selection.md)** — Choosing feature lags and forecast horizons
+- **[Multi-Horizon](multi_horizon.md)** — Finding your model's predictability limit
+
+**Newcomer Guides:**
+- **[Feature Engineering Safety](feature_engineering_safety.md)** — Safe vs dangerous features
 - **[Metric Selection](metric_selection.md)** — Which metric for which problem
 - **[Diagnostic Flowchart](diagnostic_flowchart.md)** — Troubleshooting validation failures
 

@@ -30,6 +30,7 @@ extensions = [
     "sphinx_copybutton",            # Copy button for code blocks
     "sphinxcontrib.mermaid",        # Flowchart diagrams
     "sphinx_design",                # Cards, grids, tabs for better layout
+    "sphinx_gallery.gen_gallery",   # Auto-generate example gallery
 ]
 
 # Napoleon settings (enables auto-linking in See Also)
@@ -140,3 +141,46 @@ suppress_warnings = [
     "toc.not_included",  # Internal planning/knowledge docs not in toctree
     "docutils",  # Transition issues in internal docs
 ]
+
+# -- Sphinx Gallery settings -------------------------------------------------
+
+sphinx_gallery_conf = {
+    # Path to example scripts
+    "examples_dirs": ["../examples"],
+    # Where to save gallery generated output
+    "gallery_dirs": ["auto_examples"],
+    # Pattern to identify example files
+    "filename_pattern": r"/(0[0-9]|1[0-9]|2[0-9])_",  # Match 00-29
+    # Ignore pattern (failure cases still show but with warning thumbnails)
+    "ignore_pattern": r"__init__\.py",
+    # Directory for example thumbnails
+    "backreferences_dir": "gen_modules/backreferences",
+    # Generate mini-galleries in API docs
+    "doc_module": ("temporalcv",),
+    # Show memory usage
+    "show_memory": False,
+    # Show download links
+    "download_all_examples": True,
+    # Thumbnail size
+    "thumbnail_size": (400, 280),
+    # Default thumbnail for examples without plots
+    "default_thumb_file": None,  # Uses sphinx-gallery default
+    # Sort examples by file name
+    "within_subsection_order": "FileNameSortKey",
+    # Capture stderr
+    "capture_repr": ("_repr_html_", "__repr__"),
+    # Show signature in mini-galleries
+    "show_signature": True,
+    # Reference label format
+    "reference_url": {
+        "temporalcv": None,
+    },
+    # Remove config comments from example scripts
+    "remove_config_comments": True,
+    # Minimum reported time
+    "min_reported_time": 1,
+    # Subsection order (categories)
+    "subsection_order": [
+        "../examples",
+    ],
+}
