@@ -4,28 +4,101 @@
 
 [![CI](https://github.com/brandonmbehring-dev/temporalcv/actions/workflows/ci.yml/badge.svg)](https://github.com/brandonmbehring-dev/temporalcv/actions)
 [![PyPI](https://img.shields.io/pypi/v/temporalcv.svg)](https://pypi.org/project/temporalcv/)
+[![Docs](https://readthedocs.org/projects/temporalcv/badge/?version=latest)](https://temporalcv.readthedocs.io)
 [![Python](https://img.shields.io/pypi/pyversions/temporalcv.svg)](https://pypi.org/project/temporalcv/)
 [![Coverage](https://img.shields.io/badge/coverage-83%25-green)](docs/testing_strategy.md)
 [![Tests](https://img.shields.io/badge/tests-318%20passing-brightgreen)](tests/)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/brandonmbehring-dev/temporalcv/blob/main/notebooks/demo.ipynb)
 
-**▶️ [See it in action](notebooks/01_why_temporal_cv.ipynb)** — Watch the validation gates catch leakage and guide you to a fix (GitHub renders with outputs).
+**[Full Documentation](https://temporalcv.readthedocs.io)** | **[See it in action](notebooks/01_why_temporal_cv.ipynb)**
 
 ---
 
-## Why temporalcv?
+## The Time Series Trap
 
-Time-series ML has a leakage problem. Standard cross-validation doesn't respect temporal order, and even "proper" walk-forward implementations often miss subtle bugs:
+You're an ML practitioner. You build a model, run cross-validation, get great metrics... then it fails in production.
 
-- **Lag features computed on full series** (leaks future information)
-- **No gap between train and test** (target leaks into features)
-- **Thresholds computed on full series** (future information in classification)
-
-temporalcv provides **validation gates** that catch these bugs before they corrupt your results.
+**Sound familiar?** Time series breaks standard ML validation in ways that aren't obvious until you've been burned. This library helps you avoid the traps.
 
 ---
 
-## Architecture
+## What Goes Wrong
+
+### The KFold Trap
+
+Standard cross-validation randomly shuffles data. For time series, this means your model trains on *future* data to predict the *past*.
+
+```python
+from sklearn.model_selection import KFold, cross_val_score
+from sklearn.ensemble import RandomForestRegressor
+import numpy as np
+
+# Your time series data
+X, y = load_your_time_series()
+
+# This looks fine...
+cv = KFold(n_splits=5, shuffle=True)
+scores = cross_val_score(RandomForestRegressor(), X, y, cv=cv)
+print(f"R² = {scores.mean():.2f}")  # R² = 0.73 - Looks great!
+
+# But in production...
+# Model performs terribly. What happened?
+```
+
+**Result**: Up to 47% fake improvement that vanishes in production.
+
+The problem? KFold shuffled your data. Your model saw 2024 data while "predicting" 2023. That's not forecasting—that's cheating.
+
+sklearn's `TimeSeriesSplit` helps, but doesn't catch everything...
+
+### Common Leakage Patterns
+
+| Pattern | What Happens | Why It's Bad |
+|---------|--------------|--------------|
+| Rolling stats on full series | `.rolling().mean()` sees future | Features encode tomorrow's info |
+| No gap for h-step forecast | Train ends at t, predict t+1 | Target leaks into lagged features |
+| Threshold on full data | Regime boundary uses future | Classification cheats |
+
+**These bugs don't throw errors.** Your model trains, evaluates, and looks great—until deployment.
+
+---
+
+## How temporalcv Protects You
+
+temporalcv adds a **validation layer** that catches these bugs before they corrupt your results.
+
+### Validation Gates: HALT / WARN / PASS
+
+Before you trust any result, run it through validation gates:
+
+| Gate | What It Catches | Status |
+|------|-----------------|--------|
+| **Shuffled Target Test** | Features encode target position | HALT if model beats permuted baseline |
+| **Suspicious Improvement** | Too-good-to-be-true results | WARN if >20% better than persistence |
+| **Temporal Boundary Audit** | Future information in features | HALT if boundary violated |
+
+```python
+from temporalcv import run_gates
+from temporalcv.gates import gate_signal_verification, gate_suspicious_improvement
+
+# Step 1: Run validation gates
+gate_results = [
+    gate_signal_verification(model, X, y, n_shuffles=100),
+    gate_suspicious_improvement(model_mae, persistence_mae, threshold=0.20),
+]
+
+# Step 2: Check the verdict
+report = run_gates(gate_results)
+print(report.status)  # HALT, WARN, or PASS
+```
+
+| Status | Meaning | Action |
+|--------|---------|--------|
+| **HALT** | Critical failure | Stop immediately. You have leakage. |
+| **WARN** | Suspicious signal | Proceed with caution. Verify externally. |
+| **PASS** | Validation passed | Continue to walk-forward CV. |
+
+### The Validation Pipeline
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -62,61 +135,58 @@ temporalcv provides **validation gates** that catch these bugs before they corru
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Gate Priority
-
-| Status | Meaning | Action |
-|--------|---------|--------|
-| **HALT** | Critical failure detected | Stop immediately, investigate |
-| **WARN** | Suspicious signal | Proceed with caution, verify externally |
-| **PASS** | Validation passed | Continue to next stage |
-
 ---
 
-## What Makes This Unique
+## Key Concepts
 
-1. **Shuffled Target Test** — The definitive leakage detector
-   - If your model beats a permuted baseline, features encode target position
-   - Catches: rolling stats on full series, lookahead bias, centered windows
+### Walk-Forward CV with Gap Enforcement
 
-2. **HALT/WARN/PASS Framework** — Actionable validation status
-   - Not just metrics, but decisions
-   - Prioritized: HALT > WARN > PASS
+```
+Training window                    Test
+├─────────────────────────┤  GAP  ├───┤
+         104 weeks          2 wks  1 wk
+```
 
-3. **Temporal-Aware Conformal Prediction**
-   - Adaptive conformal for distribution shift (Gibbs & Candès 2021)
-   - Approximate coverage for time series (exact guarantees require exchangeability)
+The `gap` parameter ensures your model can't cheat:
 
-4. **High-Persistence Metrics** — For sticky series (ACF(1) > 0.9)
-   - MASE, MC-SS ratio, directional accuracy
-   - Standard metrics mislead on near-unit-root data
+```python
+from temporalcv import WalkForwardCV
 
-5. **sklearn Integration** — Drop-in replacement
-   - `WalkForwardCV` works with `cross_val_score`, `GridSearchCV`
-   - Proper gap enforcement for h-step forecasting
+cv = WalkForwardCV(
+    window_type="sliding",   # or "expanding"
+    window_size=104,         # 2 years of weekly data
+    horizon=2,               # Predicting 2 steps ahead
+    extra_gap=0,             # Additional safety margin
+    test_size=1              # 1 observation per fold
+)
 
----
+for train_idx, test_idx in cv.split(X, y):
+    # Guaranteed: train_idx[-1] + horizon < test_idx[0]
+    model.fit(X[train_idx], y[train_idx])
+    predictions = model.predict(X[test_idx])
+```
 
-## Julia Implementation
+### Why Gaps Matter for h-Step Forecasting
 
-The Julia version of this library is available in a separate repository: **[temporalcv.jl](https://github.com/brandondebehring/temporalcv.jl)**.
+If you're predicting 2 steps ahead, you need `horizon >= 2`.
 
-It provides native Julia implementations of the same core validation gates and statistical tests.
+**Without gap**: Your lag-1 feature at test time includes the target you're predicting.
+**With gap**: Clean separation ensures no information leaks through lagged features.
 
----
+### High-Persistence Metrics
 
-## Comparison vs sklearn TimeSeriesSplit
+When your series is "sticky" (ACF(1) > 0.9), standard metrics lie:
 
-| Feature | temporalcv | sklearn | Winner |
-|---------|------------|---------|--------|
-| Gap Enforcement | ✅ Native | ✅ v1.0+ | Both |
-| Window Types | Expanding + Sliding | Expanding only | **temporalcv** |
-| Leakage Detection | 3 validation gates | None | **temporalcv** |
-| Statistical Tests | DM, PT, HAC | None | **temporalcv** |
-| Conformal Prediction | Split + Adaptive | External (MAPIE) | **temporalcv** |
-| Financial CV | Purging + Embargo | None | **temporalcv** |
-| Split Speed | ~0.035 ms | ~0.012 ms | sklearn |
+- **MAE looks great** because predicting "same as yesterday" works
+- **But your model adds no value** over a simple persistence baseline
 
-**Key Insight**: sklearn's `TimeSeriesSplit` handles basic temporal splits well. temporalcv adds the validation layer that catches bugs *before* they corrupt your results.
+temporalcv provides metrics that measure *actual* predictive skill:
+
+| Metric | What It Measures | When To Use |
+|--------|------------------|-------------|
+| **MASE** | Error relative to naive forecast | Always—scale-free comparison |
+| **MC-SS** | Skill only when target moved | High-persistence series |
+| **Direction Brier** | Probabilistic direction accuracy | Directional forecasts |
 
 ---
 
@@ -126,254 +196,154 @@ It provides native Julia implementations of the same core validation gates and s
 pip install temporalcv
 ```
 
-For development:
-```bash
-pip install temporalcv[dev]
-```
-
 ### Optional Dependencies
-
-temporalcv has modular dependencies for specific features:
 
 | Feature | Install Command | When Needed |
 |---------|----------------|-------------|
-| **Benchmarks** | `pip install temporalcv[benchmarks]` | Running M4/M5 benchmarks |
-| **Changepoint** | `pip install temporalcv[changepoint]` | PELT algorithm (requires `ruptures`) |
-| **Model Comparison** | `pip install temporalcv[compare]` | Benchmark runner with DM tests |
-| **Development** | `pip install temporalcv[dev]` | Testing, linting, type checking |
-| **All Features** | `pip install temporalcv[all]` | Everything above |
+| Benchmarks | `pip install temporalcv[benchmarks]` | Running M4/M5 benchmarks |
+| Changepoint | `pip install temporalcv[changepoint]` | PELT algorithm |
+| Comparison | `pip install temporalcv[compare]` | Benchmark runner |
+| Development | `pip install temporalcv[dev]` | Testing, linting |
+| All Features | `pip install temporalcv[all]` | Everything |
 
-**Core dependencies** (always installed):
-- `numpy >= 1.23.0`
-- `scipy >= 1.9.0`
-- `scikit-learn >= 1.1.0`
-- `pandas >= 1.5.0`
+**Core dependencies**: numpy >= 1.23, scipy >= 1.9, scikit-learn >= 1.1, pandas >= 1.5
 
-### Platform Compatibility
-
-| Platform | Status | Tested Versions |
-|----------|--------|-----------------|
-| **Linux** | ✅ Fully supported | Ubuntu 20.04+, Debian 11+ |
-| **macOS** | ✅ Fully supported | macOS 11+ (Intel & Apple Silicon) |
-| **Windows** | ✅ Fully supported | Windows 10+, Windows Server 2019+ |
-
-**Python versions**: 3.9, 3.10, 3.11, 3.12
-
-**CI Matrix**: All combinations tested on every PR via GitHub Actions.
+**Platforms**: Linux, macOS, Windows | **Python**: 3.9, 3.10, 3.11, 3.12
 
 ---
 
-## Quick Example
+## Quick Start: Your First Validated Model
 
 ```python
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
 from temporalcv import run_gates, WalkForwardCV
 from temporalcv.gates import gate_signal_verification, gate_suspicious_improvement
 
-# Validate your model doesn't have leakage
-# Step 1: Compute gate results
-# Note: n_shuffles>=100 required for statistical power in permutation mode (default)
+# 1. Load your data
+X, y = load_your_time_series()  # Shape: (n_samples, n_features), (n_samples,)
+
+# 2. Run validation gates FIRST
+#    This catches leakage before you waste time on CV
+model = RandomForestRegressor(n_estimators=50, random_state=42)
+persistence_mae = np.mean(np.abs(np.diff(y)))  # Naive baseline
+
 gate_results = [
-    gate_signal_verification(my_model, X, y, n_shuffles=100),
-    gate_suspicious_improvement(model_mae, persistence_mae, threshold=0.20),
+    gate_signal_verification(model, X, y, n_shuffles=100),
+    gate_suspicious_improvement(
+        model_score=0.85,           # Your model's score
+        baseline_score=0.70,        # Persistence baseline
+        threshold=0.20              # >20% improvement is suspicious
+    ),
 ]
 
-# Step 2: Aggregate into report
 report = run_gates(gate_results)
 
 if report.status == "HALT":
-    raise ValueError(f"Leakage detected: {report.summary()}")
+    raise ValueError(f"Leakage detected! {report.summary()}")
+elif report.status == "WARN":
+    print(f"Warning: {report.summary()}")
+    # Proceed with caution...
 
-# Walk-forward CV with proper gap enforcement
+# 3. Only if gates pass: Run walk-forward CV
 cv = WalkForwardCV(
     window_type="sliding",
     window_size=104,
-    horizon=2,  # Minimum required separation for 2-step forecasting
-    extra_gap=0,  # Optional: add safety margin (default: 0)
+    horizon=2,
     test_size=1
 )
 
+predictions = []
+actuals = []
+
 for train_idx, test_idx in cv.split(X, y):
-    # Guaranteed: train_idx[-1] + gap < test_idx[0]
     model.fit(X[train_idx], y[train_idx])
-    predictions = model.predict(X[test_idx])
+    pred = model.predict(X[test_idx])
+    predictions.extend(pred)
+    actuals.extend(y[test_idx])
+
+# 4. Evaluate with appropriate metrics
+from temporalcv.metrics import mase, mc_skill_score
+
+print(f"MASE: {mase(actuals, predictions, y):.3f}")
+print(f"MC-SS: {mc_skill_score(actuals, predictions):.3f}")
 ```
-
----
-
-## Features
-
-### Validation Gates
-- **Shuffled target test** - Definitive leakage detection
-- **Synthetic AR(1) bounds** - Theoretical validation
-- **Suspicious improvement detection** - >20% = investigate
-- **Temporal boundary audit** - No future in features
-
-### Statistical Tests
-- **Diebold-Mariano test** - With HAC variance estimation
-- **Pesaran-Timmermann test** - Direction accuracy (3-class)
-
-### Walk-Forward CV
-- Sliding and expanding windows
-- Gap parameter enforcement
-- sklearn-compatible splitter API
-
-### High-Persistence Metrics
-- **MC-SS** - Move-Conditional Skill Score
-- **Move-only MAE** - Error when target moved
-- **Direction Brier** - Probabilistic direction accuracy
 
 ---
 
 ## Examples
 
-21 real-world case studies organized by use case. See [Examples Index](docs/tutorials/examples_index.md) for full descriptions.
+21 real-world case studies organized by use case.
 
-### Core Concepts
+**[Full Examples Gallery](https://temporalcv.readthedocs.io/en/latest/auto_examples/)**
 
-| # | Example | Key Concept |
-|---|---------|-------------|
-| 00 | [Quickstart](examples/00_quickstart.py) | Basic WalkForwardCV + validation gates |
-| 01 | [Leakage Detection](examples/01_leakage_detection.py) | Shuffled target test catches lookahead bias |
-| 02 | [Walk-Forward CV](examples/02_walk_forward_cv.py) | Gap enforcement for h-step forecasting |
-| 03 | [Statistical Tests](examples/03_statistical_tests.py) | DM test: is improvement significant? |
-| 04 | [High Persistence](examples/04_high_persistence.py) | MASE metrics for sticky series |
-| 05 | [Conformal Prediction](examples/05_conformal_prediction.py) | Adaptive intervals under distribution shift |
+| Category | Examples | Key Learning |
+|----------|----------|--------------|
+| Core Concepts | 00-05 | Gates, CV, statistical tests, metrics, conformal |
+| Production Workflows | 06-10 | Financial CV, nested tuning, multi-horizon, pipelines |
+| Domain-Specific | 11-15 | Web traffic, IoT sensors, macro GDP, energy, crypto |
 
-### Production Workflows
+### Learn from Mistakes
 
-| # | Example | Key Concept |
-|---|---------|-------------|
-| 06 | [Financial CV](examples/06_financial_cv.py) | PurgedKFold, embargo, label overlap |
-| 07 | [Nested CV Tuning](examples/07_nested_cv_tuning.py) | Hyperparameter selection without leakage |
-| 08 | [Regime Stratified](examples/08_regime_stratified.py) | Volatility regimes, stratified gates |
-| 09 | [Multi-Horizon](examples/09_multi_horizon.py) | `compare_horizons()`, predictability horizon |
-| 10 | [End-to-End Pipeline](examples/10_end_to_end_pipeline.py) | Full data→gates→CV→deploy |
-
-### Domain-Specific
-
-| # | Example | Domain | Challenge |
-|---|---------|--------|-----------|
-| 11 | [Web Traffic](examples/11_web_traffic.py) | Web/Tech | Weekly seasonality, MASE |
-| 12 | [IoT Sensor](examples/12_iot_sensor.py) | IoT | Anomaly-aware features |
-| 13 | [Macro GDP](examples/13_macro_gdp.py) | Macro | Low-frequency, CW test |
-| 14 | [Energy Load](examples/14_energy_load.py) | Energy | Calendar effects, multi-step |
-| 15 | [Crypto Volatility](examples/15_crypto_volatility.py) | Crypto | Adaptive conformal |
-
-### ⚠️ Failure Cases (Learn from Mistakes)
+These examples show **what goes wrong** so you can avoid the same traps:
 
 | # | Example | What Goes Wrong |
 |---|---------|-----------------|
-| 16 | [Rolling Stats](examples/16_failure_rolling_stats.py) | Leakage from `.rolling()` without `.shift()` |
+| 16 | [Rolling Stats](examples/16_failure_rolling_stats.py) | `.rolling()` without `.shift()` leaks future |
 | 17 | [Threshold Leak](examples/17_failure_threshold_leak.py) | Regime boundary computed on full data |
-| 18 | [Nested DM Test](examples/18_failure_nested_dm.py) | DM bias for nested models (use CW test) |
+| 18 | [Nested DM Test](examples/18_failure_nested_dm.py) | DM test bias for nested models |
 | 19 | [Missing Gap](examples/19_failure_missing_gap.py) | No gap for h-step forecasting |
 | 20 | [KFold Trap](examples/20_failure_kfold.py) | 47.8% fake improvement from random CV |
-
-See [Failure Cases Guide](docs/tutorials/failure_cases.md) for detailed lessons.
-
-**Interactive Demo**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/brandonmbehring-dev/temporalcv/blob/main/notebooks/demo.ipynb)
-
----
-
-## Benchmark Comparison
-
-### Feature Matrix
-
-| Feature | temporalcv | sklearn | sktime | Darts |
-|---------|------------|---------|--------|-------|
-| **Gap enforcement** | ✅ Built-in | ❌ Manual | ❌ Manual | ❌ Manual |
-| **Leakage detection** | ✅ Gates | ❌ None | ❌ None | ❌ None |
-| **Horizon validation** | ✅ Warnings | ❌ None | ❌ None | ❌ None |
-| **Statistical tests (DM)** | ✅ HAC variance | ❌ None | ✅ Basic | ❌ None |
-| **Conformal prediction** | ✅ Adaptive | ❌ None | ❌ None | ✅ Split |
-| **sklearn compatible** | ✅ Full | ✅ Native | ✅ Full | ❌ Partial |
-
-### Why Not Just sklearn's TimeSeriesSplit?
-
-```python
-from sklearn.model_selection import TimeSeriesSplit
-
-# sklearn: No gap, no horizon validation
-cv = TimeSeriesSplit(n_splits=5)  # Target leakage possible for h>1
-
-# temporalcv: Gap enforcement + validation
-from temporalcv import WalkForwardCV
-cv = WalkForwardCV(n_splits=5, horizon=2, extra_gap=0)  # total_separation = horizon + extra_gap
-```
-
-### Benchmark Runner
-
-Compare models across datasets:
-
-```python
-from temporalcv.benchmarks import create_synthetic_dataset
-from temporalcv.compare import run_benchmark_suite, NaiveAdapter
-
-datasets = [create_synthetic_dataset(seed=i) for i in range(3)]
-report = run_benchmark_suite(datasets, [NaiveAdapter()], include_dm_test=True)
-print(report.to_markdown())
-```
 
 ---
 
 ## Documentation
 
-### Getting Started
-- [**Quickstart Guide**](docs/quickstart.md) - Get started in 5 minutes
+**[temporalcv.readthedocs.io](https://temporalcv.readthedocs.io)**
 
-### Tutorials
-- [Leakage Detection](docs/tutorials/leakage_detection.md) - Catch data leakage with validation gates
-- [Walk-Forward CV](docs/tutorials/walk_forward_cv.md) - Proper temporal cross-validation
-- [High-Persistence Metrics](docs/tutorials/high_persistence.md) - Metrics for sticky series
-- [Uncertainty Quantification](docs/tutorials/uncertainty.md) - Prediction intervals with coverage guarantees
+### Learning Path
+
+| If You Want To... | Start Here |
+|-------------------|------------|
+| Get started fast | [Quickstart Guide](https://temporalcv.readthedocs.io/en/latest/quickstart.html) |
+| Understand leakage | [Leakage Detection Tutorial](https://temporalcv.readthedocs.io/en/latest/tutorials/leakage_detection.html) |
+| See real examples | [Examples Gallery](https://temporalcv.readthedocs.io/en/latest/auto_examples/) |
+| Look up API | [API Reference](https://temporalcv.readthedocs.io/en/latest/api/) |
 
 ### API Reference
-- [Validation Gates](docs/api/gates.md) - HALT/PASS/WARN framework
-- [Walk-Forward CV](docs/api/cv.md) - sklearn-compatible temporal CV
-- [Statistical Tests](docs/api/statistical_tests.md) - DM test, PT test, HAC variance
-- [High-Persistence Metrics](docs/api/persistence.md) - MC-SS, move-conditional MAE
-- [Regime Classification](docs/api/regimes.md) - Volatility and direction regimes
-- [Conformal Prediction](docs/api/conformal.md) - Distribution-free intervals
-- [Bagging](docs/api/bagging.md) - Time-series-aware bagging
-- [Event Metrics](docs/api/metrics.md) - Brier score, PR-AUC
 
-### Internal
-- [Planning Documentation](docs/plans/INDEX.md)
-- [Ecosystem Gap Analysis](docs/plans/reference/ecosystem_gaps.md)
+- [Validation Gates](https://temporalcv.readthedocs.io/en/latest/api/gates.html) — HALT/PASS/WARN framework
+- [Walk-Forward CV](https://temporalcv.readthedocs.io/en/latest/api/cv.html) — sklearn-compatible temporal CV
+- [Statistical Tests](https://temporalcv.readthedocs.io/en/latest/api/statistical_tests.html) — DM test, PT test, HAC variance
+- [Metrics](https://temporalcv.readthedocs.io/en/latest/api/metrics.html) — MASE, MC-SS, high-persistence metrics
+- [Conformal Prediction](https://temporalcv.readthedocs.io/en/latest/api/conformal.html) — Distribution-free intervals
 
-### Validation & Quality Assurance
+---
 
-temporalcv's statistical computations are validated against established libraries and academic references:
+## Validation & Quality
 
-| Validation Type | Reference Source | What It Validates |
-|-----------------|------------------|-------------------|
-| **DM Test golden values** | R `forecast::dm.test()` | Statistic and p-value computation |
-| **Monte Carlo Type I error** | 500 simulations | 5% nominal error rate (±2%) |
-| **Conformal coverage** | Synthetic AR(1) | 95% nominal coverage achieved |
-| **Harvey small-sample** | Harvey (1997) | Student-t p-value correction |
+temporalcv's statistical computations are validated against established references:
 
-**Test Coverage**:
-- **83% line coverage** across 318 tests
-- **Core modules**: 89-94% coverage (gates, CV, statistical tests)
-- **6-layer validation architecture**: Unit → Integration → Anti-pattern → Property → Monte Carlo → Benchmark
+| Validation | Reference | What It Checks |
+|------------|-----------|----------------|
+| DM test golden values | R `forecast::dm.test()` | Statistic and p-value |
+| Type I error | 500 Monte Carlo sims | 5% nominal rate (±2%) |
+| Conformal coverage | Synthetic AR(1) | 95% nominal achieved |
+| Benchmark | M4 Competition | 4,773 series, 6 frequencies |
 
-**Benchmark Results**:
-- Validated on **M4 Competition** (4,773 series across 6 frequencies)
-- See [Full Results](docs/benchmarks.md) | [Methodology](docs/benchmarks/methodology.md)
+**Test Coverage**: 83% across 318 tests
 
-For complete validation evidence, see [Testing Strategy](docs/testing_strategy.md) and [Validation Evidence](docs/validation_evidence.md).
+For details: [Testing Strategy](https://temporalcv.readthedocs.io/en/latest/testing_strategy.html) | [Validation Evidence](https://temporalcv.readthedocs.io/en/latest/validation_evidence.html)
 
-### Help & Support
-- [**Troubleshooting Guide**](docs/troubleshooting.md) - Common issues and solutions
-- [**Testing Strategy**](docs/testing_strategy.md) - How temporalcv is tested
-- [**Benchmark Methodology**](docs/benchmarks/methodology.md) - How benchmark results are generated
-- [**GitHub Issues**](https://github.com/brandonmbehring-dev/temporalcv/issues) - Report bugs or request features
+---
+
+## Julia Implementation
+
+The Julia version is available at **[temporalcv.jl](https://github.com/brandondebehring/temporalcv.jl)** with native implementations of validation gates and statistical tests.
 
 ---
 
 ## Citation
-
-If you use temporalcv in your research, please cite:
 
 ```bibtex
 @software{temporalcv2025,
@@ -386,13 +356,13 @@ If you use temporalcv in your research, please cite:
 }
 ```
 
-See [CITATION.cff](CITATION.cff) for additional citation formats.
+See [CITATION.cff](CITATION.cff) for additional formats.
 
 ---
 
 ## License
 
-MIT License - see [LICENSE](LICENSE)
+MIT License — see [LICENSE](LICENSE)
 
 ---
 
