@@ -86,6 +86,7 @@ Installation
    api/metrics
    api/benchmarks
    api/compare
+   api/viz
 
 .. toctree:
    :maxdepth: 1
