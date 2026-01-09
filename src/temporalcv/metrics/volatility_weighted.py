@@ -227,7 +227,7 @@ class GARCHVolatility:
         # Extract conditional volatility
         volatility = result.conditional_volatility / scale
 
-        return volatility
+        return np.asarray(volatility, dtype=np.float64)
 
 
 # =============================================================================

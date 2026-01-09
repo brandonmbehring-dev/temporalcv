@@ -45,7 +45,6 @@ jobs:
 
       - name: Type check
         run: mypy src/temporalcv --show-error-codes
-        continue-on-error: true  # 17 pre-existing type errors to fix in separate PR
 
       - name: Lint
         run: ruff check src/temporalcv tests/

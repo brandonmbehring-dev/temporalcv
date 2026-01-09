@@ -190,7 +190,7 @@ class MultiSeriesAdapter(ForecastAdapter):
 
         results = Parallel(n_jobs=self._n_jobs)(delayed(fit_single)(i) for i in range(n_series))
 
-        return cast(np.ndarray, np.array(results))
+        return np.array(results)
 
     def get_params(self) -> dict[str, Any]:
         """

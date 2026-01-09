@@ -3004,8 +3004,8 @@ def reality_check_test(
             max_stat = max(max_stat, stat_boot)
         bootstrap_stats.append(max_stat)
 
-    bootstrap_stats = np.array(bootstrap_stats)
-    pvalue = float(np.mean(bootstrap_stats >= v_rc))
+    bootstrap_stats_arr = np.array(bootstrap_stats)
+    pvalue = float(np.mean(bootstrap_stats_arr >= v_rc))
 
     return RealityCheckResult(
         statistic=v_rc,

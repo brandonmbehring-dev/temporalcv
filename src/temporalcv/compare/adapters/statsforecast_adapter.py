@@ -14,7 +14,7 @@ Example
 
 from __future__ import annotations
 
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
 import numpy as np
 
@@ -193,7 +193,7 @@ class StatsforecastAdapter(ForecastAdapter):
         forecast = sf.predict(h=test_size)
         predictions = forecast[self._model_name].values
 
-        return cast(np.ndarray, np.asarray(predictions, dtype=np.float64))
+        return np.asarray(predictions, dtype=np.float64)
 
     def get_params(self) -> dict[str, Any]:
         """Return model parameters."""

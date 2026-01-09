@@ -194,15 +194,15 @@ def gap_sensitivity_analysis(
                 fold_errors = y[test_idx] - preds
                 errors.extend(fold_errors)
 
-            errors = np.array(errors)
+            errors_arr = np.array(errors)
 
             # Compute metric
             if metric == "mae":
-                metric_value = float(np.mean(np.abs(errors)))
+                metric_value = float(np.mean(np.abs(errors_arr)))
             elif metric == "rmse":
-                metric_value = float(np.sqrt(np.mean(errors**2)))
+                metric_value = float(np.sqrt(np.mean(errors_arr**2)))
             else:  # mse
-                metric_value = float(np.mean(errors**2))
+                metric_value = float(np.mean(errors_arr**2))
 
             metrics_list.append(metric_value)
 

@@ -404,10 +404,10 @@ class NaiveAdapter(ForecastAdapter):
         if train_values.ndim > 1:
             # Multi-series: use last value per series
             last_values = train_values[:, -1]
-            return cast(np.ndarray, np.tile(last_values.reshape(-1, 1), (1, test_size)))
+            return np.tile(last_values.reshape(-1, 1), (1, test_size))
         else:
             last_value = train_values[-1]
-            return cast(np.ndarray, np.full(test_size, last_value))
+            return np.full(test_size, last_value)
 
 
 class SeasonalNaiveAdapter(ForecastAdapter):

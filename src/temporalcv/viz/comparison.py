@@ -309,7 +309,7 @@ class MetricComparisonDisplay(BaseDisplay):
                     offset = val * 0.02 if val >= 0 else val * 0.02
                     ax.text(
                         val + offset,
-                        pos,
+                        float(pos),
                         f"{val:.3f}",
                         va="center",
                         ha=ha,
@@ -335,7 +335,7 @@ class MetricComparisonDisplay(BaseDisplay):
             if show_values:
                 for _i, (pos, val) in enumerate(zip(positions, values)):
                     ax.text(
-                        pos,
+                        float(pos),
                         val + max(values) * 0.02,
                         f"{val:.3f}",
                         ha="center",
@@ -505,7 +505,7 @@ class MetricComparisonDisplay(BaseDisplay):
                 ha = "left" if val >= 0 else "right"
                 ax.text(
                     val + (1 if val >= 0 else -1),
-                    pos,
+                    float(pos),
                     f"{val:+.1f}%",
                     va="center",
                     ha=ha,

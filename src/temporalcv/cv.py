@@ -43,7 +43,7 @@ References
 from __future__ import annotations
 
 import logging
-from collections.abc import Generator
+from collections.abc import Generator, Sized
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
@@ -606,7 +606,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
         """Get number of samples from array-like."""
         if hasattr(X, "shape"):
             return int(X.shape[0])
-        return len(X)
+        return len(cast(Sized, X))
 
     def _calculate_splits(self, n_samples: int) -> list[tuple[np.ndarray, np.ndarray]]:
         """
@@ -984,7 +984,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
         test : np.ndarray
             Test set indices
         """
-        n_samples = len(X) if not hasattr(X, "shape") else X.shape[0]
+        n_samples = len(cast(Sized, X)) if not hasattr(X, "shape") else X.shape[0]
         folds = self._calculate_fold_indices(n_samples)
 
         # Skip fold 0 - no training data available
@@ -1129,7 +1129,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
         List[Tuple[int, int]]
             List of (start, end) for each fold
         """
-        n_samples = len(X) if not hasattr(X, "shape") else X.shape[0]
+        n_samples = len(cast(Sized, X)) if not hasattr(X, "shape") else X.shape[0]
         return self._calculate_fold_indices(n_samples)
 
     def __repr__(self) -> str:
