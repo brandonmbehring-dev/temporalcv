@@ -213,7 +213,9 @@ class ResidualBootstrap(BootstrapStrategy):
             # Compute bootstrap indices using MBB on residuals
             indices_raw = (all_block_starts[i, :, np.newaxis] + block_offsets).ravel()
             # Ensure exactly n indices (truncate if needed)
-            indices: np.ndarray = np.resize(indices_raw, n) if len(indices_raw) < n else indices_raw[:n]
+            indices: np.ndarray = (
+                np.resize(indices_raw, n) if len(indices_raw) < n else indices_raw[:n]
+            )
 
             # Bootstrap residuals only
             residual_boot = residual[indices]

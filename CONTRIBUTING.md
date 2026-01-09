@@ -12,9 +12,12 @@ cd temporalcv
 # Install in development mode
 pip install -e ".[dev]"
 
-# Install pre-commit hooks
+# (Optional) Install pre-commit hooks for local checks
 pre-commit install
 ```
+
+**Pre-commit hooks** run ruff (lint + format) and mypy (type check) before each commit.
+This catches issues locally before CI. If you skip this step, CI will still catch issues on push.
 
 ## Running Tests
 
