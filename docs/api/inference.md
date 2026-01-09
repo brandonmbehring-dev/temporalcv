@@ -71,11 +71,68 @@ print(f"Mean MAE: {result.statistic:.4f}")
 print(f"95% CI: [{result.ci_lower:.4f}, {result.ci_upper:.4f}]")
 ```
 
+## Block Bootstrap Confidence Intervals
+
+For time series data, use block bootstrap to preserve temporal dependence:
+
+```python
+from temporalcv.inference import block_bootstrap_ci
+import numpy as np
+
+# Time series data with autocorrelation
+np.random.seed(42)
+n = 200
+errors = np.zeros(n)
+for t in range(1, n):
+    errors[t] = 0.7 * errors[t-1] + np.random.randn()
+
+# Compute block bootstrap CI for the mean
+result = block_bootstrap_ci(
+    data=errors,
+    statistic_func=np.mean,
+    n_bootstrap=1000,
+    block_length='auto',  # Uses n^(1/3) rule
+    confidence_level=0.95,
+)
+
+print(f"Point estimate: {result.statistic:.4f}")
+print(f"95% CI: [{result.ci_lower:.4f}, {result.ci_upper:.4f}]")
+print(f"Block length used: {result.block_length}")
+```
+
+## Comparing Two Models with Bootstrap
+
+```python
+from temporalcv.inference import wild_cluster_bootstrap
+import numpy as np
+
+# MAE from two models across 10 CV folds
+model_a_maes = np.array([0.45, 0.52, 0.48, 0.51, 0.47, 0.49, 0.53, 0.46, 0.50, 0.48])
+model_b_maes = np.array([0.42, 0.48, 0.44, 0.46, 0.43, 0.45, 0.49, 0.42, 0.46, 0.44])
+
+# Test if Model B is significantly better
+differences = model_a_maes - model_b_maes  # Positive = B is better
+
+result = wild_cluster_bootstrap(differences, n_bootstrap=1000)
+
+print(f"Mean improvement: {result.statistic:.4f}")
+print(f"95% CI: [{result.ci_lower:.4f}, {result.ci_upper:.4f}]")
+print(f"p-value (one-sided): {result.p_value:.4f}")
+
+if result.ci_lower > 0:
+    print("Model B is significantly better (CI excludes zero)")
+```
+
 ## When to Use
 
 - **Few CV folds** (< 20): Asymptotic inference unreliable
 - **Dependent folds**: Standard errors underestimate uncertainty
 - **Confidence intervals**: When point estimates alone are insufficient
+
+## See Also
+
+- [Statistical Tests](statistical_tests.md) - DM test for model comparison
+- [Wild Bootstrap](inference.md#wild-bootstrap) - Cluster-robust inference
 
 ## References
 

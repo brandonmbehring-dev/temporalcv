@@ -33,7 +33,7 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Run tests
-        run: pytest tests/ -v --cov=temporalcv --cov-report=xml --ignore=tests/benchmarks/
+        run: pytest tests/ -v --cov=temporalcv --cov-report=xml --cov-fail-under=80 --ignore=tests/benchmarks/
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
