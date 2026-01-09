@@ -46,7 +46,7 @@ dev = [
     "pytest-cov>=4.0",
     "pytest-benchmark>=4.0",
     "hypothesis>=6.0",
-    "mypy>=1.0",
+    "mypy>=1.0,<2.0",
     "ruff>=0.1.0",
     "pre-commit>=3.0",
     "pip-audit>=2.0",
@@ -147,6 +147,7 @@ module = [
     "ruptures.*",
     "pandas.*",
     "arch.*",
+    "matplotlib.*",
 ]
 ignore_missing_imports = true
 
