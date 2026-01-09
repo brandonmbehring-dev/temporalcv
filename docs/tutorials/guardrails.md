@@ -14,7 +14,7 @@ Validation gates are **pre-flight checks** for your ML pipeline. They catch prob
 
 ## The Gate Decision Tree
 
-```mermaid
+```{mermaid}
 graph TD
     A[Start: New ML Pipeline] --> B{Running gates?}
     B -->|No| C[Run gate_signal_verification first]

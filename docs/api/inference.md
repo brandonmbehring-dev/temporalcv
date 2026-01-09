@@ -132,7 +132,7 @@ if result.ci_lower > 0:
 ## See Also
 
 - [Statistical Tests](statistical_tests.md) - DM test for model comparison
-- [Wild Bootstrap](inference.md#wild-bootstrap) - Cluster-robust inference
+- [Wild Cluster Bootstrap](#wild_cluster_bootstrap) - Cluster-robust inference
 
 ## References
 

@@ -8,7 +8,7 @@ Distribution-free prediction intervals with coverage guarantees.
 
 ## When to Use
 
-```mermaid
+```{mermaid}
 graph TD
     A[Need prediction intervals?] --> B{Data stationarity?}
 

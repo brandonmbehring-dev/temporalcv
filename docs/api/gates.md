@@ -6,7 +6,7 @@ Three-stage validation framework with HALT/PASS/WARN/SKIP decisions for leakage 
 
 ## When to Use
 
-```mermaid
+```{mermaid}
 graph TD
     A[New Pipeline] --> B{Which leakage type?}
 

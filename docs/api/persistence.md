@@ -6,7 +6,7 @@ Specialized tools for evaluating forecasts on high-persistence time series.
 
 ## When to Use
 
-```mermaid
+```{mermaid}
 graph TD
     A[Evaluate forecasts] --> B{Check ACF at lag 1}
 

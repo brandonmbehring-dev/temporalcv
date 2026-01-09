@@ -131,6 +131,7 @@ Visualize prediction intervals with coverage highlighting.
 .. autoclass:: temporalcv.viz.PredictionIntervalDisplay
    :members:
    :special-members: __init__
+   :exclude-members: coverage_
 ```
 
 **Example:**

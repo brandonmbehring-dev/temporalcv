@@ -248,7 +248,7 @@ X, y_aligned = create_seasonal_features(
 
 ## Decision Flow
 
-```mermaid
+```{mermaid}
 graph TD
     A[Start: New Time Series] --> B[Compute ACF/PACF]
     B --> C{High persistence?<br>ACF(1) > 0.8}

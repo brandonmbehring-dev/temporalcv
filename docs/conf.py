@@ -140,6 +140,7 @@ suppress_warnings = [
     "myst.header",
     "toc.not_included",  # Internal planning/knowledge docs not in toctree
     "docutils",  # Transition issues in internal docs
+    "ref.python",  # Duplicate object warnings from autodoc
 ]
 
 # -- Sphinx Gallery settings -------------------------------------------------

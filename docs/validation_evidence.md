@@ -102,7 +102,7 @@ Uses [Hypothesis](https://hypothesis.readthedocs.io/) for exhaustive property te
 
 ### Suspicious Improvement Gate
 
-```python
+```text
 # These properties are verified:
 - Zero or negative improvement → never HALT
 - >90% improvement → always HALT

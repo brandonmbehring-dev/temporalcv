@@ -6,7 +6,7 @@ Statistical tests for forecast evaluation with proper corrections.
 
 ## When to Use
 
-```mermaid
+```{mermaid}
 graph TD
     A[Compare forecasts] --> B{Model relationship?}
 

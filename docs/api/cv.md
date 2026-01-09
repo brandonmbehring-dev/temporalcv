@@ -6,7 +6,7 @@ sklearn-compatible temporal cross-validation with gap enforcement for h-step for
 
 ## When to Use
 
-```mermaid
+```{mermaid}
 graph TD
     A[Time Series CV?] --> B{Data characteristics}
 
