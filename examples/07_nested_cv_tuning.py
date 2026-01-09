@@ -36,8 +36,11 @@ from sklearn.model_selection import GridSearchCV, cross_val_score
 
 # temporalcv imports
 from temporalcv import WalkForwardCV
+from temporalcv.viz import CVFoldsDisplay, MetricComparisonDisplay, apply_tufte_style
 
 warnings.filterwarnings("ignore", category=UserWarning)
+
+# sphinx_gallery_thumbnail_number = 1
 
 # =============================================================================
 # PART 1: Generate Synthetic Time Series Data
@@ -445,3 +448,39 @@ print("""
 print("\n" + "=" * 70)
 print("Example completed successfully!")
 print("=" * 70)
+
+# %%
+# Nested CV Structure Visualization
+# ----------------------------------
+# This shows the nested cross-validation structure:
+# - Outer loop: evaluation (5 folds)
+# - Inner loop (not shown): hyperparameter tuning within each outer train set
+
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(10, 4))
+
+# Show outer CV structure
+cv = WalkForwardCV(n_splits=3, window_type="expanding", test_size=100)
+CVFoldsDisplay.from_cv(cv, X, y).plot(
+    ax=ax, title="Nested CV: Outer Loop (Evaluation)"
+)
+plt.tight_layout()
+plt.show()
+
+# %%
+# Score Comparison: Nested vs Non-Nested
+# --------------------------------------
+# Non-nested CV gives optimistically biased scores because hyperparameter
+# selection uses the same data as evaluation.
+
+results = {
+    "Non-Nested\n(GridSearchCV)": {"RMSE": non_nested_score},
+    "Nested\n(Proper)": {"RMSE": nested_score},
+}
+
+display = MetricComparisonDisplay.from_dict(
+    results, lower_is_better={"RMSE": True}
+)
+display.plot(title="Nested vs Non-Nested CV Scores", show_values=True)
+plt.show()

@@ -54,8 +54,11 @@ from sklearn.metrics import mean_absolute_error
 
 from temporalcv.cv import SplitInfo, WalkForwardCV
 from temporalcv.gates import gate_temporal_boundary
+from temporalcv.viz import CVFoldsDisplay, apply_tufte_style
 
 warnings.filterwarnings("ignore")
+
+# sphinx_gallery_thumbnail_number = 1
 
 
 # =============================================================================
@@ -358,5 +361,63 @@ def demonstrate_walk_forward_cv():
 """)
 
 
+def visualize_walk_forward_cv():
+    """
+    Visualize walk-forward CV using temporalcv.viz module.
+    """
+    import matplotlib.pyplot as plt
+
+    # Load data and create features
+    series, horizon, _ = load_forecasting_data()
+    X, y = create_lagged_features(series, n_lags=12)
+
+    # %%
+    # Walk-Forward CV Fold Structure
+    # -------------------------------
+    # This visualization shows how WalkForwardCV preserves temporal ordering:
+    # training data (blue) always precedes the gap (red) and test data (orange).
+
+    # Create expanding window CV
+    cv = WalkForwardCV(
+        n_splits=5,
+        window_type="expanding",
+        extra_gap=0,
+        test_size=12,
+    )
+
+    # Use CVFoldsDisplay for Tufte-styled visualization
+    display = CVFoldsDisplay.from_cv(cv, X, y)
+    display.plot(title="Walk-Forward CV: Expanding Window")
+    plt.show()
+
+    # %%
+    # Expanding vs Sliding Window Comparison
+    # --------------------------------------
+    # Expanding windows grow over time (using all history),
+    # while sliding windows maintain fixed size.
+
+    fig, axes = plt.subplots(2, 1, figsize=(10, 6))
+
+    # Expanding window
+    cv_expanding = WalkForwardCV(
+        n_splits=5, window_type="expanding", window_size=60, test_size=12
+    )
+    CVFoldsDisplay.from_cv(cv_expanding, X).plot(
+        ax=axes[0], title="Expanding Window (grows over time)"
+    )
+
+    # Sliding window
+    cv_sliding = WalkForwardCV(
+        n_splits=5, window_type="sliding", window_size=60, test_size=12
+    )
+    CVFoldsDisplay.from_cv(cv_sliding, X).plot(
+        ax=axes[1], title="Sliding Window (fixed size)"
+    )
+
+    plt.tight_layout()
+    plt.show()
+
+
 if __name__ == "__main__":
     demonstrate_walk_forward_cv()
+    visualize_walk_forward_cv()

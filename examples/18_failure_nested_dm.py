@@ -44,6 +44,9 @@ from sklearn.linear_model import Ridge
 
 # temporalcv imports
 from temporalcv.statistical_tests import dm_test, cw_test
+from temporalcv.viz import MetricComparisonDisplay, apply_tufte_style
+
+# sphinx_gallery_thumbnail_number = 1
 
 # =============================================================================
 # PART 1: The Setup — Nested Model Comparison
@@ -434,3 +437,38 @@ The pattern: ALWAYS check if models are nested before comparing.
 print("\n" + "=" * 70)
 print("Example 18 complete.")
 print("=" * 70)
+
+# %%
+# Monte Carlo Results: DM vs CW Test Size
+# ----------------------------------------
+# Under the null hypothesis (beta = 0), a correctly sized test
+# should reject at the nominal rate (5%). The DM test over-rejects
+# for nested models, while the CW test maintains proper size.
+
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(8, 5))
+
+# Results
+tests = ["DM Test\n(WRONG for nested)", "CW Test\n(CORRECT)"]
+rejection_rates = [dm_rejection_rate * 100, cw_rejection_rate * 100]
+colors = ["#c44e52", "#55a868"]  # Red for wrong, green for correct
+
+bars = ax.bar(tests, rejection_rates, color=colors, alpha=0.8, width=0.5)
+ax.axhline(5, color="#4a4a4a", linestyle="--", linewidth=2, label="Nominal α = 5%")
+
+# Add value labels
+for bar, rate in zip(bars, rejection_rates):
+    ax.text(
+        bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+        f"{rate:.1f}%", ha="center", va="bottom", fontsize=12
+    )
+
+ax.set_ylabel("Rejection Rate (%)")
+ax.set_title("Test Size Under H0 (Nested Models)", loc="left")
+ax.set_ylim(0, max(rejection_rates) * 1.3)
+ax.legend(loc="upper right")
+
+apply_tufte_style(ax)
+plt.tight_layout()
+plt.show()

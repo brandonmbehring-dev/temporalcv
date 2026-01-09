@@ -39,6 +39,8 @@ import numpy as np
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import Ridge
 
+from temporalcv.viz import apply_tufte_style
+
 warnings.filterwarnings("ignore")
 
 
@@ -353,6 +355,10 @@ for bar, mase in zip(bars2, mases):
                  xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
                  xytext=(0, 3), textcoords="offset points",
                  ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+# Apply Tufte styling
+for ax in axes:
+    apply_tufte_style(ax)
 
 plt.tight_layout()
 plt.suptitle('High-Persistence Series: Why MASE Matters More Than MAE', y=1.02, fontsize=14)

@@ -38,6 +38,7 @@ from sklearn.linear_model import LinearRegression
 # temporalcv imports
 from temporalcv import WalkForwardCV
 from temporalcv.gates import gate_suspicious_improvement, run_gates, GateResult
+from temporalcv.viz import apply_tufte_style
 
 # =============================================================================
 # PART 1: Generate Time Series Data
@@ -394,6 +395,10 @@ ax2.set_xticks([])
 for i, (status, label) in enumerate(zip(gate_statuses, gate_labels)):
     ax2.text(0.5, i, label, ha='center', va='center', fontsize=14,
              fontweight='bold', color='white')
+
+# Apply Tufte styling
+for ax in axes:
+    apply_tufte_style(ax)
 
 plt.tight_layout()
 plt.suptitle('FAILURE CASE: Rolling Features Without .shift()', y=1.02, fontsize=14)

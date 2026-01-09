@@ -58,6 +58,7 @@ from temporalcv.conformal import (
     walk_forward_conformal,
 )
 from temporalcv.cv import WalkForwardCV
+from temporalcv.viz import apply_tufte_style
 
 warnings.filterwarnings("ignore")
 
@@ -444,7 +445,10 @@ ax2.set_xlabel('Test Index')
 ax2.set_ylabel('Interval Width')
 ax2.set_title('Prediction Interval Width (Constant for Split Conformal)')
 ax2.legend(loc='upper right')
-ax2.grid(True, alpha=0.3)
+
+# Apply Tufte styling (remove grid, minimize spines)
+for ax in axes:
+    apply_tufte_style(ax)
 
 plt.tight_layout()
 plt.suptitle('Conformal Prediction for Time Series Forecasting', y=1.02, fontsize=14)

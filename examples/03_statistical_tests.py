@@ -43,6 +43,8 @@ from sklearn.linear_model import Ridge
 
 warnings.filterwarnings("ignore")
 
+# sphinx_gallery_thumbnail_number = 1
+
 
 # =============================================================================
 # Generate Test Data
@@ -409,5 +411,79 @@ def demonstrate_statistical_tests():
 """)
 
 
+def visualize_statistical_tests():
+    """
+    Visualize test results using temporalcv.viz module.
+    """
+    import matplotlib.pyplot as plt
+
+    from temporalcv.viz import MetricComparisonDisplay, apply_tufte_style
+
+    # Generate data
+    actual, persistence_preds, model_preds = generate_ar1_with_forecasts(n=300)
+    model_errors = actual - model_preds
+    persistence_errors = actual - persistence_preds
+
+    # Calculate metrics
+    model_mae = float(np.mean(np.abs(model_errors)))
+    model_rmse = float(np.sqrt(np.mean(model_errors**2)))
+    persistence_mae = float(np.mean(np.abs(persistence_errors)))
+    persistence_rmse = float(np.sqrt(np.mean(persistence_errors**2)))
+
+    # Run DM tests
+    dm_mae = dm_test(model_errors, persistence_errors, h=1, loss="absolute")
+    dm_mse = dm_test(model_errors, persistence_errors, h=1, loss="squared")
+
+    # %%
+    # Model Comparison: MAE and RMSE
+    # ------------------------------
+    # Comparing forecast errors between model and persistence baseline.
+    # Even if one model appears better, the DM test tells us if the
+    # difference is statistically significant.
+
+    results = {
+        "Model": {"MAE": model_mae, "RMSE": model_rmse},
+        "Persistence": {"MAE": persistence_mae, "RMSE": persistence_rmse},
+    }
+
+    display = MetricComparisonDisplay.from_dict(
+        results, baseline="Persistence", lower_is_better={"MAE": True, "RMSE": True}
+    )
+    display.plot(title="Forecast Error Comparison", show_values=True)
+    plt.show()
+
+    # %%
+    # DM Test P-Values Across Horizons
+    # --------------------------------
+    # The Diebold-Mariano test becomes more conservative (higher p-values)
+    # at longer horizons due to HAC variance adjustment.
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    horizons = [1, 2, 3, 4, 5, 6]
+    p_values = []
+    for h in horizons:
+        dm_h = dm_test(model_errors, persistence_errors, h=h, loss="squared")
+        p_values.append(dm_h["pvalue"])
+
+    bars = ax.bar(horizons, p_values, color="#4a4a4a", alpha=0.8)
+    ax.axhline(0.05, color="#c44e52", linestyle="--", linewidth=2, label="α = 0.05")
+
+    # Color significant bars green
+    for i, (h, p) in enumerate(zip(horizons, p_values)):
+        if p < 0.05:
+            bars[i].set_color("#55a868")
+
+    ax.set_xlabel("Forecast Horizon (h)")
+    ax.set_ylabel("p-value")
+    ax.set_title("DM Test P-Values by Horizon", loc="left")
+    ax.legend(loc="upper left")
+
+    apply_tufte_style(ax)
+    plt.tight_layout()
+    plt.show()
+
+
 if __name__ == "__main__":
     demonstrate_statistical_tests()
+    visualize_statistical_tests()

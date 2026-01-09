@@ -22,6 +22,7 @@ from sklearn.linear_model import Ridge
 
 from temporalcv.cv import WalkForwardCV
 from temporalcv.gates import gate_signal_verification, gate_suspicious_improvement, run_gates
+from temporalcv.viz import apply_tufte_style
 
 # Generate simple time series data
 rng = np.random.default_rng(42)
@@ -100,6 +101,9 @@ ax.set_yticklabels([f'Fold {i+1}' for i in range(5)])
 ax.set_title('Walk-Forward Cross-Validation with Gap Enforcement')
 ax.legend(loc='upper left')
 ax.set_xlim(0, n_samples)
+
+# Apply Tufte styling
+apply_tufte_style(ax)
 
 plt.tight_layout()
 plt.show()

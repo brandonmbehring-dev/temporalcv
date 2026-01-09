@@ -42,6 +42,9 @@ from sklearn.metrics import accuracy_score, f1_score, roc_curve
 # temporalcv imports
 from temporalcv import WalkForwardCV
 from temporalcv.gates import gate_suspicious_improvement
+from temporalcv.viz import MetricComparisonDisplay, apply_tufte_style
+
+# sphinx_gallery_thumbnail_number = 1
 
 # =============================================================================
 # PART 1: Generate Time Series Classification Data
@@ -401,3 +404,25 @@ see test labels, directly or indirectly.
 print("\n" + "=" * 70)
 print("Example 17 complete.")
 print("=" * 70)
+
+# %%
+# Threshold Leakage Impact
+# ------------------------
+# Comparing accuracy and F1 scores across three approaches:
+# - Default 0.5 threshold
+# - WRONG: Threshold from full data (leaks test info)
+# - CORRECT: Threshold from training data only
+
+import matplotlib.pyplot as plt
+
+results = {
+    "Default (0.5)": {"Accuracy": acc_default * 100, "F1": f1_default},
+    "WRONG\n(Full Data)": {"Accuracy": acc_wrong * 100, "F1": f1_wrong},
+    "CORRECT\n(Train Only)": {"Accuracy": acc_correct * 100, "F1": f1_correct},
+}
+
+display = MetricComparisonDisplay.from_dict(
+    results, lower_is_better={"Accuracy": False, "F1": False}
+)
+display.plot(title="Threshold Leakage: Accuracy Comparison", show_values=True)
+plt.show()

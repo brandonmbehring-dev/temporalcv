@@ -45,6 +45,7 @@ from sklearn.linear_model import Ridge
 # temporalcv imports
 from temporalcv import WalkForwardCV
 from temporalcv.gates import gate_signal_verification, run_gates
+from temporalcv.viz import apply_tufte_style
 
 # =============================================================================
 # PART 1: Generate Time Series Data
@@ -431,6 +432,10 @@ ax2.set_title('CV Fold Structure: Shuffled vs Temporal')
 ax2.set_yticks([])
 ax2.set_xlim(-80, n_samples + 10)
 ax2.legend(loc='upper right')
+
+# Apply Tufte styling
+for ax in axes:
+    apply_tufte_style(ax)
 
 plt.tight_layout()
 plt.suptitle('FAILURE CASE: KFold Leaks Future Information to Training', y=1.02, fontsize=14)

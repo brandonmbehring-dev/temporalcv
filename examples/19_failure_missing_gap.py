@@ -41,6 +41,9 @@ from sklearn.model_selection import cross_val_score
 # temporalcv imports
 from temporalcv import WalkForwardCV
 from temporalcv.gates import gate_suspicious_improvement
+from temporalcv.viz import CVFoldsDisplay, MetricComparisonDisplay, apply_tufte_style
+
+# sphinx_gallery_thumbnail_number = 1
 
 # =============================================================================
 # PART 1: Generate AR(1) Data
@@ -345,3 +348,45 @@ The pattern: gap = horizon. Always. No exceptions.
 print("\n" + "=" * 70)
 print("Example 19 complete.")
 print("=" * 70)
+
+# %%
+# Gap Enforcement: Wrong vs Correct CV Structure
+# -----------------------------------------------
+# The WRONG approach (horizon=1) has minimal gap between train and test.
+# The CORRECT approach (horizon=4) enforces a proper 4-step gap.
+
+import matplotlib.pyplot as plt
+
+fig, axes = plt.subplots(2, 1, figsize=(10, 6))
+
+# Wrong: horizon=1
+CVFoldsDisplay.from_cv(wfcv_wrong, X, y).plot(
+    ax=axes[0], title="WRONG: horizon=1 (features leak future info)"
+)
+
+# Correct: horizon=4
+CVFoldsDisplay.from_cv(wfcv_correct, X, y).plot(
+    ax=axes[1], title="CORRECT: horizon=4 (proper gap enforcement)"
+)
+
+plt.tight_layout()
+plt.show()
+
+# %%
+# MAE Comparison: Impact of Gap Leakage
+# -------------------------------------
+# Without proper gap enforcement, MAE appears artificially lower.
+# The ~{degradation:.1f}% degradation when using correct gap shows
+# the true forecast difficulty.
+
+results = {
+    "Naive\n(y_lag4)": {"MAE": naive_mae},
+    "WRONG\n(horizon=1)": {"MAE": mae_wrong},
+    "CORRECT\n(horizon=4)": {"MAE": mae_correct},
+}
+
+display = MetricComparisonDisplay.from_dict(
+    results, baseline="Naive\n(y_lag4)", lower_is_better={"MAE": True}
+)
+display.plot(title="4-Step Forecast: Gap Leakage Impact", show_values=True)
+plt.show()
