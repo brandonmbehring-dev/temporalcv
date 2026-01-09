@@ -110,7 +110,7 @@ __all__ = [
 
 # Conditional imports for optional adapters
 try:
-    from temporalcv.compare.adapters import StatsforecastAdapter
+    from temporalcv.compare.adapters import StatsforecastAdapter  # noqa: F401
 
     __all__.append("StatsforecastAdapter")
 except ImportError:

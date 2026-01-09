@@ -140,7 +140,7 @@ class TestEWMAVolatility:
         data = np.concatenate([low_vol, high_vol])
 
         vol_ewma = EWMAVolatility(span=13).estimate(data)
-        vol_roll = RollingVolatility(window=13).estimate(data)
+        RollingVolatility(window=13).estimate(data)
 
         # Check response at transition point + 5
         idx = 55

@@ -88,7 +88,7 @@ class TestResidualDiagnosticsBasic:
         """
         Heavy-tailed residuals should trigger Jarque-Bera failure.
         """
-        rng = np.random.default_rng(42)
+        np.random.default_rng(42)
         n = 200
 
         # Generate heavy-tailed residuals (t-distribution)
@@ -146,7 +146,7 @@ class TestResidualDiagnosticsHaltBehavior:
         halt_on_normality=True should HALT on Jarque-Bera failure.
         """
         # Generate heavily skewed residuals
-        rng = np.random.default_rng(42)
+        np.random.default_rng(42)
         residuals = stats.t.rvs(df=3, size=200, random_state=42)
 
         # Default: WARN on non-normality

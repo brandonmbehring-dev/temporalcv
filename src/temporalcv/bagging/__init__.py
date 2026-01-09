@@ -35,8 +35,6 @@ References
 - Bergmeir, Hyndman & Benitez (2016). "Bagging Exponential Smoothing"
 """
 
-from typing import Optional
-
 from temporalcv.bagging.base import (
     BootstrapStrategy,
     SupportsPredict,

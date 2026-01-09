@@ -239,10 +239,7 @@ def kpss_test(
 
     # Handle nlags parameter
     nlags_param: int | str
-    if nlags == "auto" or nlags is None:
-        nlags_param = "auto"
-    else:
-        nlags_param = nlags
+    nlags_param = "auto" if nlags == "auto" or nlags is None else nlags
 
     # statsmodels kpss returns: (kpss_stat, pvalue, lags_used, critical_values)
     # It emits a warning about interpolated p-values, which we suppress

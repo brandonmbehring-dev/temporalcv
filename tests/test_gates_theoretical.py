@@ -271,7 +271,7 @@ class TestTheoreticalBoundsAdversarial:
 
         # Should detect that AR(1) is insufficient
         # Check for AR(1) assumption warning
-        ar1_warning = result.details.get("ar1_assumption_warning", False)
+        result.details.get("ar1_assumption_warning", False)
         # This is a soft requirement - implementation may or may not detect
         # Just ensure it doesn't crash
         assert result is not None

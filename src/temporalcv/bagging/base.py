@@ -86,7 +86,7 @@ class BootstrapStrategy(ABC):
     def transform_for_predict(
         self,
         X: np.ndarray,
-        estimator_idx: int,
+        _estimator_idx: int,
     ) -> np.ndarray:
         """
         Transform X for prediction (default: identity).
@@ -258,7 +258,7 @@ class TimeSeriesBagger:
 
         # Fit estimators
         self.estimators_ = []
-        for i, (X_boot, y_boot) in enumerate(samples):
+        for _i, (X_boot, y_boot) in enumerate(samples):
             estimator = _clone_model(self.base_model)
             estimator.fit(X_boot, y_boot)
             self.estimators_.append(estimator)

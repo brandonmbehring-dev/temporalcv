@@ -194,12 +194,12 @@ class GARCHVolatility:
 
     def __init__(self, p: int = 1, q: int = 1):
         try:
-            from arch import arch_model
+            from arch import arch_model  # noqa: F401
         except ImportError:
             raise ImportError(
                 "GARCH estimation requires the 'arch' package. "
                 "Install with: pip install arch"
-            )
+            ) from None
         self.p = p
         self.q = q
 

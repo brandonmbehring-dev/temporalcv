@@ -239,8 +239,6 @@ class TestHACVsStatsmodels:
         var_sm_high = cov_high[0, 0]
 
         # Check relative ordering is preserved
-        tcv_order = var_tcv_iid < var_tcv_low < var_tcv_high
-        sm_order = var_sm_iid < var_sm_low < var_sm_high
 
         # Allow some tolerance in ordering
         # (high AR should have highest variance in both)
@@ -314,8 +312,6 @@ class TestHACVsStatsmodels:
 
         # For AR series, larger bandwidth should capture more autocorrelation
         # Direction should be same in both implementations
-        tcv_increases = var_tcv_bw10 > var_tcv_bw2
-        sm_increases = var_sm_bw10 > var_sm_bw2
 
         print(f"temporalcv: bw=2: {var_tcv_bw2:.6f}, bw=10: {var_tcv_bw10:.6f}")
         print(f"statsmodels: bw=2: {var_sm_bw2:.6f}, bw=10: {var_sm_bw10:.6f}")

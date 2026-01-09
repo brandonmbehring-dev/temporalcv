@@ -500,7 +500,7 @@ class TestComputeHuberLoss:
         actuals = np.array([0.0, 0.0])
         preds = np.array([2.0, -2.0])  # Same magnitude, opposite sign
 
-        huber = compute_huber_loss(preds, actuals)
+        compute_huber_loss(preds, actuals)
         # Should be same for both
         individual = [
             compute_huber_loss(preds[:1], actuals[:1]),
@@ -560,8 +560,8 @@ class TestAsymmetricLossIntegration:
         actuals = rng.standard_normal(100)
         preds = rng.standard_normal(100)
 
-        mae = np.mean(np.abs(actuals - preds))
-        mse = np.mean((actuals - preds) ** 2)
+        np.mean(np.abs(actuals - preds))
+        np.mean((actuals - preds) ** 2)
         huber = compute_huber_loss(preds, actuals, delta=1.0)
 
         # Huber should be somewhere between scaled MAE and MSE behavior

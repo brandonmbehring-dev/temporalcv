@@ -907,7 +907,7 @@ class TestCoverageDiagnostics:
 
         # Should have 2 windows
         assert len(diag.coverage_by_window) == 2
-        for window_name, cov in diag.coverage_by_window.items():
+        for _window_name, cov in diag.coverage_by_window.items():
             assert cov == pytest.approx(1.0, rel=0.01)
 
     def test_coverage_by_regime(self) -> None:

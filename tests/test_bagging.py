@@ -40,10 +40,10 @@ class SimpleModel:
         X_bias = np.column_stack([np.ones(n), X])
 
         # Ridge solution: (X'X + αI)^(-1) X'y
-        I = np.eye(X_bias.shape[1])
-        I[0, 0] = 0  # Don't regularize intercept
+        identity = np.eye(X_bias.shape[1])
+        identity[0, 0] = 0  # Don't regularize intercept
         beta = np.linalg.solve(
-            X_bias.T @ X_bias + self.alpha * I,
+            X_bias.T @ X_bias + self.alpha * identity,
             X_bias.T @ y,
         )
 

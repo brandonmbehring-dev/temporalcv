@@ -59,7 +59,7 @@ class TestDMGoldenReference:
         """Model 1 clearly better should reject null."""
         case = golden_refs["dm_test"]["case_002_model1_better"]
         inputs = case["inputs"]
-        expected = case["expected"]
+        case["expected"]
 
         result = dm_test(
             np.array(inputs["errors1"]),
@@ -134,7 +134,7 @@ class TestWildBootstrapGoldenReference:
         """Zero-centered fold statistics should not reject H0."""
         case = golden_refs["wild_bootstrap"]["case_002_zero_mean"]
         inputs = case["inputs"]
-        expected = case["expected"]
+        case["expected"]
 
         result = wild_cluster_bootstrap(
             np.array(inputs["fold_statistics"]),

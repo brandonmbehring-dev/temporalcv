@@ -134,7 +134,7 @@ class TestE2EBenchmarkPipeline:
 
         # At least one comparison should have actual statistics
         has_valid_test = False
-        for model_name, dm_data in result.statistical_tests.items():
+        for _model_name, dm_data in result.statistical_tests.items():
             if isinstance(dm_data, dict) and "error" not in dm_data:
                 has_valid_test = True
                 assert "statistic" in dm_data
@@ -266,7 +266,7 @@ class TestBenchmarkDatasetIntegrity:
 
         adapters_base = [NaiveAdapter()]
 
-        for freq_name, season_len, n_obs in configs:
+        for _freq_name, season_len, n_obs in configs:
             # Create synthetic with appropriate length
             dataset = create_synthetic_dataset(
                 n_obs=n_obs,

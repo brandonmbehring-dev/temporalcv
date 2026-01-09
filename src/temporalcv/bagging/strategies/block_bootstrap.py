@@ -111,7 +111,8 @@ class MovingBlockBootstrap(BootstrapStrategy):
             block_len = max(1, min(n, self.block_length))
             if self.block_length > n:
                 warnings.warn(
-                    f"block_length={self.block_length} > n={n}, clamped to {block_len}"
+                    f"block_length={self.block_length} > n={n}, clamped to {block_len}",
+                    stacklevel=2,
                 )
 
         # Number of blocks needed to cover n observations

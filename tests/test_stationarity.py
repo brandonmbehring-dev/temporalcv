@@ -53,7 +53,7 @@ class TestADFTest:
         result = adf_test(stationary)
 
         # Should reject H0 (unit root) → is_stationary = True
-        assert result.is_stationary == True
+        assert result.is_stationary
         assert result.pvalue < 0.05
 
     def test_adf_fails_to_reject_for_random_walk(self) -> None:
@@ -64,7 +64,7 @@ class TestADFTest:
         result = adf_test(random_walk)
 
         # Should fail to reject H0 (unit root) → is_stationary = False
-        assert result.is_stationary == False
+        assert not result.is_stationary
         assert result.pvalue > 0.05
 
     def test_adf_regression_options(self) -> None:
@@ -152,7 +152,7 @@ class TestKPSSTest:
         result = kpss_test(stationary)
 
         # Should fail to reject H0 (stationary) → is_stationary = True
-        assert result.is_stationary == True
+        assert result.is_stationary
         assert result.pvalue >= 0.05
 
     def test_kpss_rejects_for_random_walk(self) -> None:
@@ -163,7 +163,7 @@ class TestKPSSTest:
         result = kpss_test(random_walk)
 
         # Should reject H0 (stationary) → is_stationary = False
-        assert result.is_stationary == False
+        assert not result.is_stationary
         assert result.pvalue < 0.05
 
     def test_kpss_regression_options(self) -> None:
@@ -214,7 +214,7 @@ class TestPPTest:
 
         result = pp_test(stationary)
 
-        assert result.is_stationary == True
+        assert result.is_stationary
 
     def test_pp_fails_for_random_walk(self) -> None:
         """PP should fail to reject for random walk."""
@@ -223,7 +223,7 @@ class TestPPTest:
 
         result = pp_test(random_walk)
 
-        assert result.is_stationary == False
+        assert not result.is_stationary
 
     def test_pp_short_series_raises(self) -> None:
         """PP should raise for series shorter than 20."""
@@ -245,8 +245,8 @@ class TestCheckStationarity:
 
         assert isinstance(result, JointStationarityResult)
         assert result.conclusion == StationarityConclusion.STATIONARY
-        assert result.adf_result.is_stationary == True
-        assert result.kpss_result.is_stationary == True
+        assert result.adf_result.is_stationary
+        assert result.kpss_result.is_stationary
 
     def test_joint_nonstationary_conclusion(self) -> None:
         """Joint test should conclude NON_STATIONARY for random walk."""
@@ -256,8 +256,8 @@ class TestCheckStationarity:
         result = check_stationarity(random_walk)
 
         assert result.conclusion == StationarityConclusion.NON_STATIONARY
-        assert result.adf_result.is_stationary == False
-        assert result.kpss_result.is_stationary == False
+        assert not result.adf_result.is_stationary
+        assert not result.kpss_result.is_stationary
 
     def test_joint_provides_action(self) -> None:
         """Joint test should provide recommended action."""
@@ -504,7 +504,7 @@ class TestARSeries:
             ar1[i] = phi * ar1[i - 1] + rng.normal(0, 1)
 
         result = adf_test(ar1)
-        assert result.is_stationary == True
+        assert result.is_stationary
 
     def test_ar1_unit_root(self) -> None:
         """AR(1) with phi = 1 should be non-stationary."""
@@ -515,4 +515,4 @@ class TestARSeries:
         random_walk = np.cumsum(rng.normal(0, 1, n))
 
         result = adf_test(random_walk)
-        assert result.is_stationary == False
+        assert not result.is_stationary

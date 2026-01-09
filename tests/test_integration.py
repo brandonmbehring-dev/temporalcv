@@ -142,7 +142,7 @@ class TestConformalCoveragePipeline:
         y = np.cumsum(np.random.randn(n) * 0.1)
         train_size = 150
 
-        y_train = y[:train_size]
+        y[:train_size]
         y_test = y[train_size:]
 
         # Create lag features
@@ -169,7 +169,7 @@ class TestConformalCoveragePipeline:
         test_preds = model.predict(X_test)
         covered_count = 0
 
-        for i, (pred, actual) in enumerate(zip(test_preds, y_test_clean)):
+        for _i, (pred, actual) in enumerate(zip(test_preds, y_test_clean)):
             # Get interval
             lower, upper = acp.predict_interval(pred)
 

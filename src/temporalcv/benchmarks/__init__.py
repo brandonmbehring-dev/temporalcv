@@ -58,7 +58,7 @@ __all__ = [
 
 # Try to import optional loaders
 try:
-    from temporalcv.benchmarks.fred import (
+    from temporalcv.benchmarks.fred import (  # noqa: F401
         FRED_RATE_SERIES,
         list_available_series,
         load_fred_rates,
@@ -69,7 +69,7 @@ except ImportError:
     pass  # fredapi not installed
 
 try:
-    from temporalcv.benchmarks.m5 import (
+    from temporalcv.benchmarks.m5 import (  # noqa: F401
         M5_DOWNLOAD_URL,
         M5_INSTRUCTIONS,
         load_m5,
@@ -80,14 +80,14 @@ except ImportError:
     pass  # pandas not installed for M5
 
 try:
-    from temporalcv.benchmarks.gluonts import load_electricity, load_traffic
+    from temporalcv.benchmarks.gluonts import load_electricity, load_traffic  # noqa: F401
 
     __all__.extend(["load_electricity", "load_traffic"])
 except ImportError:
     pass  # gluonts not installed
 
 try:
-    from temporalcv.benchmarks.monash import (
+    from temporalcv.benchmarks.monash import (  # noqa: F401
         M3_HORIZONS,
         M4_HORIZONS,
         load_m3,

@@ -58,10 +58,7 @@ def _stationary_bootstrap_indices(
 
     for j in range(n):
         indices[j] = i
-        if uniforms[j] < p:
-            i = int(jump_targets[j])
-        else:
-            i = (i + 1) % n
+        i = int(jump_targets[j]) if uniforms[j] < p else (i + 1) % n
 
     result: np.ndarray = indices
     return result

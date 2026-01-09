@@ -531,10 +531,7 @@ def _sn_pvalue(statistic: float, alternative: str) -> float:
     abs_stat = abs(statistic)
 
     # Determine one-sided or two-sided
-    if alternative == "two-sided":
-        key_prefix = "two-sided"
-    else:
-        key_prefix = "one-sided"
+    key_prefix = "two-sided" if alternative == "two-sided" else "one-sided"
 
     # Get critical values
     cv_01 = _SN_CRITICAL_VALUES[(key_prefix, 0.01)]
@@ -1145,10 +1142,7 @@ def gw_test(
         else:  # greater
             # H1: Model 2 conditionally better
             # Need mean_loss_diff > 0
-            if d_bar <= 0:
-                pvalue = 1.0
-            else:
-                pvalue = base_pvalue / 2
+            pvalue = 1.0 if d_bar <= 0 else base_pvalue / 2
 
     pvalue = float(np.clip(pvalue, 0.0, 1.0))
 
@@ -2586,7 +2580,7 @@ def forecast_encompassing_test(
         for i in range(2):
             for j in range(2):
                 # Compute covariance with HAC
-                series_ij = u_X[:, i] * u_X[:, j] / n
+                u_X[:, i] * u_X[:, j] / n
                 meat[i, j] = compute_hac_variance(
                     u_X[:, i] * u_X[:, j], bandwidth=bandwidth
                 ) * n
@@ -2980,7 +2974,7 @@ def reality_check_test(
         idx = bootstrap_indices[b]
         # Resample loss differentials
         max_stat = -np.inf
-        for name, diff in loss_diffs.items():
+        for _name, diff in loss_diffs.items():
             diff_boot = diff[idx]
             # Center at zero under H0
             diff_centered = diff_boot - np.mean(diff)

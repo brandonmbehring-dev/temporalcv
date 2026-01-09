@@ -104,7 +104,6 @@ class TestPTVarianceFormula:
         var_p_hat, var_p_star, var_total = _compute_pt_variance_formula(p_y, p_x, n)
 
         # p* = 0.5
-        p_star = 0.5
 
         # Var(p_hat) = 0.5 * 0.5 / 100 = 0.0025
         assert_allclose(var_p_hat, 0.0025, rtol=1e-10)
@@ -129,7 +128,6 @@ class TestPTVarianceFormula:
         var_p_hat, var_p_star, var_total = _compute_pt_variance_formula(p_y, p_x, n)
 
         # p* = 0.6*0.7 + 0.4*0.3 = 0.42 + 0.12 = 0.54
-        p_star = 0.54
 
         # Var(p_hat) = 0.54 * 0.46 / 100 = 0.002484
         expected_var_p_hat = 0.54 * 0.46 / 100
@@ -152,7 +150,6 @@ class TestPTVarianceFormula:
         var_p_hat, var_p_star, var_total = _compute_pt_variance_formula(p_y, p_x, n)
 
         # p* = 0.9*0.9 + 0.1*0.1 = 0.81 + 0.01 = 0.82
-        p_star = 0.82
 
         # Var(p_hat) = 0.82 * 0.18 / 100 = 0.001476
         expected_var_p_hat = 0.82 * 0.18 / 100
@@ -443,7 +440,7 @@ class TestPTEdgeCases:
         """
         Zero values should be excluded in 2-class mode.
         """
-        rng = np.random.default_rng(42)
+        np.random.default_rng(42)
 
         # Mix of positive, negative, and zero
         actual = np.array([1.0, -1.0, 0.0, 1.0, -1.0, 0.0] * 10)

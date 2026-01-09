@@ -97,8 +97,8 @@ class TestVolatilityRegime:
         last_50_changes = regimes_changes[-50:]
         last_50_levels = regimes_levels[-50:]
 
-        high_count_changes = np.sum(last_50_changes == "HIGH")
-        high_count_levels = np.sum(last_50_levels == "HIGH")
+        np.sum(last_50_changes == "HIGH")
+        np.sum(last_50_levels == "HIGH")
 
         # For drifting data, basis='levels' should have MORE HIGH in late period
         # because the rolling std of cumulative values increases over time

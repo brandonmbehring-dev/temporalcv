@@ -317,7 +317,7 @@ class TestGapEnforcement:
         cv = WalkForwardCV(n_splits=5, test_size=1)
 
         prev_test: set[int] = set()
-        for train, test in cv.split(X):
+        for _train, test in cv.split(X):
             test_set = set(test)
             if prev_test:
                 overlap = prev_test & test_set
@@ -351,7 +351,7 @@ class TestWindowTypes:
         X, y = sample_data
         cv = WalkForwardCV(n_splits=5, window_type="sliding", window_size=50)
 
-        for train, test in cv.split(X):
+        for train, _test in cv.split(X):
             assert len(train) == 50, f"Train size {len(train)} != 50"
 
     def test_sliding_requires_window_size(self) -> None:
@@ -503,7 +503,7 @@ class TestEdgeCases:
         X, y = sample_data
         cv = WalkForwardCV(n_splits=3, test_size=10)
 
-        for train, test in cv.split(X):
+        for _train, test in cv.split(X):
             assert len(test) == 10
 
     def test_test_indices_are_contiguous(self, sample_data: tuple) -> None:
@@ -511,7 +511,7 @@ class TestEdgeCases:
         X, y = sample_data
         cv = WalkForwardCV(n_splits=5, test_size=3)
 
-        for train, test in cv.split(X):
+        for _train, test in cv.split(X):
             expected = np.arange(test[0], test[-1] + 1)
             np.testing.assert_array_equal(test, expected)
 
@@ -520,7 +520,7 @@ class TestEdgeCases:
         X, y = sample_data
         cv = WalkForwardCV(n_splits=5)
 
-        for train, test in cv.split(X):
+        for train, _test in cv.split(X):
             expected = np.arange(train[0], train[-1] + 1)
             np.testing.assert_array_equal(train, expected)
 

@@ -277,7 +277,7 @@ class TestHuberLossInvariants:
         """Huber loss should be bounded by linear component (approx MAE for large errors)."""
         predictions, actuals = pair
         huber = compute_huber_loss(predictions, actuals, delta=1.0)
-        mae = compute_mae(predictions, actuals)
+        compute_mae(predictions, actuals)
         # Huber is <= MAE for any delta (approximately)
         # Actually Huber is smaller for small errors but can be larger for large errors
         # Skip this test as the relationship is more complex

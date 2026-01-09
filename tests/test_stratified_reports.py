@@ -238,7 +238,6 @@ class TestPerRegimeGates:
     def test_suspicious_improvement_per_regime(self) -> None:
         """gate_suspicious_improvement should run per regime."""
         # Create data where one regime has suspicious improvement
-        n = 100
         actuals = np.array([1.0, 2.0, 3.0, 4.0, 5.0] * 20)
         # Normal predictions for regime A, suspiciously good for B
         predictions_a = actuals[:60] + np.random.default_rng(42).standard_normal(60) * 0.5

@@ -88,7 +88,7 @@ class TestResidualDiagnosticsBasic:
 
         # Should detect non-normality (may PASS occasionally due to test randomness)
         # The key is the kurtosis in details should be elevated
-        details_str = str(result.details).lower() + result.message.lower()
+        str(result.details).lower() + result.message.lower()
         kurtosis = result.details.get("tests", {}).get("jarque_bera", {}).get("kurtosis", 0)
         # t(2) should have high excess kurtosis (theoretical = infinity)
         # If kurtosis > 1, the distribution is clearly non-normal

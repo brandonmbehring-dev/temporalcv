@@ -278,10 +278,7 @@ class MetricComparisonDisplay(BaseDisplay):
         lower_better = self.lower_is_better.get(metric_name, True)
 
         # Determine best model
-        if lower_better:
-            best_idx = np.nanargmin(values)
-        else:
-            best_idx = np.nanargmax(values)
+        best_idx = np.nanargmin(values) if lower_better else np.nanargmax(values)
 
         # Colors: best in green, others in muted blue
         colors = [
@@ -307,7 +304,7 @@ class MetricComparisonDisplay(BaseDisplay):
 
             # Value labels
             if show_values:
-                for i, (pos, val) in enumerate(zip(positions, values)):
+                for _i, (pos, val) in enumerate(zip(positions, values)):
                     ha = "left" if val >= 0 else "right"
                     offset = val * 0.02 if val >= 0 else val * 0.02
                     ax.text(
@@ -336,7 +333,7 @@ class MetricComparisonDisplay(BaseDisplay):
 
             # Value labels
             if show_values:
-                for i, (pos, val) in enumerate(zip(positions, values)):
+                for _i, (pos, val) in enumerate(zip(positions, values)):
                     ax.text(
                         pos,
                         val + max(values) * 0.02,
@@ -363,7 +360,7 @@ class MetricComparisonDisplay(BaseDisplay):
         *,
         ax: Axes | None,
         tufte: bool,
-        show_values: bool,
+        show_values: bool,  # noqa: ARG002
         show_best: bool,
         title: str | None,
     ) -> MetricComparisonDisplay:
@@ -391,7 +388,7 @@ class MetricComparisonDisplay(BaseDisplay):
             values = self.values[:, m_idx]
             color = metric_colors[m_idx % len(metric_colors)]
 
-            bars = ax.bar(
+            ax.bar(
                 positions + offset,
                 values,
                 bar_width * 0.9,

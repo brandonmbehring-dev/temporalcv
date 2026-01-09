@@ -490,10 +490,7 @@ def compute_profit_factor(
     predicted = np.asarray(predicted_changes, dtype=np.float64)
     actual = np.asarray(actual_changes, dtype=np.float64)
 
-    if returns is not None:
-        returns = np.asarray(returns, dtype=np.float64)
-    else:
-        returns = actual
+    returns = np.asarray(returns, dtype=np.float64) if returns is not None else actual
 
     if len(predicted) == 0 or len(actual) == 0:
         raise ValueError("Arrays cannot be empty")

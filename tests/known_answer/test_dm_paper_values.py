@@ -370,7 +370,7 @@ class TestHarveySizeControl:
                 rejections_without_harvey += 1
 
         rejection_rate_with = rejections_with_harvey / n_simulations
-        rejection_rate_without = rejections_without_harvey / n_simulations
+        rejections_without_harvey / n_simulations
 
         # Harvey-adjusted should be closer to nominal 5%
         # Allow wide tolerance due to limited simulations

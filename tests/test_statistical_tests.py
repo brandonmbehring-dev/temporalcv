@@ -453,7 +453,7 @@ class TestPTTest:
         predicted = np.zeros(n)
 
         # Without threshold: persistence always wrong (sign of 0 is 0)
-        result_no_thresh = pt_test(actual, predicted, move_threshold=None)
+        pt_test(actual, predicted, move_threshold=None)
 
         # With threshold: persistence gets credit for "FLAT" predictions
         result_thresh = pt_test(actual, predicted, move_threshold=0.5)
@@ -1532,7 +1532,7 @@ class TestGWEdgeCases:
 
     def test_constant_loss_differential(self) -> None:
         """Constant loss differential should produce R²=0."""
-        rng = np.random.default_rng(42)
+        np.random.default_rng(42)
         n = 100
 
         # Same error magnitude, just different sign
@@ -2939,7 +2939,7 @@ class TestCompareModelsHorizons:
         result = compare_models_horizons(errors, horizons=(1,), loss="absolute")
 
         # Check that loss was used in pairwise comparison
-        for h, comp in result.pairwise_by_horizon.items():
+        for _h, comp in result.pairwise_by_horizon.items():
             for dm_result in comp.pairwise_results.values():
                 assert dm_result.loss == "absolute"
 

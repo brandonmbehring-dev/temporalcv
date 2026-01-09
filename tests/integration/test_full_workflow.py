@@ -197,11 +197,11 @@ class TestCVWithGateValidation:
         )
 
         split_results = []
-        for fold_idx, (train_idx, test_idx) in enumerate(cv.split(X, y)):
+        for _fold_idx, (train_idx, test_idx) in enumerate(cv.split(X, y)):
             # Fit model
             model = Ridge(alpha=1.0)
             model.fit(X[train_idx], y[train_idx])
-            predictions = model.predict(X[test_idx])
+            model.predict(X[test_idx])
 
             # Validate boundary: horizon + gap_param <= cv_gap
             # horizon=1, gap_param=1 → requires 2, CV provides 2

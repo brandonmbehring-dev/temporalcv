@@ -324,10 +324,7 @@ def moving_block_bootstrap(
         indices = _create_block_indices(n, bl, rng)
 
         # Get bootstrap sample
-        if data.ndim == 1:
-            bootstrap_data = data[indices]
-        else:
-            bootstrap_data = data[indices, :]
+        bootstrap_data = data[indices] if data.ndim == 1 else data[indices, :]
 
         # Compute statistic
         try:

@@ -352,8 +352,8 @@ class GateComparisonDisplay(BaseDisplay):
 
         if orientation == "horizontal":
             # Horizontal bars (side by side)
-            bar_width = 0.8 / self.n_gates
-            positions = np.arange(self.n_gates)
+            0.8 / self.n_gates
+            np.arange(self.n_gates)
 
             for i, (name, status) in enumerate(zip(self.names, self.statuses)):
                 color = status_colors.get(status, TUFTE_PALETTE["secondary"])

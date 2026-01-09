@@ -219,7 +219,7 @@ class TestTestSizeInvariants:
 
         if splits:
             # All but possibly last should have exact test_size
-            for train_idx, test_idx in splits[:-1]:
+            for _train_idx, test_idx in splits[:-1]:
                 assert len(test_idx) == test_size
 
             # Last can be <= test_size (may have fewer remaining samples)
@@ -248,7 +248,7 @@ class TestSplitInfoInvariants:
         )
 
         prev_test_end = -1
-        for train_idx, test_idx in cv.split(X, y):
+        for _train_idx, test_idx in cv.split(X, y):
             test_start = min(test_idx)
             test_end = max(test_idx)
 

@@ -552,10 +552,7 @@ def gate_signal_verification(
     shuffled_maes: list[float] = []
     for _ in range(effective_n_shuffles):
         # Apply permutation strategy
-        if permutation == "block":
-            y_shuffled = block_permute(y, rng)
-        else:
-            y_shuffled = rng.permutation(y)
+        y_shuffled = block_permute(y, rng) if permutation == "block" else rng.permutation(y)
 
         # Use DRY helper (model cloning happens inside)
         shuffle_model = _clone_model(model)
@@ -787,7 +784,7 @@ def gate_synthetic_ar1(
     y = y_full[n_lags:]  # Target: y_t
     X = np.column_stack([y_full[n_lags - lag : -lag] for lag in range(1, n_lags + 1)])
 
-    n = len(y)
+    len(y)
 
     # Compute out-of-sample MAE using DRY helper
     result = _compute_cv_mae(model, X, y, n_cv_splits=n_cv_splits, return_errors=True)

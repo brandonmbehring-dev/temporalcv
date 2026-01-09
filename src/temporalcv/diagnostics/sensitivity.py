@@ -158,7 +158,7 @@ def gap_sensitivity_analysis(
     if len(gap_values) == 0:
         raise ValueError("gap_range must contain at least one value")
 
-    n_samples = len(y)
+    len(y)
     metrics_list = []
 
     for gap in gap_values:

@@ -25,7 +25,7 @@ from temporalcv.changepoint import (
 
 # Check if ruptures is available
 try:
-    import ruptures
+    import ruptures  # noqa: F401
 
     HAS_RUPTURES = True
 except ImportError:

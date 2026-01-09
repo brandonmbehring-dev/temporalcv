@@ -830,10 +830,7 @@ class BellmanConformalPredictor:
             transition = self.lambda_reg * (q_next - current_q) ** 2
 
             # Use value function from horizon 1
-            if self.horizon >= 1:
-                future = float(self.value_function[1, j])
-            else:
-                future = 0.0
+            future = float(self.value_function[1, j]) if self.horizon >= 1 else 0.0
 
             total = immediate + transition + future
 

@@ -70,7 +70,7 @@ COLORS = {
 }
 
 
-def muted_color(color: str, saturation: float = 0.7) -> str:
+def muted_color(color: str, _saturation: float = 0.7) -> str:
     """
     Return a muted version of a color from the palette.
 
@@ -78,8 +78,8 @@ def muted_color(color: str, saturation: float = 0.7) -> str:
     ----------
     color : str
         Color name from TUFTE_PALETTE or a hex color.
-    saturation : float
-        Saturation factor (0-1). Lower = more muted.
+    _saturation : float
+        Saturation factor (0-1). Lower = more muted. (Not yet implemented)
 
     Returns
     -------

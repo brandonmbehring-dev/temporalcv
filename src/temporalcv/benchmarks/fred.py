@@ -139,10 +139,7 @@ def load_fred_rates(
     fred = Fred(api_key=key)
 
     # Handle single series or list
-    if isinstance(series, str):
-        series_list = [series]
-    else:
-        series_list = list(series)
+    series_list = [series] if isinstance(series, str) else list(series)
 
     # Load data
     all_data: list[np.ndarray] = []
@@ -156,16 +153,10 @@ def load_fred_rates(
         all_data.append(data.values)
 
     # Stack if multiple series
-    if len(all_data) == 1:
-        values = all_data[0]
-    else:
-        values = np.column_stack(all_data)
+    values = all_data[0] if len(all_data) == 1 else np.column_stack(all_data)
 
     # Remove NaN (FRED has missing observations)
-    if values.ndim > 1:
-        mask = ~np.isnan(values).any(axis=-1)
-    else:
-        mask = ~np.isnan(values)
+    mask = ~np.isnan(values).any(axis=-1) if values.ndim > 1 else ~np.isnan(values)
     values = values[mask]
 
     # Compute train/test split

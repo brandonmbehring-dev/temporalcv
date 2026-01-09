@@ -739,8 +739,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
         n_samples = self._get_n_samples(X)
         splits = self._calculate_splits(n_samples)
 
-        for train_indices, test_indices in splits:
-            yield train_indices, test_indices
+        yield from splits
 
     def get_n_splits(
         self,
@@ -946,10 +945,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
         Returns list of (start, end) tuples where end is exclusive.
         """
-        if self.test_size is not None:
-            fold_size = self.test_size
-        else:
-            fold_size = n_samples // self.n_splits
+        fold_size = self.test_size if self.test_size is not None else n_samples // self.n_splits
 
         if fold_size < 1:
             raise ValueError(

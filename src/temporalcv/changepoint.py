@@ -156,7 +156,7 @@ def detect_changepoints_variance(
     if baseline_std < 1e-10:
         # Truly constant series - no changepoints
         return ChangepointResult(
-            changepoints=tuple(),
+            changepoints=(),
             n_segments=1,
             method="variance",
             penalty=penalty,
@@ -455,10 +455,7 @@ def classify_regimes_from_changepoints(
     for start, end in zip(cp_indices[:-1], cp_indices[1:]):
         segment = arr[start:end]
         if method == "volatility":
-            if len(segment) > 1:
-                val = float(np.std(np.diff(segment)))
-            else:
-                val = 0.0
+            val = float(np.std(np.diff(segment))) if len(segment) > 1 else 0.0
         elif method == "level":
             val = float(np.mean(segment))
         elif method == "trend":
