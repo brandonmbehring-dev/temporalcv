@@ -306,12 +306,12 @@ class WalkForwardResults:
     @property
     def predictions(self) -> np.ndarray:
         """All predictions concatenated across splits."""
-        return cast(np.ndarray, np.concatenate([s.predictions for s in self.splits]))
+        return np.concatenate([s.predictions for s in self.splits])
 
     @property
     def actuals(self) -> np.ndarray:
         """All actuals concatenated across splits."""
-        return cast(np.ndarray, np.concatenate([s.actuals for s in self.splits]))
+        return np.concatenate([s.actuals for s in self.splits])
 
     @property
     def errors(self) -> np.ndarray:
