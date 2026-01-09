@@ -146,9 +146,9 @@ class TestHACVarianceIndependent:
         var_ar = compute_hac_variance(d_ar, bandwidth=bandwidth)
 
         # AR series should have larger HAC variance
-        assert var_ar > var_iid, (
-            f"AR series HAC variance ({var_ar:.6f}) should be > IID variance ({var_iid:.6f})"
-        )
+        assert (
+            var_ar > var_iid
+        ), f"AR series HAC variance ({var_ar:.6f}) should be > IID variance ({var_iid:.6f})"
 
     def test_automatic_bandwidth_selection(self) -> None:
         """
@@ -241,12 +241,12 @@ class TestHACVsStatsmodels:
 
         # Allow some tolerance in ordering
         # (high AR should have highest variance in both)
-        assert max(var_tcv_iid, var_tcv_low, var_tcv_high) == var_tcv_high, (
-            "temporalcv: High AR should have highest variance"
-        )
-        assert max(var_sm_iid, var_sm_low, var_sm_high) == var_sm_high, (
-            "statsmodels: High AR should have highest variance"
-        )
+        assert (
+            max(var_tcv_iid, var_tcv_low, var_tcv_high) == var_tcv_high
+        ), "temporalcv: High AR should have highest variance"
+        assert (
+            max(var_sm_iid, var_sm_low, var_sm_high) == var_sm_high
+        ), "statsmodels: High AR should have highest variance"
 
     def test_similar_magnitude_for_iid(self) -> None:
         """
@@ -359,9 +359,9 @@ class TestHACEdgeCases:
             var_hac = compute_hac_variance(d, bandwidth=30)
             # If no error, result should be either finite or NaN
             # NaN is acceptable for undefined input
-            assert np.isfinite(var_hac) or np.isnan(var_hac), (
-                "Result should be finite or NaN for bandwidth > n"
-            )
+            assert np.isfinite(var_hac) or np.isnan(
+                var_hac
+            ), "Result should be finite or NaN for bandwidth > n"
         except (ValueError, RuntimeWarning):
             # Raising an error is also acceptable for invalid input
             pass

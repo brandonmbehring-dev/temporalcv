@@ -37,7 +37,6 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import Ridge
 
 # temporalcv imports
-from temporalcv import WalkForwardCV
 from temporalcv.statistical_tests import (
     compare_horizons,
     compare_models_horizons,
@@ -136,8 +135,8 @@ print("=" * 70)
 df = generate_multi_horizon_data(n_samples=500, seed=42)
 
 print(f"\n📊 Generated ARMA(1,1) + seasonal data: {len(df)} samples")
-print(f"   AR coefficient: 0.8 (strong short-term persistence)")
-print(f"   Seasonality: 7 days (weekly pattern)")
+print("   AR coefficient: 0.8 (strong short-term persistence)")
+print("   Seasonality: 7 days (weekly pattern)")
 
 # =============================================================================
 # PART 2: The Problem — Single-Horizon Evaluation Misleads
@@ -147,7 +146,8 @@ print("\n" + "=" * 70)
 print("PART 2: THE PROBLEM — SINGLE-HORIZON EVALUATION MISLEADS")
 print("=" * 70)
 
-print("""
+print(
+    """
 Common mistake: Evaluate model only at h=1 (one-step ahead).
 
    "Our model beats persistence by 15% at h=1!"
@@ -156,7 +156,8 @@ But this tells you nothing about h=4, h=7, or h=12. If your business
 needs 7-day forecasts, the h=1 result is irrelevant.
 
 Worse: A model tuned for h=1 may be WORSE than baseline at h=7.
-""")
+"""
+)
 
 # =============================================================================
 # PART 3: Generate Multi-Step Forecasts
@@ -197,8 +198,8 @@ ridge_errors = y_test - ridge_pred
 persistence_errors = y_test - persistence_pred
 
 print(f"✅ Generated forecasts for {len(y_test)} test points")
-print(f"   Models: GradientBoosting, Ridge, Persistence")
-print(f"   Horizons to test: 1, 2, 4, 7, 12")
+print("   Models: GradientBoosting, Ridge, Persistence")
+print("   Horizons to test: 1, 2, 4, 7, 12")
 
 # =============================================================================
 # PART 4: WRONG Approach — Report Only h=1
@@ -211,12 +212,12 @@ print("=" * 70)
 # Single-horizon DM test
 dm_h1 = dm_test(gb_errors, persistence_errors, h=1)
 
-print(f"\n❌ Single-horizon result (h=1 only):")
+print("\n❌ Single-horizon result (h=1 only):")
 print(f"   GB vs Persistence: DM stat = {dm_h1.statistic:.3f}, p = {dm_h1.pvalue:.4f}")
 
 if dm_h1.pvalue < 0.05:
-    print(f"   → 'GradientBoosting significantly beats persistence!'")
-    print(f"   → But this is ONLY for h=1 forecasts...")
+    print("   → 'GradientBoosting significantly beats persistence!'")
+    print("   → But this is ONLY for h=1 forecasts...")
 
 # =============================================================================
 # PART 5: CORRECT Approach — compare_horizons()
@@ -226,13 +227,15 @@ print("\n" + "=" * 70)
 print("PART 5: CORRECT APPROACH — compare_horizons()")
 print("=" * 70)
 
-print("""
+print(
+    """
 compare_horizons() runs DM tests at multiple horizons with:
 - Horizon-specific HAC bandwidth (h-1) for MA(h-1) error structure
 - Harvey et al. (1997) small-sample correction
 - Pattern detection: "degrading", "consistent", or "irregular"
 - Predictability horizon: Where advantage becomes insignificant
-""")
+"""
+)
 
 # Compare GB vs Persistence across horizons
 horizons = (1, 2, 4, 7, 12)
@@ -250,7 +253,7 @@ print("\n📊 GradientBoosting vs Persistence across horizons:")
 print(result_gb.to_markdown())
 
 # Key insights
-print(f"\n🔍 Key Insights:")
+print("\n🔍 Key Insights:")
 print(f"   Significant horizons (p < 0.05): {result_gb.significant_horizons}")
 print(f"   First insignificant horizon: {result_gb.first_insignificant_horizon}")
 print(f"   Degradation pattern: {result_gb.degradation_pattern}")
@@ -259,8 +262,8 @@ print(f"   Degradation pattern: {result_gb.degradation_pattern}")
 # The DM test with alternative="less" tests if model1 has LOWER error
 # High p-values mean we can't reject that model1 is worse or equal
 if len(result_gb.significant_horizons) == 0:
-    print(f"\n⚠️  NOTE: No significant improvement at any horizon!")
-    print(f"   This often happens when complex models overfit on simple AR data.")
+    print("\n⚠️  NOTE: No significant improvement at any horizon!")
+    print("   This often happens when complex models overfit on simple AR data.")
 
 # =============================================================================
 # PART 6: Multi-Model Horizon Comparison
@@ -270,12 +273,14 @@ print("\n" + "=" * 70)
 print("PART 6: MULTI-MODEL HORIZON COMPARISON")
 print("=" * 70)
 
-print("""
+print(
+    """
 compare_models_horizons() compares multiple models at each horizon:
 - Bonferroni-corrected pairwise DM tests
 - Identifies best model at each horizon
 - Detects if one model consistently dominates
-""")
+"""
+)
 
 # Prepare error dictionary
 errors_dict = {
@@ -307,12 +312,12 @@ for h in horizons:
 print("-" * 60)
 
 # Summary
-print(f"\n📈 Summary:")
+print("\n📈 Summary:")
 print(f"   Best models by horizon: {multi_result.best_model_by_horizon}")
 if multi_result.consistent_best:
     print(f"   Consistent winner: {multi_result.consistent_best}")
 else:
-    print(f"   No consistent winner (model selection depends on horizon)")
+    print("   No consistent winner (model selection depends on horizon)")
 
 # =============================================================================
 # PART 7: Visualizing Horizon-Dependent Performance
@@ -356,7 +361,8 @@ print("\n" + "=" * 70)
 print("PART 8: PRACTICAL RECOMMENDATIONS")
 print("=" * 70)
 
-print("""
+print(
+    """
 Based on multi-horizon analysis:
 
 1. IDENTIFY YOUR BUSINESS HORIZON
@@ -376,7 +382,8 @@ Based on multi-horizon analysis:
    - Never report just h=1 performance
    - Show degradation curve to stakeholders
    - Be honest about where model advantage ends
-""")
+"""
+)
 
 # =============================================================================
 # PART 9: Key Takeaways
@@ -386,7 +393,8 @@ print("\n" + "=" * 70)
 print("PART 9: KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. SINGLE-HORIZON EVALUATION IS DANGEROUS
    - h=1 results don't generalize to h=7 or h=12
    - Business decisions often need longer horizons
@@ -411,7 +419,8 @@ print("""
    - "degrading": Normal for most models (advantage fades)
    - "consistent": Rare but desirable (model robust across horizons)
    - "irregular": Investigate — may indicate overfitting or data issues
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example 09 complete.")

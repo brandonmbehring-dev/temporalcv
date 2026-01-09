@@ -80,9 +80,9 @@ class TestWildBootstrapCoverage:
         type_i_rate = rejections / N_SIMS
 
         # With 10 clusters, should be closer to nominal 5%
-        assert 0.02 <= type_i_rate <= 0.12, (
-            f"10-fold Type I error = {type_i_rate:.1%}, expected ~5%"
-        )
+        assert (
+            0.02 <= type_i_rate <= 0.12
+        ), f"10-fold Type I error = {type_i_rate:.1%}, expected ~5%"
 
     def test_type_i_error_20_folds(self):
         """
@@ -109,9 +109,9 @@ class TestWildBootstrapCoverage:
         type_i_rate = rejections / N_SIMS
 
         # With 20 clusters, should be closer to nominal
-        assert 0.02 <= type_i_rate <= 0.10, (
-            f"20-fold Type I error = {type_i_rate:.1%}, expected ~5%"
-        )
+        assert (
+            0.02 <= type_i_rate <= 0.10
+        ), f"20-fold Type I error = {type_i_rate:.1%}, expected ~5%"
 
 
 # =============================================================================

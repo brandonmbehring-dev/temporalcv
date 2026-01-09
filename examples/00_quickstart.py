@@ -83,23 +83,44 @@ n_samples = len(X)
 
 for fold_idx, (train_idx, test_idx) in enumerate(cv.split(X, y)):
     # Training set
-    ax.barh(fold_idx, len(train_idx), left=train_idx[0], height=0.6,
-            color='#1f77b4', alpha=0.8, label='Train' if fold_idx == 0 else '')
+    ax.barh(
+        fold_idx,
+        len(train_idx),
+        left=train_idx[0],
+        height=0.6,
+        color="#1f77b4",
+        alpha=0.8,
+        label="Train" if fold_idx == 0 else "",
+    )
     # Gap
     gap_start = train_idx[-1] + 1
     gap_end = test_idx[0]
-    ax.barh(fold_idx, gap_end - gap_start, left=gap_start, height=0.6,
-            color='#d62728', alpha=0.5, label='Gap' if fold_idx == 0 else '')
+    ax.barh(
+        fold_idx,
+        gap_end - gap_start,
+        left=gap_start,
+        height=0.6,
+        color="#d62728",
+        alpha=0.5,
+        label="Gap" if fold_idx == 0 else "",
+    )
     # Test set
-    ax.barh(fold_idx, len(test_idx), left=test_idx[0], height=0.6,
-            color='#ff7f0e', alpha=0.8, label='Test' if fold_idx == 0 else '')
+    ax.barh(
+        fold_idx,
+        len(test_idx),
+        left=test_idx[0],
+        height=0.6,
+        color="#ff7f0e",
+        alpha=0.8,
+        label="Test" if fold_idx == 0 else "",
+    )
 
-ax.set_xlabel('Sample Index')
-ax.set_ylabel('CV Fold')
+ax.set_xlabel("Sample Index")
+ax.set_ylabel("CV Fold")
 ax.set_yticks(range(5))
-ax.set_yticklabels([f'Fold {i+1}' for i in range(5)])
-ax.set_title('Walk-Forward Cross-Validation with Gap Enforcement')
-ax.legend(loc='upper left')
+ax.set_yticklabels([f"Fold {i+1}" for i in range(5)])
+ax.set_title("Walk-Forward Cross-Validation with Gap Enforcement")
+ax.legend(loc="upper left")
 ax.set_xlim(0, n_samples)
 
 # Apply Tufte styling

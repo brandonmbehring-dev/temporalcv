@@ -47,7 +47,7 @@ from sklearn.linear_model import Ridge
 
 # temporalcv imports
 from temporalcv import WalkForwardCV
-from temporalcv.statistical_tests import dm_test, cw_test
+from temporalcv.statistical_tests import cw_test, dm_test
 
 # =============================================================================
 # PART 1: Generate Synthetic Quarterly GDP Data
@@ -114,10 +114,13 @@ def generate_gdp_data(
     # Create quarterly dates
     dates = pd.date_range("1990-01-01", periods=n_quarters, freq="QE")
 
-    df = pd.DataFrame({
-        "growth": growth,
-        "indicator": indicator,
-    }, index=dates)
+    df = pd.DataFrame(
+        {
+            "growth": growth,
+            "indicator": indicator,
+        },
+        index=dates,
+    )
 
     # Add lagged features
     df["growth_lag1"] = df["growth"].shift(1)
@@ -140,8 +143,8 @@ print(f"\n📊 Generated quarterly GDP data: {len(df)} observations")
 print(f"   Date range: {df.index[0].date()} to {df.index[-1].date()}")
 print(f"   Mean growth: {df['growth'].mean()*100:.2f}% per quarter")
 print(f"   Growth volatility: {df['growth'].std()*100:.2f}%")
-print(f"\n   KEY: Indicator has TRUE coefficient = 0 (no signal)")
-print(f"   This means AR(1)+Indicator should NOT beat AR(1)!")
+print("\n   KEY: Indicator has TRUE coefficient = 0 (no signal)")
+print("   This means AR(1)+Indicator should NOT beat AR(1)!")
 
 # =============================================================================
 # PART 2: The Problem — Comparing Nested Models
@@ -151,7 +154,8 @@ print("\n" + "=" * 70)
 print("PART 2: THE PROBLEM — COMPARING NESTED MODELS")
 print("=" * 70)
 
-print("""
+print(
+    """
 Two models to compare:
 
    AR(1):        growth_t = mu + phi * growth_{t-1} + epsilon_t
@@ -170,7 +174,8 @@ For nested models, DM test is BIASED:
    - Estimating beta adds noise to forecasts
    - DM test penalizes AR(1)+X for this noise
    - Result: DM test favors AR(1) even when AR(1)+X is correct!
-""")
+"""
+)
 
 # =============================================================================
 # PART 3: Generate Out-of-Sample Forecasts
@@ -200,8 +205,8 @@ for t in range(train_size, len(df)):
     y_train = train_df["growth"].values
 
     # Test point at t
-    X_test_ar1 = df.iloc[t:t+1][["growth_lag1"]].values
-    X_test_ar1_x = df.iloc[t:t+1][["growth_lag1", "indicator_lag1"]].values
+    X_test_ar1 = df.iloc[t : t + 1][["growth_lag1"]].values
+    X_test_ar1_x = df.iloc[t : t + 1][["growth_lag1", "indicator_lag1"]].values
 
     # Train models
     model_ar1 = Ridge(alpha=0.01)
@@ -249,7 +254,8 @@ print("\n" + "=" * 70)
 print("PART 4: WRONG APPROACH — USING DM TEST FOR NESTED MODELS")
 print("=" * 70)
 
-print("""
+print(
+    """
 The DM test compares loss differentials:
    d_t = L(e_ar1_t) - L(e_ar1x_t)
 
@@ -258,7 +264,8 @@ Under H0: E[d_t] = 0 (equal predictive accuracy)
 PROBLEM: For nested models, DM test has wrong size under H0.
    - True beta=0, so models should have equal accuracy
    - But DM test rejects too often (over-sized test)
-""")
+"""
+)
 
 # Run DM test (WRONG for nested models)
 dm_result = dm_test(
@@ -270,18 +277,18 @@ dm_result = dm_test(
     harvey_correction=True,
 )
 
-print(f"❌ DM Test Results (WRONG for nested models):")
+print("❌ DM Test Results (WRONG for nested models):")
 print(f"   Test statistic: {dm_result.statistic:.3f}")
 print(f"   p-value: {dm_result.pvalue:.3f}")
 print(f"   Conclusion at α=0.05: {'Reject H0' if dm_result.pvalue < 0.05 else 'Fail to reject H0'}")
 
 if dm_result.pvalue < 0.05:
-    print(f"\n   ⚠️  DM test rejects equal accuracy!")
-    print(f"   But we KNOW the indicator has no signal (beta=0)")
-    print(f"   This is a FALSE REJECTION due to test bias")
+    print("\n   ⚠️  DM test rejects equal accuracy!")
+    print("   But we KNOW the indicator has no signal (beta=0)")
+    print("   This is a FALSE REJECTION due to test bias")
 else:
-    print(f"\n   DM test correctly fails to reject, but this is luck")
-    print(f"   On average, DM test over-rejects for nested models")
+    print("\n   DM test correctly fails to reject, but this is luck")
+    print("   On average, DM test over-rejects for nested models")
 
 # =============================================================================
 # PART 5: Why DM Test is Biased for Nested Models
@@ -291,7 +298,8 @@ print("\n" + "=" * 70)
 print("PART 5: WHY DM TEST IS BIASED FOR NESTED MODELS")
 print("=" * 70)
 
-print("""
+print(
+    """
 The bias comes from parameter estimation uncertainty:
 
 1. AR(1)+X estimates coefficient beta on indicator
@@ -309,7 +317,8 @@ Mathematical adjustment:
    d*_t = d_t - (ŷ_ar1 - ŷ_ar1_x)²
 
 The CW test uses d*_t instead of d_t, removing the bias.
-""")
+"""
+)
 
 # =============================================================================
 # PART 6: CORRECT Approach — Using CW Test for Nested Models
@@ -319,7 +328,8 @@ print("\n" + "=" * 70)
 print("PART 6: CORRECT APPROACH — USING CW TEST FOR NESTED MODELS")
 print("=" * 70)
 
-print("""
+print(
+    """
 The Clark-West (CW) test adjusts for the parameter estimation bias:
 
    d*_t = L(e_ar1) - L(e_ar1x) - (ŷ_ar1 - ŷ_ar1x)²
@@ -330,7 +340,8 @@ from estimating the extra parameters in the unrestricted model.
 Under H0 (models have equal population accuracy), CW test has:
    - Correct size (rejects at α=0.05 about 5% of the time)
    - Good power against alternatives where AR(1)+X truly helps
-""")
+"""
+)
 
 # Run CW test (CORRECT for nested models)
 cw_result = cw_test(
@@ -344,18 +355,18 @@ cw_result = cw_test(
     harvey_correction=True,
 )
 
-print(f"✅ CW Test Results (CORRECT for nested models):")
+print("✅ CW Test Results (CORRECT for nested models):")
 print(f"   Test statistic: {cw_result.statistic:.3f}")
 print(f"   p-value: {cw_result.pvalue:.3f}")
 print(f"   Conclusion at α=0.05: {'Reject H0' if cw_result.pvalue < 0.05 else 'Fail to reject H0'}")
 
 if cw_result.pvalue >= 0.05:
-    print(f"\n   ✅ CW test correctly fails to reject")
-    print(f"   The indicator has no true predictive power (beta=0)")
-    print(f"   AR(1) and AR(1)+X have equal population accuracy")
+    print("\n   ✅ CW test correctly fails to reject")
+    print("   The indicator has no true predictive power (beta=0)")
+    print("   AR(1) and AR(1)+X have equal population accuracy")
 else:
-    print(f"\n   CW test rejects (sample variation)")
-    print(f"   With small samples, this can happen 5% of the time under H0")
+    print("\n   CW test rejects (sample variation)")
+    print("   With small samples, this can happen 5% of the time under H0")
 
 # =============================================================================
 # PART 7: Comparison Summary
@@ -365,20 +376,26 @@ print("\n" + "=" * 70)
 print("PART 7: COMPARISON SUMMARY")
 print("=" * 70)
 
-print(f"\n📊 Test Comparison (TRUE beta = 0, models should be equal):")
+print("\n📊 Test Comparison (TRUE beta = 0, models should be equal):")
 print("-" * 60)
 print(f"{'Test':<20} {'Statistic':<15} {'p-value':<15} {'Decision':<15}")
 print("-" * 60)
-print(f"{'DM (WRONG)':<20} {dm_result.statistic:<15.3f} {dm_result.pvalue:<15.3f} {'Reject' if dm_result.pvalue < 0.05 else 'Fail to reject':<15}")
-print(f"{'CW (CORRECT)':<20} {cw_result.statistic:<15.3f} {cw_result.pvalue:<15.3f} {'Reject' if cw_result.pvalue < 0.05 else 'Fail to reject':<15}")
+print(
+    f"{'DM (WRONG)':<20} {dm_result.statistic:<15.3f} {dm_result.pvalue:<15.3f} {'Reject' if dm_result.pvalue < 0.05 else 'Fail to reject':<15}"
+)
+print(
+    f"{'CW (CORRECT)':<20} {cw_result.statistic:<15.3f} {cw_result.pvalue:<15.3f} {'Reject' if cw_result.pvalue < 0.05 else 'Fail to reject':<15}"
+)
 print("-" * 60)
 
-print("""
+print(
+    """
 Key difference:
 - DM test is biased AGAINST the larger model (AR(1)+X)
 - CW test corrects for this bias
 - When comparing nested models, ALWAYS use CW test
-""")
+"""
+)
 
 # =============================================================================
 # PART 8: Walk-Forward CV with Limited Data
@@ -388,12 +405,14 @@ print("\n" + "=" * 70)
 print("PART 8: WALK-FORWARD CV WITH LIMITED DATA")
 print("=" * 70)
 
-print("""
+print(
+    """
 With quarterly data (n~100), we have limited splits:
 - n_splits=3-4 is typical
 - Each fold needs enough data for estimation
 - Expanding window preferable (use all available history)
-""")
+"""
+)
 
 # WalkForwardCV with limited splits
 wfcv = WalkForwardCV(
@@ -404,12 +423,12 @@ wfcv = WalkForwardCV(
     n_splits=3,
 )
 
-print(f"\n📊 WalkForwardCV Configuration:")
-print(f"   Window: Expanding from 40 quarters")
-print(f"   Test size: 10 quarters per fold")
-print(f"   Folds: 3")
+print("\n📊 WalkForwardCV Configuration:")
+print("   Window: Expanding from 40 quarters")
+print("   Test size: 10 quarters per fold")
+print("   Folds: 3")
 
-print(f"\n📊 Per-Fold Results:")
+print("\n📊 Per-Fold Results:")
 print("-" * 60)
 print(f"{'Fold':<8} {'Train':<12} {'AR(1) RMSE':<15} {'AR(1)+X RMSE':<15}")
 print("-" * 60)
@@ -439,8 +458,8 @@ for fold_idx, (train_idx, test_idx) in enumerate(wfcv.split(df[["growth_lag1"]].
     pred_fold_ar1_x = model_ar1_x.predict(X_test_ar1_x)
 
     # RMSE
-    rmse_ar1 = np.sqrt(np.mean((y_test - pred_fold_ar1)**2))
-    rmse_ar1_x = np.sqrt(np.mean((y_test - pred_fold_ar1_x)**2))
+    rmse_ar1 = np.sqrt(np.mean((y_test - pred_fold_ar1) ** 2))
+    rmse_ar1_x = np.sqrt(np.mean((y_test - pred_fold_ar1_x) ** 2))
 
     print(f"{fold_idx+1:<8} {len(train_idx):<12} {rmse_ar1:<15.4f} {rmse_ar1_x:<15.4f}")
 
@@ -454,7 +473,8 @@ print("\n" + "=" * 70)
 print("PART 9: KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. NESTED MODEL COMPARISON REQUIRES CW TEST, NOT DM TEST
    - DM test is biased against larger model
    - CW test corrects for parameter estimation noise
@@ -488,7 +508,8 @@ print("""
 The pattern: Is model A a special case of model B?
    Yes → CW test
    No  → DM test
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example 13 complete.")

@@ -59,7 +59,9 @@ def check_gap_enforcement(n: int = 1000, gap: int = 5) -> BenchmarkResult:
         name="Gap Enforcement",
         temporalcv_value=f"All gaps >= {gap}: {tcv_correct}",
         sklearn_value=f"All gaps >= {gap}: {sklearn_correct}",
-        winner="Both" if tcv_correct and sklearn_correct else ("temporalcv" if tcv_correct else "sklearn"),
+        winner="Both"
+        if tcv_correct and sklearn_correct
+        else ("temporalcv" if tcv_correct else "sklearn"),
         notes="Both support gap parameter (sklearn added in v1.0)",
     )
 
@@ -96,7 +98,6 @@ def check_window_types(n: int = 1000) -> BenchmarkResult:
 def check_leakage_detection() -> BenchmarkResult:
     """Check if leakage detection is available."""
     # temporalcv has gates
-    from temporalcv.gates import gate_signal_verification, gate_suspicious_improvement
 
     tcv_has_gates = True
 
@@ -114,7 +115,6 @@ def check_leakage_detection() -> BenchmarkResult:
 
 def check_statistical_tests() -> BenchmarkResult:
     """Check if statistical testing is integrated."""
-    from temporalcv.statistical_tests import dm_test, pt_test
 
     tcv_has_tests = True
 
@@ -127,7 +127,9 @@ def check_statistical_tests() -> BenchmarkResult:
     )
 
 
-def benchmark_split_speed(n: int = 10000, n_splits: int = 10, iterations: int = 100) -> BenchmarkResult:
+def benchmark_split_speed(
+    n: int = 10000, n_splits: int = 10, iterations: int = 100
+) -> BenchmarkResult:
     """Benchmark splitting speed."""
     X = np.random.randn(n, 10)
     y = np.random.randn(n)
@@ -160,7 +162,6 @@ def benchmark_split_speed(n: int = 10000, n_splits: int = 10, iterations: int = 
 
 def check_conformal_prediction() -> BenchmarkResult:
     """Check conformal prediction support."""
-    from temporalcv.conformal import AdaptiveConformalPredictor, SplitConformalPredictor
 
     return BenchmarkResult(
         name="Conformal Prediction",
@@ -173,7 +174,6 @@ def check_conformal_prediction() -> BenchmarkResult:
 
 def check_financial_cv() -> BenchmarkResult:
     """Check financial CV support (purging, embargo)."""
-    from temporalcv.cv_financial import CombinatorialPurgedCV, PurgedKFold, PurgedWalkForward
 
     return BenchmarkResult(
         name="Financial CV (Purging)",
@@ -228,7 +228,7 @@ def main():
     sklearn_wins = sum(1 for r in results if r.winner == "sklearn")
     ties = len(results) - tcv_wins - sklearn_wins
 
-    print(f"\n### Summary")
+    print("\n### Summary")
     print(f"- temporalcv wins: {tcv_wins}")
     print(f"- sklearn wins: {sklearn_wins}")
     print(f"- Comparable/Both: {ties}")

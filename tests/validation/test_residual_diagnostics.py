@@ -59,9 +59,9 @@ class TestResidualDiagnosticsBasic:
         result = gate_residual_diagnostics(residuals, max_lag=10)
 
         # Should detect autocorrelation
-        assert "ljung_box" in result.details["failing_tests"], (
-            "Ljung-Box should detect AR(1) residuals"
-        )
+        assert (
+            "ljung_box" in result.details["failing_tests"]
+        ), "Ljung-Box should detect AR(1) residuals"
 
     def test_biased_residuals_detected(self) -> None:
         """
@@ -95,9 +95,9 @@ class TestResidualDiagnosticsBasic:
         result = gate_residual_diagnostics(residuals)
 
         # Should detect non-normality (WARN by default)
-        assert "jarque_bera" in result.details["failing_tests"], (
-            "Jarque-Bera should detect heavy-tailed residuals"
-        )
+        assert (
+            "jarque_bera" in result.details["failing_tests"]
+        ), "Jarque-Bera should detect heavy-tailed residuals"
 
     def test_insufficient_data_skips(self) -> None:
         """Gate should SKIP with insufficient data."""
@@ -223,9 +223,9 @@ class TestLjungBoxImplementation:
 
         # Should be around 5% ± reasonable tolerance
         # Using 2-15% as acceptable range
-        assert 0.02 < rejection_rate < 0.15, (
-            f"Rejection rate {rejection_rate:.2%} outside expected range for white noise"
-        )
+        assert (
+            0.02 < rejection_rate < 0.15
+        ), f"Rejection rate {rejection_rate:.2%} outside expected range for white noise"
 
 
 class TestResidualDiagnosticsEdgeCases:

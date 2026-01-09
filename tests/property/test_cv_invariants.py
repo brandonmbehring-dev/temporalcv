@@ -128,9 +128,9 @@ class TestCVCoreInvariants:
         )
 
         for train_idx, test_idx in cv.split(X, y):
-            assert max(train_idx) < min(test_idx), (
-                f"Train should precede test: max(train)={max(train_idx)}, min(test)={min(test_idx)}"
-            )
+            assert max(train_idx) < min(
+                test_idx
+            ), f"Train should precede test: max(train)={max(train_idx)}, min(test)={min(test_idx)}"
 
 
 # === Window Type Invariants ===
@@ -161,9 +161,9 @@ class TestWindowTypeInvariants:
 
         if train_sizes:  # Only check if we have splits
             # All training sets should be same size
-            assert all(s == train_sizes[0] for s in train_sizes), (
-                f"Sliding window should have constant size: {set(train_sizes)}"
-            )
+            assert all(
+                s == train_sizes[0] for s in train_sizes
+            ), f"Sliding window should have constant size: {set(train_sizes)}"
 
     @given(valid_cv_params())
     @settings(max_examples=50)
@@ -187,9 +187,9 @@ class TestWindowTypeInvariants:
         if len(train_sizes) > 1:
             # Each training set should be >= previous
             for i in range(1, len(train_sizes)):
-                assert train_sizes[i] >= train_sizes[i - 1], (
-                    f"Expanding window should grow: {train_sizes}"
-                )
+                assert (
+                    train_sizes[i] >= train_sizes[i - 1]
+                ), f"Expanding window should grow: {train_sizes}"
 
 
 # === Test Size Invariants ===
@@ -253,8 +253,8 @@ class TestSplitInfoInvariants:
             test_end = max(test_idx)
 
             # This split's test should start after previous split's test
-            assert test_start > prev_test_end, (
-                f"Splits should progress: test_start={test_start}, prev_test_end={prev_test_end}"
-            )
+            assert (
+                test_start > prev_test_end
+            ), f"Splits should progress: test_start={test_start}, prev_test_end={prev_test_end}"
 
             prev_test_end = test_end

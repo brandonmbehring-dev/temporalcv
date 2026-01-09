@@ -111,9 +111,9 @@ class TestCriticalValueProperties:
         for alpha in [0.01, 0.05, 0.10]:
             cv_two = SHAO_LOBATO_CRITICAL_VALUES[("two-sided", alpha)]
             cv_one = SHAO_LOBATO_CRITICAL_VALUES[("one-sided", alpha)]
-            assert cv_two > cv_one, (
-                f"Two-sided CV ({cv_two}) should be > one-sided CV ({cv_one}) for α={alpha}"
-            )
+            assert (
+                cv_two > cv_one
+            ), f"Two-sided CV ({cv_two}) should be > one-sided CV ({cv_one}) for α={alpha}"
 
     def test_critical_values_decrease_with_alpha(self) -> None:
         """
@@ -141,9 +141,9 @@ class TestCriticalValueProperties:
         Much larger would never reject (too conservative).
         """
         for key, value in SHAO_LOBATO_CRITICAL_VALUES.items():
-            assert 1.0 <= value <= 5.0, (
-                f"Critical value {value} for {key} outside reasonable range [1, 5]"
-            )
+            assert (
+                1.0 <= value <= 5.0
+            ), f"Critical value {value} for {key} outside reasonable range [1, 5]"
 
 
 # =============================================================================
@@ -306,9 +306,9 @@ class TestDMTestSelfNormalizedIntegration:
             alternative="two-sided",
         )
 
-        assert result.pvalue < 0.05, (
-            f"Very different forecasts should be significant, got p={result.pvalue}"
-        )
+        assert (
+            result.pvalue < 0.05
+        ), f"Very different forecasts should be significant, got p={result.pvalue}"
 
 
 # =============================================================================

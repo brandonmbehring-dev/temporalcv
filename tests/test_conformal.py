@@ -575,9 +575,9 @@ class TestCoverageGuarantees:
 
         # Average coverage should be ≥ 1 - α = 0.90
         mean_coverage = np.mean(coverages)
-        assert mean_coverage >= 0.85, (
-            f"Mean coverage {mean_coverage:.3f} < 0.85. Finite sample guarantee may be violated."
-        )
+        assert (
+            mean_coverage >= 0.85
+        ), f"Mean coverage {mean_coverage:.3f} < 0.85. Finite sample guarantee may be violated."
 
     def test_coverage_not_grossly_overconservative(self) -> None:
         """Coverage should not be grossly overconservative (e.g., 100%)."""
@@ -594,9 +594,9 @@ class TestCoverageGuarantees:
         coverage = intervals.coverage(y[100:])
 
         # Should not be extremely overconservative
-        assert coverage < 0.995, (
-            f"Coverage {coverage:.3f} is too high. Intervals may be excessively wide."
-        )
+        assert (
+            coverage < 0.995
+        ), f"Coverage {coverage:.3f} is too high. Intervals may be excessively wide."
 
 
 # =============================================================================
@@ -631,17 +631,17 @@ class TestWalkForwardConformal:
         )
 
         # Verify holdout-only computation
-        assert quality["holdout_size"] == 70, (
-            f"Expected 70 holdout points, got {quality['holdout_size']}"
-        )
-        assert quality["calibration_size"] == 30, (
-            f"Expected 30 calibration points, got {quality['calibration_size']}"
-        )
+        assert (
+            quality["holdout_size"] == 70
+        ), f"Expected 70 holdout points, got {quality['holdout_size']}"
+        assert (
+            quality["calibration_size"] == 30
+        ), f"Expected 30 calibration points, got {quality['calibration_size']}"
 
         # Intervals should be sized for holdout only
-        assert len(intervals.point) == 70, (
-            f"Intervals should have 70 points, got {len(intervals.point)}"
-        )
+        assert (
+            len(intervals.point) == 70
+        ), f"Intervals should have 70 points, got {len(intervals.point)}"
 
     def test_metadata_returned(self) -> None:
         """Quality dict should include calibration metadata."""
@@ -700,9 +700,9 @@ class TestWalkForwardConformal:
         mean_coverage = np.mean(coverages)
 
         # Average coverage should be >= 1 - alpha = 0.90 (approximately)
-        assert mean_coverage >= 0.80, (
-            f"Mean coverage {mean_coverage:.3f} < 0.80. Coverage guarantee may be violated."
-        )
+        assert (
+            mean_coverage >= 0.80
+        ), f"Mean coverage {mean_coverage:.3f} < 0.80. Coverage guarantee may be violated."
 
     def test_length_mismatch_raises(self) -> None:
         """Should raise error if predictions/actuals lengths differ."""

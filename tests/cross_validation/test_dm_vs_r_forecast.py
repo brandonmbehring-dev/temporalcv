@@ -116,9 +116,9 @@ class TestDMDirectionMatchesR:
         result = dm_test(e1, e2, h=1, alternative="two-sided")
 
         # Statistic should be near zero for equal models
-        assert abs(result.statistic) < 2.5, (
-            f"Equal models should have |stat| < 2.5, got {result.statistic}"
-        )
+        assert (
+            abs(result.statistic) < 2.5
+        ), f"Equal models should have |stat| < 2.5, got {result.statistic}"
         # Should not reject at 5%
         assert result.pvalue > 0.01, "Equal models should not be highly significant"
 
@@ -132,9 +132,9 @@ class TestDMDirectionMatchesR:
         result = dm_test(e1, e2, h=1, alternative="two-sided")
 
         # Model 1 has variance 0.5, model 2 has 1.5 -> model 1 better -> negative stat
-        assert result.statistic < 0, (
-            f"Model 1 better should give negative stat, got {result.statistic}"
-        )
+        assert (
+            result.statistic < 0
+        ), f"Model 1 better should give negative stat, got {result.statistic}"
         # Should be significant
         assert result.pvalue < 0.05, "Clear difference should be significant"
 
@@ -148,9 +148,9 @@ class TestDMDirectionMatchesR:
         result = dm_test(e1, e2, h=4, alternative="two-sided")
 
         # Model 2 is biased -> model 1 better -> negative stat
-        assert result.statistic < 0, (
-            f"Unbiased model 1 should be preferred, got stat={result.statistic}"
-        )
+        assert (
+            result.statistic < 0
+        ), f"Unbiased model 1 should be preferred, got stat={result.statistic}"
 
 
 # =============================================================================
@@ -184,9 +184,9 @@ class TestPValueRangeMatchesR:
         result = dm_test(e1, e2, h=4, alternative="two-sided")
 
         # Should be in borderline range
-        assert 0.01 < result.pvalue < 0.30, (
-            f"Marginal difference should give p in (0.01, 0.30), got {result.pvalue}"
-        )
+        assert (
+            0.01 < result.pvalue < 0.30
+        ), f"Marginal difference should give p in (0.01, 0.30), got {result.pvalue}"
 
     def test_no_difference_not_significant(self) -> None:
         """
@@ -206,9 +206,9 @@ class TestPValueRangeMatchesR:
 
         # Should not be highly significant (use 0.01 threshold for robustness)
         # Note: Some seeds will give p < 0.05 by chance (Type I error)
-        assert result.pvalue > 0.01, (
-            f"Equal models should generally not be significant, got p={result.pvalue}"
-        )
+        assert (
+            result.pvalue > 0.01
+        ), f"Equal models should generally not be significant, got p={result.pvalue}"
 
 
 # =============================================================================
@@ -236,9 +236,9 @@ class TestOneSidedMatchesR:
 
         # Model 1 has variance 0.8, model 2 has 1.2
         # Model 1 is BETTER, so testing "greater" (model 1 worse) gives high p
-        assert result.pvalue > 0.5, (
-            f"Testing 'greater' when model 1 is better should give p > 0.5, got {result.pvalue}"
-        )
+        assert (
+            result.pvalue > 0.5
+        ), f"Testing 'greater' when model 1 is better should give p > 0.5, got {result.pvalue}"
 
     def test_one_sided_less_when_better(self) -> None:
         """
@@ -250,9 +250,9 @@ class TestOneSidedMatchesR:
         result = dm_test(e1, e2, h=1, alternative="less")
 
         # Model 1 is better, testing "less" should be significant
-        assert result.pvalue < 0.20, (
-            f"Testing 'less' when model 1 is better should give small p, got {result.pvalue}"
-        )
+        assert (
+            result.pvalue < 0.20
+        ), f"Testing 'less' when model 1 is better should give small p, got {result.pvalue}"
 
 
 # =============================================================================
@@ -273,9 +273,9 @@ class TestSmallSampleBehavior:
         result = dm_test(e1, e2, h=1, alternative="two-sided")
 
         # Model 2 has larger variance -> model 1 better -> negative stat
-        assert result.statistic < 0, (
-            f"Small sample should still get direction right, got {result.statistic}"
-        )
+        assert (
+            result.statistic < 0
+        ), f"Small sample should still get direction right, got {result.statistic}"
 
     def test_small_sample_less_significant(self) -> None:
         """
@@ -295,9 +295,9 @@ class TestSmallSampleBehavior:
 
         # Larger sample should have smaller p-value (more significant)
         # This is a soft test - mainly checks reasonable behavior
-        assert result_small.pvalue > 0 and result_large.pvalue > 0, (
-            "Both p-values should be positive"
-        )
+        assert (
+            result_small.pvalue > 0 and result_large.pvalue > 0
+        ), "Both p-values should be positive"
 
 
 # =============================================================================
@@ -360,9 +360,9 @@ class TestAgainstReferenceCSV:
         result = dm_test(e1, e2, h=int(ref_row["h"]), alternative="two-sided")
 
         # R gives negative statistic, we should too
-        assert np.sign(result.statistic) == np.sign(ref_row["statistic"]), (
-            f"Statistic sign mismatch: Python={result.statistic:.3f}, R={ref_row['statistic']:.3f}"
-        )
+        assert np.sign(result.statistic) == np.sign(
+            ref_row["statistic"]
+        ), f"Statistic sign mismatch: Python={result.statistic:.3f}, R={ref_row['statistic']:.3f}"
 
     def test_reference_cases_significance_alignment(self, reference_df: pd.DataFrame) -> None:
         """

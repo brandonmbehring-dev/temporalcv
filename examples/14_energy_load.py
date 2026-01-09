@@ -111,13 +111,18 @@ def generate_energy_load_data(
     load = np.maximum(load, 0)  # Load can't be negative
 
     # Create DataFrame
-    df = pd.DataFrame({
-        "load": load,
-        "hour": hour_of_day,
-        "day_of_week": day_of_week,
-        "is_weekend": is_weekend.astype(int),
-        "is_business_hour": ((hour_of_day >= 9) & (hour_of_day <= 17) & (day_of_week < 5)).astype(int),
-    }, index=timestamps)
+    df = pd.DataFrame(
+        {
+            "load": load,
+            "hour": hour_of_day,
+            "day_of_week": day_of_week,
+            "is_weekend": is_weekend.astype(int),
+            "is_business_hour": (
+                (hour_of_day >= 9) & (hour_of_day <= 17) & (day_of_week < 5)
+            ).astype(int),
+        },
+        index=timestamps,
+    )
 
     # Add lagged features (strictly causal)
     df["load_lag1"] = df["load"].shift(1)  # Previous hour
@@ -148,7 +153,7 @@ print(f"   Min load: {df['load'].min():.0f} MW")
 
 # Show daily pattern
 daily_avg = df.groupby("hour")["load"].mean()
-print(f"\n📈 Average load by hour (daily pattern):")
+print("\n📈 Average load by hour (daily pattern):")
 print(f"   Peak hour: {daily_avg.idxmax()}:00 ({daily_avg.max():.0f} MW)")
 print(f"   Trough hour: {daily_avg.idxmin()}:00 ({daily_avg.min():.0f} MW)")
 
@@ -160,7 +165,8 @@ print("\n" + "=" * 70)
 print("PART 2: WHY MULTI-STEP FORECASTING NEEDS GAP ENFORCEMENT")
 print("=" * 70)
 
-print("""
+print(
+    """
 For day-ahead forecasting (24-hour horizon):
 
    At time t, you need to forecast load[t+1], load[t+2], ..., load[t+24]
@@ -173,7 +179,8 @@ But if you train on data up to t+23 for a 24-step forecast:
    - Your features at t+24 use load[t+23] ← NOT AVAILABLE at time t!
 
 WalkForwardCV enforces the gap: train data ends at t - horizon + 1.
-""")
+"""
+)
 
 # =============================================================================
 # PART 3: Baseline — 24-Hour Lag (Same Hour Yesterday)
@@ -197,9 +204,9 @@ y_test = df_test["load"].values
 baseline_pred = df_test["load_lag24"].values
 baseline_mae = np.mean(np.abs(y_test - baseline_pred))
 
-print(f"📊 24-Hour Lag Baseline (same hour yesterday):")
+print("📊 24-Hour Lag Baseline (same hour yesterday):")
 print(f"   Test MAE: {baseline_mae:.2f} MW")
-print(f"   This is our reference for model improvement.")
+print("   This is our reference for model improvement.")
 
 # =============================================================================
 # PART 4: Train Models with Proper Features
@@ -211,9 +218,15 @@ print("=" * 70)
 
 # Features
 feature_cols = [
-    "hour", "day_of_week", "is_weekend", "is_business_hour",
-    "load_lag1", "load_lag24", "load_lag168",
-    "load_ma24", "load_std24"
+    "hour",
+    "day_of_week",
+    "is_weekend",
+    "is_business_hour",
+    "load_lag1",
+    "load_lag24",
+    "load_lag168",
+    "load_ma24",
+    "load_std24",
 ]
 
 X_train = df_train[feature_cols].values
@@ -237,12 +250,14 @@ ridge_pred = ridge_model.predict(X_test)
 gb_mae = np.mean(np.abs(y_test - gb_pred))
 ridge_mae = np.mean(np.abs(y_test - ridge_pred))
 
-print(f"✅ Model Performance (1-hour ahead features):")
+print("✅ Model Performance (1-hour ahead features):")
 print("-" * 50)
 print(f"{'Model':<20} {'MAE (MW)':<15} {'vs Baseline':<15}")
 print("-" * 50)
 print(f"{'24-Hour Lag':<20} {baseline_mae:<15.2f} {'(baseline)':<15}")
-print(f"{'GradientBoosting':<20} {gb_mae:<15.2f} {(gb_mae - baseline_mae) / baseline_mae * 100:+.1f}%")
+print(
+    f"{'GradientBoosting':<20} {gb_mae:<15.2f} {(gb_mae - baseline_mae) / baseline_mae * 100:+.1f}%"
+)
 print(f"{'Ridge':<20} {ridge_mae:<15.2f} {(ridge_mae - baseline_mae) / baseline_mae * 100:+.1f}%")
 print("-" * 50)
 
@@ -254,12 +269,14 @@ print("\n" + "=" * 70)
 print("PART 5: WALK-FORWARD CV FOR DAY-AHEAD (24-HOUR) FORECASTING")
 print("=" * 70)
 
-print("""
+print(
+    """
 For day-ahead forecasting, we set horizon=24:
 - This enforces a 24-hour gap between train end and test start
 - Ensures features at test time use only available information
 - Simulates real-world operational forecasting
-""")
+"""
+)
 
 # WalkForwardCV with 24-hour horizon
 wfcv = WalkForwardCV(
@@ -270,7 +287,7 @@ wfcv = WalkForwardCV(
     n_splits=3,
 )
 
-print(f"\n📊 Walk-Forward CV with horizon=24 (day-ahead):")
+print("\n📊 Walk-Forward CV with horizon=24 (day-ahead):")
 print("-" * 70)
 print(f"{'Fold':<8} {'Train Hours':<15} {'Test Period':<25} {'GB MAE':<12} {'Ridge MAE':<12}")
 print("-" * 70)
@@ -313,7 +330,9 @@ for fold_idx, (train_idx, test_idx) in enumerate(wfcv.split(df[feature_cols].val
     # Print
     test_start = df.index[test_idx[0]]
     test_end = df.index[test_idx[-1]]
-    print(f"{fold_idx + 1:<8} {len(train_idx):<15} {str(test_start.date()) + ' to ' + str(test_end.date()):<25} {gb_mae_fold:<12.2f} {ridge_mae_fold:<12.2f}")
+    print(
+        f"{fold_idx + 1:<8} {len(train_idx):<15} {str(test_start.date()) + ' to ' + str(test_end.date()):<25} {gb_mae_fold:<12.2f} {ridge_mae_fold:<12.2f}"
+    )
 
 print("-" * 70)
 print(f"{'Mean':<8} {'':<15} {'':<25} {np.mean(gb_maes):<12.2f} {np.mean(ridge_maes):<12.2f}")
@@ -328,12 +347,11 @@ print("=" * 70)
 
 # Get feature importance from the last GB model
 importance = gb_fold.feature_importances_
-importance_df = pd.DataFrame({
-    "feature": feature_cols,
-    "importance": importance
-}).sort_values("importance", ascending=False)
+importance_df = pd.DataFrame({"feature": feature_cols, "importance": importance}).sort_values(
+    "importance", ascending=False
+)
 
-print(f"\n📊 Feature Importance (GradientBoosting):")
+print("\n📊 Feature Importance (GradientBoosting):")
 print("-" * 40)
 for _, row in importance_df.iterrows():
     bar = "█" * int(row["importance"] * 50)
@@ -357,7 +375,7 @@ gate_result = gate_suspicious_improvement(
     warn_threshold=0.15,
 )
 
-print(f"\n📊 Gate: Suspicious Improvement Check")
+print("\n📊 Gate: Suspicious Improvement Check")
 print(f"   Best model MAE: {best_model_mae:.2f} MW")
 print(f"   Baseline MAE: {avg_baseline_mae:.2f} MW")
 print(f"   Improvement: {(avg_baseline_mae - best_model_mae) / avg_baseline_mae * 100:.1f}%")
@@ -371,7 +389,8 @@ print("\n" + "=" * 70)
 print("PART 8: KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. MULTI-STEP FORECASTING REQUIRES PROPER GAPS
    - horizon=24 for day-ahead forecasting
    - horizon=168 for week-ahead
@@ -403,7 +422,8 @@ print("""
    - Day-ahead scheduling needs 24-hour gap
    - Week-ahead planning needs 168-hour gap
    - Different horizons may need different models
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example 14 complete.")

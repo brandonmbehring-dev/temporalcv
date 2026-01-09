@@ -39,12 +39,11 @@ References
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 from sklearn.linear_model import Ridge
 
 # temporalcv imports
-from temporalcv.statistical_tests import dm_test, cw_test
-from temporalcv.viz import MetricComparisonDisplay, apply_tufte_style
+from temporalcv.statistical_tests import cw_test, dm_test
+from temporalcv.viz import apply_tufte_style
 
 # sphinx_gallery_thumbnail_number = 1
 
@@ -56,7 +55,8 @@ print("=" * 70)
 print("EXAMPLE 18: FAILURE CASE — USING DM TEST FOR NESTED MODELS")
 print("=" * 70)
 
-print("""
+print(
+    """
 SCENARIO:
 ---------
 You're a macro researcher comparing two models:
@@ -76,7 +76,8 @@ PROBLEM:
    DM test is biased for nested models
    It rejects H0 more often than it should (over-sized)
    You'll publish false positives!
-""")
+"""
+)
 
 # =============================================================================
 # PART 2: Generate Data Under the Null (beta = 0)
@@ -123,10 +124,10 @@ def generate_nested_null_data(
 # Generate one dataset
 y, x = generate_nested_null_data(n=100, seed=42)
 
-print(f"📊 Generated data under null hypothesis:")
+print("📊 Generated data under null hypothesis:")
 print(f"   Sample size: {len(y)}")
-print(f"   Indicator beta: 0.0 (NO signal)")
-print(f"   AR(1) coefficient: 0.7")
+print("   Indicator beta: 0.0 (NO signal)")
+print("   AR(1) coefficient: 0.7")
 
 # =============================================================================
 # PART 3: Run DM and CW Tests on Single Dataset
@@ -165,8 +166,8 @@ def run_forecast_comparison(y: np.ndarray, x: np.ndarray, train_frac: float = 0.
         x_lag_train = x_lag[:t]
 
         # Test point
-        y_lag_test = y_lag[t:t+1]
-        x_lag_test = x_lag[t:t+1]
+        y_lag_test = y_lag[t : t + 1]
+        x_lag_test = x_lag[t : t + 1]
 
         # Skip first point (no valid lag)
         if t == 0:
@@ -218,7 +219,7 @@ def run_forecast_comparison(y: np.ndarray, x: np.ndarray, train_frac: float = 0.
 
 dm_result, cw_result = run_forecast_comparison(y, x)
 
-print(f"📊 Single Dataset Results (TRUE beta = 0):")
+print("📊 Single Dataset Results (TRUE beta = 0):")
 print("-" * 50)
 print(f"{'Test':<20} {'Statistic':<15} {'p-value':<15}")
 print("-" * 50)
@@ -234,7 +235,8 @@ print("\n" + "=" * 70)
 print("PART 4: MONTE CARLO SIMULATION — TEST SIZE UNDER H0")
 print("=" * 70)
 
-print("""
+print(
+    """
 To see the bias, we run many simulations under H0 (beta = 0):
 - Generate data where indicator has NO signal
 - Run both DM and CW tests
@@ -243,7 +245,8 @@ To see the bias, we run many simulations under H0 (beta = 0):
 EXPECTED:
    - Correct test: Rejects ~5% of the time (nominal size)
    - DM test for nested models: Rejects >5% (over-sized)
-""")
+"""
+)
 
 n_simulations = 200  # Use 200 for reasonable runtime
 alpha = 0.05
@@ -252,7 +255,7 @@ dm_rejections = 0
 cw_rejections = 0
 
 print(f"\n🔄 Running {n_simulations} Monte Carlo simulations...")
-print(f"   (This may take a moment)")
+print("   (This may take a moment)")
 
 for sim in range(n_simulations):
     # Generate data under null
@@ -281,17 +284,17 @@ print(f"{'CW Test (CORRECT)':<20} {cw_rejections:<15} {cw_rejection_rate*100:.1f
 print("-" * 60)
 
 # Interpretation
-print(f"\n🔍 Interpretation:")
+print("\n🔍 Interpretation:")
 if dm_rejection_rate > 0.07:  # More than 40% inflation
     print(f"   ❌ DM test rejects {dm_rejection_rate*100:.1f}% (should be 5%)")
     print(f"      This is {dm_rejection_rate/alpha:.1f}x the nominal rate!")
-    print(f"      You would falsely claim 'significant improvement' too often!")
+    print("      You would falsely claim 'significant improvement' too often!")
 else:
     print(f"   DM rejection rate: {dm_rejection_rate*100:.1f}%")
 
 if 0.03 <= cw_rejection_rate <= 0.08:
     print(f"   ✅ CW test rejects {cw_rejection_rate*100:.1f}% (close to 5%)")
-    print(f"      This is correct behavior under H0!")
+    print("      This is correct behavior under H0!")
 else:
     print(f"   CW rejection rate: {cw_rejection_rate*100:.1f}%")
 
@@ -303,7 +306,8 @@ print("\n" + "=" * 70)
 print("PART 5: WHY THIS HAPPENS")
 print("=" * 70)
 
-print("""
+print(
+    """
 THE MATHEMATICAL PROBLEM:
 
 Under H0, the unrestricted model (AR+X) estimates beta when true beta=0.
@@ -325,7 +329,8 @@ INTUITION:
    CW asks: "Which model has better POPULATION forecasts?"
 
 For nested models, these are different questions!
-""")
+"""
+)
 
 # =============================================================================
 # PART 6: How This Mistake Appears in Research
@@ -335,7 +340,8 @@ print("\n" + "=" * 70)
 print("PART 6: HOW THIS MISTAKE APPEARS IN RESEARCH")
 print("=" * 70)
 
-print("""
+print(
+    """
 COMMON PATTERNS WHERE THIS BUG APPEARS:
 
 1. MACRO FORECASTING PAPERS
@@ -357,7 +363,8 @@ RED FLAGS TO WATCH FOR:
    - Restricted model is a special case of unrestricted
    - Only DM test is reported (not CW)
    - Marginal significance (p = 0.04) — might be DM bias
-""")
+"""
+)
 
 # =============================================================================
 # PART 7: Decision Rule
@@ -367,7 +374,8 @@ print("\n" + "=" * 70)
 print("PART 7: DECISION RULE")
 print("=" * 70)
 
-print("""
+print(
+    """
 IS MY MODEL COMPARISON NESTED?
 
 Ask: "Is Model A a special case of Model B when some parameters = 0?"
@@ -390,7 +398,8 @@ THE PATTERN:
    Is one model a RESTRICTED version of the other?
    YES → CW test
    NO  → DM test
-""")
+"""
+)
 
 # =============================================================================
 # PART 8: Key Takeaways
@@ -400,7 +409,8 @@ print("\n" + "=" * 70)
 print("PART 8: KEY TAKEAWAYS")
 print("=" * 70)
 
-print(f"""
+print(
+    f"""
 1. DM TEST IS BIASED FOR NESTED MODELS
    - Rejects H0 too often (we observed ~{dm_rejection_rate*100:.0f}% vs 5% expected)
    - Leads to false claims of predictive improvement
@@ -432,7 +442,8 @@ print(f"""
    - No other code changes needed
 
 The pattern: ALWAYS check if models are nested before comparing.
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example 18 complete.")
@@ -460,8 +471,12 @@ ax.axhline(5, color="#4a4a4a", linestyle="--", linewidth=2, label="Nominal α = 
 # Add value labels
 for bar, rate in zip(bars, rejection_rates):
     ax.text(
-        bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
-        f"{rate:.1f}%", ha="center", va="bottom", fontsize=12
+        bar.get_x() + bar.get_width() / 2,
+        bar.get_height() + 0.5,
+        f"{rate:.1f}%",
+        ha="center",
+        va="bottom",
+        fontsize=12,
     )
 
 ax.set_ylabel("Rejection Rate (%)")

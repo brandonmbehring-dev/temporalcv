@@ -117,9 +117,9 @@ class TestTheoreticalBoundsKnownAnswer:
         estimated_phi = result.details.get("phi_estimate", 0)
 
         # Should be within 0.15 of true value (ACF(1) estimation variance)
-        assert abs(estimated_phi - true_phi) < 0.15, (
-            f"Estimated phi={estimated_phi:.3f}, true phi={true_phi}"
-        )
+        assert (
+            abs(estimated_phi - true_phi) < 0.15
+        ), f"Estimated phi={estimated_phi:.3f}, true phi={true_phi}"
 
     def test_sigma_estimation_accuracy(self):
         """Verify innovation sigma estimation is accurate."""
@@ -130,9 +130,9 @@ class TestTheoreticalBoundsKnownAnswer:
         estimated_sigma = result.details.get("sigma_innovation", 0)
 
         # Should be within 25% of true value
-        assert abs(estimated_sigma - true_sigma) / true_sigma < 0.30, (
-            f"Estimated sigma={estimated_sigma:.3f}, true sigma={true_sigma}"
-        )
+        assert (
+            abs(estimated_sigma - true_sigma) / true_sigma < 0.30
+        ), f"Estimated sigma={estimated_sigma:.3f}, true sigma={true_sigma}"
 
     def test_different_sigma_values(self):
         """Test with different innovation variances."""

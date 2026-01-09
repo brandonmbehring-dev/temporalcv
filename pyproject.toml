@@ -179,16 +179,20 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # sklearn interface methods require y, groups params even when unused
-"src/temporalcv/cv.py" = ["ARG002"]
+"src/temporalcv/cv.py" = ["ARG002", "UP038"]
 "src/temporalcv/cv_financial.py" = ["ARG002"]
 "src/temporalcv/compare/base.py" = ["ARG002"]
 "src/temporalcv/compare/adapters/*.py" = ["ARG002"]
+"src/temporalcv/compare/results.py" = ["UP038"]
 # Imports after logger/constant definitions (intentional structure)
 "src/temporalcv/compare/runner.py" = ["E402"]
 "src/temporalcv/regimes.py" = ["E402"]
 "src/temporalcv/statistical_tests.py" = ["E402"]
 # Test fixtures and mocks often have unused params
 "tests/**/*.py" = ["ARG001", "ARG002"]
+# Examples/benchmarks: allow unused vars, loop vars, late imports for pedagogical clarity
+"examples/**/*.py" = ["F841", "B007", "E402", "ARG001"]
+"benchmarks/**/*.py" = ["F841", "B007", "UP007"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["temporalcv"]

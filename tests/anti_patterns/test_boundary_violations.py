@@ -38,9 +38,9 @@ class TestBoundaryViolationDetection:
             extra_gap=0,
         )
 
-        assert result.status == GateStatus.HALT, (
-            f"Should HALT on overlapping indices, got {result.status}"
-        )
+        assert (
+            result.status == GateStatus.HALT
+        ), f"Should HALT on overlapping indices, got {result.status}"
 
     def test_detects_adjacent_without_gap(self) -> None:
         """
@@ -55,9 +55,9 @@ class TestBoundaryViolationDetection:
             extra_gap=0,
         )
 
-        assert result.status == GateStatus.HALT, (
-            f"Should HALT when gap < horizon, got {result.status}"
-        )
+        assert (
+            result.status == GateStatus.HALT
+        ), f"Should HALT when gap < horizon, got {result.status}"
 
     def test_detects_insufficient_gap(self) -> None:
         """
@@ -196,9 +196,9 @@ class TestWalkForwardCVBoundaries:
             max_train = max(train_idx)
             min_test = min(test_idx)
 
-            assert max_train < min_test, (
-                f"Temporal order violation: max(train)={max_train} >= min(test)={min_test}"
-            )
+            assert (
+                max_train < min_test
+            ), f"Temporal order violation: max(train)={max_train} >= min(test)={min_test}"
 
 
 class TestBoundaryMetrics:

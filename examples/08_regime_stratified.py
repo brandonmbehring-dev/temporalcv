@@ -35,18 +35,15 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import Ridge
 
 # temporalcv imports
-from temporalcv import WalkForwardCV
+from temporalcv.gates import (
+    gate_suspicious_improvement,
+    run_gates_stratified,
+)
 from temporalcv.regimes import (
     classify_volatility_regime,
     compute_stratified_metrics,
     get_regime_counts,
 )
-from temporalcv.gates import (
-    gate_signal_verification,
-    gate_suspicious_improvement,
-    run_gates_stratified,
-)
-from temporalcv.persistence import compute_persistence_mae
 
 # =============================================================================
 # PART 1: Generate Synthetic Data with Known Volatility Regimes
@@ -100,9 +97,7 @@ def generate_regime_data(
 
     # Combine
     y = np.concatenate([y_low, y_high, y_med])
-    true_regimes = (
-        ["LOW"] * n_per_regime + ["HIGH"] * n_per_regime + ["MED"] * n_per_regime
-    )
+    true_regimes = ["LOW"] * n_per_regime + ["HIGH"] * n_per_regime + ["MED"] * n_per_regime
 
     # Generate features (lagged values + noise to create predictable signal)
     # In LOW regime: features are more predictive
@@ -110,11 +105,13 @@ def generate_regime_data(
     X = np.zeros((n_samples, 3))
 
     # Feature 1: Lagged target (with varying noise by regime)
-    noise_scale = np.concatenate([
-        np.full(n_per_regime, 0.01),   # LOW: low noise, predictable
-        np.full(n_per_regime, 0.05),   # HIGH: high noise, unpredictable
-        np.full(n_per_regime, 0.025),  # MED: medium noise
-    ])
+    noise_scale = np.concatenate(
+        [
+            np.full(n_per_regime, 0.01),  # LOW: low noise, predictable
+            np.full(n_per_regime, 0.05),  # HIGH: high noise, unpredictable
+            np.full(n_per_regime, 0.025),  # MED: medium noise
+        ]
+    )
     X[1:, 0] = y[:-1] + rng.normal(0, noise_scale[1:])
 
     # Feature 2: Lagged change
@@ -126,13 +123,15 @@ def generate_regime_data(
     X[6:, 2] = momentum[:-1]
 
     # Create DataFrame
-    df = pd.DataFrame({
-        "y": y,
-        "x1_lagged_level": X[:, 0],
-        "x2_lagged_change": X[:, 1],
-        "x3_momentum": X[:, 2],
-        "true_regime": true_regimes,
-    })
+    df = pd.DataFrame(
+        {
+            "y": y,
+            "x1_lagged_level": X[:, 0],
+            "x2_lagged_change": X[:, 1],
+            "x3_momentum": X[:, 2],
+            "true_regime": true_regimes,
+        }
+    )
 
     # Add index for time reference
     df.index = pd.date_range("2020-01-01", periods=n_samples, freq="D")
@@ -159,7 +158,8 @@ print("\n" + "=" * 70)
 print("PART 2: THE PROBLEM — WHY AGGREGATE METRICS HIDE CRITICAL FAILURES")
 print("=" * 70)
 
-print("""
+print(
+    """
 Consider a model deployed for risk management. You need it to work during
 market stress (HIGH volatility). But if you only look at aggregate MAE:
 
@@ -173,7 +173,8 @@ Model A looks better! But what if:
 
 For risk management, Model B is clearly superior. But aggregate metrics
 hide this completely.
-""")
+"""
+)
 
 # =============================================================================
 # PART 3: WRONG Approach — Ignore Regimes, Report Global Average
@@ -230,7 +231,7 @@ detected_regimes = classify_volatility_regime(
 )
 
 print("\n📊 Step 4.1: Classify volatility regimes")
-print(f"   Method: Rolling std of CHANGES (window=13)")
+print("   Method: Rolling std of CHANGES (window=13)")
 print(f"   Detected regime distribution: {get_regime_counts(detected_regimes)}")
 
 # Step 4.2: Compute stratified metrics
@@ -249,10 +250,12 @@ regime_maes = {r: m["mae"] for r, m in stratified_result.by_regime.items()}
 worst_regime = max(regime_maes, key=regime_maes.get)
 best_regime = min(regime_maes, key=regime_maes.get)
 
-print(f"\n⚠️  KEY INSIGHT:")
+print("\n⚠️  KEY INSIGHT:")
 print(f"   Worst regime ({worst_regime}): MAE = {regime_maes[worst_regime]:.4f}")
 print(f"   Best regime ({best_regime}):  MAE = {regime_maes[best_regime]:.4f}")
-print(f"   Ratio: {regime_maes[worst_regime] / regime_maes[best_regime]:.1f}x worse in {worst_regime} regime!")
+print(
+    f"   Ratio: {regime_maes[worst_regime] / regime_maes[best_regime]:.1f}x worse in {worst_regime} regime!"
+)
 
 # =============================================================================
 # PART 5: Validate Regime Boundaries Don't Leak
@@ -262,13 +265,15 @@ print("\n" + "=" * 70)
 print("PART 5: VALIDATE REGIME BOUNDARIES DON'T LEAK")
 print("=" * 70)
 
-print("""
+print(
+    """
 A subtle bug: if regimes are computed on the FULL dataset (train + test),
 the test set knows about future volatility patterns. This is a form of
 data leakage that inflates performance.
 
 temporalcv's run_gates_stratified() checks for this and other issues.
-""")
+"""
+)
 
 # First, compute overall gates
 # Persistence baseline
@@ -297,20 +302,20 @@ stratified_report = run_gates_stratified(
     warning_threshold=0.10,
 )
 
-print(f"\n✅ Stratified Validation Report:")
+print("\n✅ Stratified Validation Report:")
 print(f"   Overall status: {stratified_report.status}")
 print(f"   Regime counts: {stratified_report.regime_counts}")
 
 if stratified_report.status == "HALT":
-    print(f"\n🛑 HALT detected! Check per-regime results:")
+    print("\n🛑 HALT detected! Check per-regime results:")
     for regime, report in stratified_report.by_regime.items():
         print(f"   {regime}: {report.status}")
         for gate in report.gates:
             print(f"      - {gate.name}: {gate.status} — {gate.message}")
 elif stratified_report.status == "WARN":
-    print(f"\n⚠️  WARN detected. Review per-regime results for potential issues.")
+    print("\n⚠️  WARN detected. Review per-regime results for potential issues.")
 else:
-    print(f"\n✅ PASS: Model passes validation across all regimes.")
+    print("\n✅ PASS: Model passes validation across all regimes.")
 
 # =============================================================================
 # PART 6: Compare Models Across Regimes
@@ -320,12 +325,14 @@ print("\n" + "=" * 70)
 print("PART 6: COMPARE MODELS ACROSS REGIMES")
 print("=" * 70)
 
-print("""
+print(
+    """
 Different models may excel in different regimes. A complex model might
 overfit in LOW volatility but capture patterns in HIGH volatility.
 
 Let's compare Gradient Boosting vs Ridge Regression across regimes.
-""")
+"""
+)
 
 # Train a simpler model
 ridge_model = Ridge(alpha=1.0)
@@ -360,7 +367,8 @@ print("\n" + "=" * 70)
 print("PART 7: KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. ALWAYS STRATIFY BY REGIME
    - Global metrics hide regime-dependent failures
    - A model can pass overall but fail catastrophically in specific regimes
@@ -385,7 +393,8 @@ print("""
    - Report per-regime metrics in model cards
    - Set regime-specific thresholds for deployment decisions
    - Consider ensemble strategies: different models for different regimes
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example 08 complete.")

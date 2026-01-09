@@ -1,8 +1,8 @@
 # Implementation Plan: Fix 83 Test Failures from gap→extra_gap Rename
 
-**Status**: Planning Complete  
-**Created**: 2026-01-05  
-**Estimated Scope**: 83 test failures across 11 test files + 3 source file bugs  
+**Status**: Planning Complete
+**Created**: 2026-01-05
+**Estimated Scope**: 83 test failures across 11 test files + 3 source file bugs
 
 ---
 
@@ -19,7 +19,7 @@ The `gap` → `extra_gap` parameter rename was applied to source code and docume
 
 2. **Test File Parameter Changes** (121 occurrences across 11 files):
    - Constructor calls: `WalkForwardCV(gap=N)` → `WalkForwardCV(extra_gap=N)`
-   - Function calls: `gate_temporal_boundary(gap=N)` → `gate_temporal_boundary(extra_gap=N)`  
+   - Function calls: `gate_temporal_boundary(gap=N)` → `gate_temporal_boundary(extra_gap=N)`
    - `walk_forward_evaluate(gap=N)` → `walk_forward_evaluate(extra_gap=N)`
 
 3. **Test Attribute Assertions** (12 occurrences):
@@ -64,7 +64,7 @@ WalkForwardCV(horizon=5, extra_gap=5)  # extra safety margin
    ```python
    # BEFORE:
    if self.verbose >= 1:  # ERROR: self.verbose doesn't exist yet
-   
+
    # AFTER:
    if verbose >= 1:  # Use parameter, not attribute
    ```
@@ -80,7 +80,7 @@ WalkForwardCV(horizon=5, extra_gap=5)  # extra safety margin
        window_size=self.window_size,
        test_size=1,
    )
-   
+
    # AFTER:
    outer_cv = WalkForwardCV(
        n_splits=self.n_outer_splits,
@@ -100,7 +100,7 @@ WalkForwardCV(horizon=5, extra_gap=5)  # extra safety margin
        f"n_outer={self.n_outer_splits}, n_inner={self.n_inner_splits}, "
        f"horizon={self.horizon}, gap={self.gap})"  # ERROR
    )
-   
+
    # AFTER:
    return (
        f"NestedWalkForwardCV(search={search_type!r}, "
@@ -150,7 +150,7 @@ assert split.gap >= 2                         → KEEP (split is SplitResult, .g
 
 **Specific Line Changes**:
 - L172: `gap=2` → `extra_gap=2`
-- L183: `gap=2` → `extra_gap=2` 
+- L183: `gap=2` → `extra_gap=2`
 - L187: `"gap=2"` in repr assertion → `"extra_gap=2"`
 - L163: `assert cv.gap == 0` → `assert cv.extra_gap == 0`
 - L178: `assert cv.gap == 2` → `assert cv.extra_gap == 2`
@@ -216,7 +216,7 @@ cv_with_gap = PurgedWalkForward(n_splits=3, test_size=20, gap=10, purge_gap=0)
 grep -A5 "class PurgedWalkForward" src/temporalcv/cv_financial.py
 ```
 
-If YES → `gap` → `extra_gap`  
+If YES → `gap` → `extra_gap`
 If NO → KEEP `gap` as-is
 
 **Action**: Investigate inheritance first, then update.
@@ -276,7 +276,7 @@ After all fixes:
 pytest tests/ -v --tb=short
 ```
 
-**Success Criteria**: 
+**Success Criteria**:
 - Total collected: 1,741 tests
 - Passed: 1,741 (100%)
 - Failed: 0
@@ -287,7 +287,7 @@ pytest tests/ -v --tb=short
 
 **Test Cases to Verify**:
 1. `WalkForwardCV(horizon=3, extra_gap=0)` → min 3-step separation
-2. `WalkForwardCV(horizon=3, extra_gap=2)` → min 5-step separation  
+2. `WalkForwardCV(horizon=3, extra_gap=2)` → min 5-step separation
 3. Edge case: `WalkForwardCV(horizon=1, extra_gap=0)` → 1-step separation
 4. NestedWalkForwardCV: Inner and outer CV both respect formula
 
@@ -357,10 +357,10 @@ for train, test in cv.split(X):
 
 ### High Risk Areas
 
-1. **Semantic Confusion**: 
+1. **Semantic Confusion**:
    - Risk: Tests might encode old `gap >= horizon` logic
    - Mitigation: Review each horizon+gap test for semantic correctness
-   
+
 2. **PurgedWalkForward edge case**:
    - Risk: cv_financial.py may use different `gap` semantics
    - Mitigation: Check class inheritance and documentation
@@ -391,7 +391,7 @@ for train, test in cv.split(X):
 
 ### Phase 1: Source Code Fixes
 - [ ] Fix cv.py line 1509 (self.verbose → verbose)
-- [ ] Fix cv.py line 1717 (gap=self.gap → extra_gap=self.extra_gap)  
+- [ ] Fix cv.py line 1717 (gap=self.gap → extra_gap=self.extra_gap)
 - [ ] Fix cv.py line 1928 (__repr__ gap → extra_gap)
 - [ ] Fix cv.py docstrings (lines 22, 540)
 - [ ] Run: `pytest tests/test_cv.py::TestNestedWalkForwardCV::test_basic_nested_cv -v`
@@ -400,7 +400,7 @@ for train, test in cv.split(X):
 ### Phase 2A: Core Test Files
 - [ ] Fix tests/test_cv.py (36 changes)
   - [ ] 24 constructor calls
-  - [ ] 10 attribute assertions  
+  - [ ] 10 attribute assertions
   - [ ] 2 function calls
   - [ ] Verify: `pytest tests/test_cv.py -v` (all pass)
 - [ ] Fix tests/test_gates.py (4 changes)
@@ -418,7 +418,7 @@ for train, test in cv.split(X):
 ### Phase 2C: Remaining Test Files
 - [ ] Fix tests/test_cross_fit.py
 - [ ] Fix tests/anti_patterns/test_boundary_violations.py
-- [ ] Fix tests/property/test_cv_invariants.py  
+- [ ] Fix tests/property/test_cv_invariants.py
 - [ ] Fix tests/benchmarks/test_gate_benchmarks.py
 - [ ] Fix tests/benchmarks/test_cv_benchmarks.py
 - [ ] Fix tests/integration/test_full_workflow.py
@@ -493,10 +493,10 @@ These 5 files are the most critical to understand and modify correctly:
 
 - Phase 1 (Source bugs): 30 minutes
 - Phase 2A (Core tests): 1 hour
-- Phase 2B (Special cases): 30 minutes  
+- Phase 2B (Special cases): 30 minutes
 - Phase 2C (Remaining tests): 1 hour
 - Phase 3 (Validation): 30 minutes
 - **Total**: 3.5 hours
 
-**Complexity**: Medium (systematic but requires semantic understanding)  
+**Complexity**: Medium (systematic but requires semantic understanding)
 **Risk Level**: Low-Medium (well-scoped, automated verification available)

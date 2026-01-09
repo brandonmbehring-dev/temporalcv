@@ -34,14 +34,13 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import cross_val_score
 
 # temporalcv imports
 from temporalcv import WalkForwardCV
 from temporalcv.gates import gate_suspicious_improvement
-from temporalcv.viz import CVFoldsDisplay, MetricComparisonDisplay, apply_tufte_style
+from temporalcv.viz import CVFoldsDisplay, MetricComparisonDisplay
 
 # sphinx_gallery_thumbnail_number = 1
 
@@ -109,8 +108,10 @@ print("=" * 70)
 df = generate_ar_data(n_samples=500, ar_coef=0.85, seed=42)
 
 print(f"\n📊 Generated AR(1) data: {len(df)} samples")
-print(f"   AR coefficient: 0.85 (strong persistence)")
-print(f"   Autocorrelation at lag 1: {np.corrcoef(df['y'][1:].values, df['y'][:-1].values)[0,1]:.3f}")
+print("   AR coefficient: 0.85 (strong persistence)")
+print(
+    f"   Autocorrelation at lag 1: {np.corrcoef(df['y'][1:].values, df['y'][:-1].values)[0,1]:.3f}"
+)
 
 # =============================================================================
 # PART 2: The Problem — Features Include Future Information
@@ -120,7 +121,8 @@ print("\n" + "=" * 70)
 print("PART 2: THE PROBLEM — FEATURES INCLUDE FUTURE INFORMATION")
 print("=" * 70)
 
-print("""
+print(
+    """
 Scenario: Forecasting 4 steps ahead (horizon=4)
 
 At time t=100, you need to forecast y[104]:
@@ -138,7 +140,8 @@ CORRECT approach (gap = horizon = 4):
 - Train on data up to t=96 (100 - 4)
 - Test starts at t=101
 - Now ALL features at test time use only data from ≤ t=100
-""")
+"""
+)
 
 # =============================================================================
 # PART 3: WRONG Approach — No Gap
@@ -168,18 +171,20 @@ model = Ridge(alpha=1.0)
 scores_wrong = cross_val_score(model, X, y, cv=wfcv_wrong, scoring="neg_mean_absolute_error")
 mae_wrong = -scores_wrong.mean()
 
-print(f"❌ WRONG: Using horizon=1 for 4-step ahead forecast")
+print("❌ WRONG: Using horizon=1 for 4-step ahead forecast")
 print(f"   Mean MAE: {mae_wrong:.4f}")
-print(f"   This is artificially low because features leak future info!")
+print("   This is artificially low because features leak future info!")
 
 # Show what's happening
-print(f"\n🔍 What's happening in each fold:")
+print("\n🔍 What's happening in each fold:")
 for fold_idx, (train_idx, test_idx) in enumerate(wfcv_wrong.split(X)):
     if fold_idx < 2:  # Show first 2 folds
         train_end = train_idx[-1]
         test_start = test_idx[0]
         gap = test_start - train_end - 1
-        print(f"   Fold {fold_idx + 1}: Train ends at idx {train_end}, Test starts at idx {test_start}")
+        print(
+            f"   Fold {fold_idx + 1}: Train ends at idx {train_end}, Test starts at idx {test_start}"
+        )
         print(f"            Effective gap: {gap} (should be ≥ 4 for 4-step forecast)")
         print(f"            ⚠️  y_lag1 at test_start uses y[{test_start - 1}] — was this available?")
 
@@ -203,21 +208,23 @@ wfcv_correct = WalkForwardCV(
 scores_correct = cross_val_score(model, X, y, cv=wfcv_correct, scoring="neg_mean_absolute_error")
 mae_correct = -scores_correct.mean()
 
-print(f"✅ CORRECT: Using horizon=4 for 4-step ahead forecast")
+print("✅ CORRECT: Using horizon=4 for 4-step ahead forecast")
 print(f"   Mean MAE: {mae_correct:.4f}")
-print(f"   This is the honest performance estimate.")
+print("   This is the honest performance estimate.")
 
 # Show the gap enforcement
-print(f"\n🔍 What's happening in each fold:")
+print("\n🔍 What's happening in each fold:")
 for fold_idx, (train_idx, test_idx) in enumerate(wfcv_correct.split(X)):
     if fold_idx < 2:
         train_end = train_idx[-1]
         test_start = test_idx[0]
         gap = test_start - train_end - 1
-        print(f"   Fold {fold_idx + 1}: Train ends at idx {train_end}, Test starts at idx {test_start}")
+        print(
+            f"   Fold {fold_idx + 1}: Train ends at idx {train_end}, Test starts at idx {test_start}"
+        )
         print(f"            Effective gap: {gap}")
         if gap >= 3:  # gap of 3 means 4-step separation
-            print(f"            ✅ All features at test_start use data from ≤ train_end")
+            print("            ✅ All features at test_start use data from ≤ train_end")
 
 # =============================================================================
 # PART 5: Comparing Results
@@ -232,19 +239,25 @@ naive_pred = df["y_lag4"].values
 naive_actual = df["y"].values
 naive_mae = np.mean(np.abs(naive_actual - naive_pred))
 
-print(f"\n📊 Side-by-Side Comparison (4-step ahead forecast):")
+print("\n📊 Side-by-Side Comparison (4-step ahead forecast):")
 print("-" * 60)
 print(f"{'Method':<30} {'MAE':<15} {'vs Naive':<15}")
 print("-" * 60)
 print(f"{'Naive (y_lag4)':<30} {naive_mae:<15.4f} {'(baseline)':<15}")
-print(f"{'WRONG (horizon=1)':<30} {mae_wrong:<15.4f} {(mae_wrong - naive_mae) / naive_mae * 100:+.1f}%")
-print(f"{'CORRECT (horizon=4)':<30} {mae_correct:<15.4f} {(mae_correct - naive_mae) / naive_mae * 100:+.1f}%")
+print(
+    f"{'WRONG (horizon=1)':<30} {mae_wrong:<15.4f} {(mae_wrong - naive_mae) / naive_mae * 100:+.1f}%"
+)
+print(
+    f"{'CORRECT (horizon=4)':<30} {mae_correct:<15.4f} {(mae_correct - naive_mae) / naive_mae * 100:+.1f}%"
+)
 print("-" * 60)
 
 degradation = (mae_correct - mae_wrong) / mae_wrong * 100
-print(f"\n⚠️  Reality check:")
-print(f"   WRONG approach appears {abs(degradation):.1f}% {'better' if degradation > 0 else 'worse'} than CORRECT")
-print(f"   This difference is due to information leakage through the gap!")
+print("\n⚠️  Reality check:")
+print(
+    f"   WRONG approach appears {abs(degradation):.1f}% {'better' if degradation > 0 else 'worse'} than CORRECT"
+)
+print("   This difference is due to information leakage through the gap!")
 
 # =============================================================================
 # PART 6: Validation with Gate
@@ -269,12 +282,12 @@ gate_correct = gate_suspicious_improvement(
     warn_threshold=0.15,
 )
 
-print(f"\n📊 Gate Results:")
+print("\n📊 Gate Results:")
 print(f"   WRONG approach: {gate_wrong.status}")
 print(f"   CORRECT approach: {gate_correct.status}")
 
 if str(gate_wrong.status) in ["GateStatus.HALT", "GateStatus.WARN"]:
-    print(f"\n   The gate flags WRONG as suspicious — good detection!")
+    print("\n   The gate flags WRONG as suspicious — good detection!")
 
 # =============================================================================
 # PART 7: Why This Matters
@@ -284,7 +297,8 @@ print("\n" + "=" * 70)
 print("PART 7: WHY THIS MATTERS")
 print("=" * 70)
 
-print("""
+print(
+    """
 Multi-step forecasting without proper gap enforcement is a pervasive bug:
 
 1. SKLEARN'S TIMESERIESSPLIT HAD THIS BUG
@@ -306,7 +320,8 @@ Multi-step forecasting without proper gap enforcement is a pervasive bug:
    - h=1: No gap needed (features at t+1 use data from t)
    - h=4: Need gap=4 (features at t+4 should use data from ≤t)
    - h=24: Need gap=24 (common in day-ahead forecasting)
-""")
+"""
+)
 
 # =============================================================================
 # PART 8: Key Takeaways
@@ -316,7 +331,8 @@ print("\n" + "=" * 70)
 print("PART 8: KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. HORIZON DETERMINES GAP
    - horizon=h means training data ends h steps before test starts
    - This ensures features at test time use only available information
@@ -343,7 +359,8 @@ print("""
    - gate_suspicious_improvement() catches many such bugs
 
 The pattern: gap = horizon. Always. No exceptions.
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example 19 complete.")

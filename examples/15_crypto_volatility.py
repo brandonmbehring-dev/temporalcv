@@ -43,8 +43,7 @@ import pandas as pd
 from sklearn.linear_model import Ridge
 
 # temporalcv imports
-from temporalcv import WalkForwardCV
-from temporalcv.conformal import SplitConformalPredictor, AdaptiveConformalPredictor
+from temporalcv.conformal import AdaptiveConformalPredictor, SplitConformalPredictor
 
 # =============================================================================
 # PART 1: Generate Synthetic Crypto Returns with Regime Shifts
@@ -80,13 +79,13 @@ def generate_crypto_data(
     if regimes is None:
         # Default: CALM → CRASH → RECOVERY cycle (twice)
         regimes = [
-            (100, "CALM", 0.001, 0.02),      # Days 0-100: Low vol, slight positive drift
-            (150, "CRASH", -0.01, 0.08),     # Days 100-150: High vol, negative drift
+            (100, "CALM", 0.001, 0.02),  # Days 0-100: Low vol, slight positive drift
+            (150, "CRASH", -0.01, 0.08),  # Days 100-150: High vol, negative drift
             (200, "RECOVERY", 0.005, 0.04),  # Days 150-200: Medium vol, recovery
-            (300, "CALM", 0.001, 0.02),      # Days 200-300: Back to calm
-            (350, "CRASH", -0.015, 0.10),    # Days 300-350: Severe crash
+            (300, "CALM", 0.001, 0.02),  # Days 200-300: Back to calm
+            (350, "CRASH", -0.015, 0.10),  # Days 300-350: Severe crash
             (400, "RECOVERY", 0.003, 0.05),  # Days 350-400: Recovery
-            (n_days, "CALM", 0.001, 0.02),   # Days 400+: Calm
+            (n_days, "CALM", 0.001, 0.02),  # Days 400+: Calm
         ]
 
     # Generate returns
@@ -104,10 +103,13 @@ def generate_crypto_data(
 
     # Create DataFrame
     dates = pd.date_range("2020-01-01", periods=n_days, freq="D")
-    df = pd.DataFrame({
-        "return": returns,
-        "regime": regime_labels,
-    }, index=dates)
+    df = pd.DataFrame(
+        {
+            "return": returns,
+            "regime": regime_labels,
+        },
+        index=dates,
+    )
 
     # Add features
     df["return_lag1"] = df["return"].shift(1)
@@ -130,7 +132,7 @@ print(f"   Date range: {df.index[0].date()} to {df.index[-1].date()}")
 
 # Show regime breakdown
 regime_stats = df.groupby("regime")["return"].agg(["count", "mean", "std"]).round(4)
-print(f"\n📈 Regime Statistics:")
+print("\n📈 Regime Statistics:")
 print(regime_stats.to_string())
 
 # =============================================================================
@@ -141,7 +143,8 @@ print("\n" + "=" * 70)
 print("PART 2: THE PROBLEM — FIXED INTERVALS FAIL DURING REGIME SHIFTS")
 print("=" * 70)
 
-print("""
+print(
+    """
 Split Conformal Prediction:
 1. Train model on training data
 2. Calibrate quantile on calibration data (fixed period)
@@ -154,7 +157,8 @@ Similarly, if calibration is during CRASH, intervals are too wide
 during CALM periods (OVER-COVERAGE, inefficient).
 
 The quantile doesn't adapt to changing volatility!
-""")
+"""
+)
 
 # =============================================================================
 # PART 3: Setup — Train Model and Generate Predictions
@@ -192,7 +196,7 @@ model.fit(X_train, y_train)
 cal_preds = model.predict(X_cal)
 test_preds = model.predict(X_test)
 
-print(f"📊 Data Splits:")
+print("📊 Data Splits:")
 print(f"   Training: {len(train_df)} days (model fitting)")
 print(f"   Calibration: {len(cal_df)} days (regime: {cal_df['regime'].iloc[0]})")
 print(f"   Test: {len(test_df)} days (multiple regimes)")
@@ -209,10 +213,10 @@ print("=" * 70)
 scp = SplitConformalPredictor(alpha=0.10)  # 90% intervals
 scp.calibrate(cal_preds, y_cal)
 
-print(f"❌ Split Conformal Prediction:")
+print("❌ Split Conformal Prediction:")
 print(f"   Calibration regime: {cal_df['regime'].iloc[0]} (low volatility)")
 print(f"   Calibrated quantile: {scp.quantile_:.4f}")
-print(f"   This quantile will be FIXED for all test data!")
+print("   This quantile will be FIXED for all test data!")
 
 # Generate intervals
 intervals_split = scp.predict_interval(test_preds)
@@ -226,7 +230,7 @@ test_df_with_preds["lower"] = lower_split
 test_df_with_preds["upper"] = upper_split
 test_df_with_preds["covered"] = (y_test >= lower_split) & (y_test <= upper_split)
 
-print(f"\n📊 Split Conformal Coverage by Regime:")
+print("\n📊 Split Conformal Coverage by Regime:")
 print("-" * 50)
 coverage_split = test_df_with_preds.groupby("regime")["covered"].mean()
 for regime in ["CALM", "CRASH", "RECOVERY"]:
@@ -237,7 +241,7 @@ for regime in ["CALM", "CRASH", "RECOVERY"]:
 
 overall_split = test_df_with_preds["covered"].mean()
 print(f"\n   Overall Coverage: {overall_split*100:.1f}%")
-print(f"   ⚠️  Coverage breaks down during CRASH — intervals too narrow!")
+print("   ⚠️  Coverage breaks down during CRASH — intervals too narrow!")
 
 # =============================================================================
 # PART 5: CORRECT Approach — Adaptive Conformal Prediction
@@ -247,7 +251,8 @@ print("\n" + "=" * 70)
 print("PART 5: CORRECT APPROACH — ADAPTIVE CONFORMAL PREDICTION")
 print("=" * 70)
 
-print("""
+print(
+    """
 Adaptive Conformal Prediction (Gibbs & Candès 2021):
 1. Start with initial quantile estimate
 2. For each new observation:
@@ -262,15 +267,16 @@ The update rule:
 
 This pushes the quantile up when under-covering (like during crashes)
 and down when over-covering (like during calm periods).
-""")
+"""
+)
 
 # Adaptive Conformal (CORRECT for non-stationary data)
 acp = AdaptiveConformalPredictor(alpha=0.10, gamma=0.1)
 acp.initialize(cal_preds, y_cal)
 
-print(f"✅ Adaptive Conformal Prediction:")
+print("✅ Adaptive Conformal Prediction:")
 print(f"   Initial quantile: {acp.quantile_history[0]:.4f}")
-print(f"   Adaptation rate (gamma): 0.1")
+print("   Adaptation rate (gamma): 0.1")
 
 # Online prediction
 adaptive_lowers = []
@@ -303,7 +309,7 @@ test_df_with_preds["upper_adaptive"] = adaptive_uppers
 test_df_with_preds["covered_adaptive"] = adaptive_covered
 test_df_with_preds["quantile_adaptive"] = adaptive_quantiles
 
-print(f"\n📊 Adaptive Conformal Coverage by Regime:")
+print("\n📊 Adaptive Conformal Coverage by Regime:")
 print("-" * 50)
 coverage_adaptive = test_df_with_preds.groupby("regime")["covered_adaptive"].mean()
 for regime in ["CALM", "CRASH", "RECOVERY"]:
@@ -314,7 +320,7 @@ for regime in ["CALM", "CRASH", "RECOVERY"]:
 
 overall_adaptive = test_df_with_preds["covered_adaptive"].mean()
 print(f"\n   Overall Coverage: {overall_adaptive*100:.1f}%")
-print(f"   ✅ Coverage is maintained across ALL regimes!")
+print("   ✅ Coverage is maintained across ALL regimes!")
 
 # =============================================================================
 # PART 6: Quantile Adaptation Visualization (Text-Based)
@@ -332,7 +338,7 @@ for i, regime in enumerate(test_df_with_preds["regime"]):
         regime_transitions.append((i, regime))
         prev_regime = regime
 
-print(f"\n📊 Adaptive Quantile at Regime Transitions:")
+print("\n📊 Adaptive Quantile at Regime Transitions:")
 print("-" * 60)
 for idx, regime in regime_transitions[:6]:  # Show first 6 transitions
     quantile = adaptive_quantiles[idx] if idx < len(adaptive_quantiles) else np.nan
@@ -342,7 +348,7 @@ print("-" * 60)
 # Show quantile range
 print(f"\n   Quantile range: {min(adaptive_quantiles):.4f} to {max(adaptive_quantiles):.4f}")
 print(f"   Fixed (split) quantile: {scp.quantile_:.4f}")
-print(f"   Adaptive quantile GROWS during crashes, SHRINKS during calm!")
+print("   Adaptive quantile GROWS during crashes, SHRINKS during calm!")
 
 # =============================================================================
 # PART 7: Side-by-Side Comparison
@@ -352,7 +358,7 @@ print("\n" + "=" * 70)
 print("PART 7: SIDE-BY-SIDE COMPARISON")
 print("=" * 70)
 
-print(f"\n📊 Coverage Comparison (Target: 90%):")
+print("\n📊 Coverage Comparison (Target: 90%):")
 print("-" * 70)
 print(f"{'Regime':<15} {'Split Conformal':<20} {'Adaptive Conformal':<20} {'Winner':<15}")
 print("-" * 70)
@@ -374,9 +380,11 @@ print(f"{'OVERALL':<15} {overall_split*100:<20.1f}% {overall_adaptive*100:<20.1f
 
 # Interval width comparison
 width_split = (test_df_with_preds["upper"] - test_df_with_preds["lower"]).mean()
-width_adaptive = (test_df_with_preds["upper_adaptive"] - test_df_with_preds["lower_adaptive"]).mean()
+width_adaptive = (
+    test_df_with_preds["upper_adaptive"] - test_df_with_preds["lower_adaptive"]
+).mean()
 
-print(f"\n📊 Average Interval Width:")
+print("\n📊 Average Interval Width:")
 print(f"   Split Conformal:    {width_split:.4f}")
 print(f"   Adaptive Conformal: {width_adaptive:.4f}")
 
@@ -388,7 +396,8 @@ print("\n" + "=" * 70)
 print("PART 8: KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. SPLIT CONFORMAL FAILS UNDER DISTRIBUTION SHIFT
    - Calibration quantile is FIXED from historical period
    - During regime change, coverage breaks down
@@ -426,7 +435,8 @@ print("""
 
 The pattern: Use adaptive conformal when distribution can shift.
 If data is truly stationary, split conformal is more efficient.
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example 15 complete.")

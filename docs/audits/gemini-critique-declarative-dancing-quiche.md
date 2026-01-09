@@ -4,9 +4,9 @@
 
 ## Executive Summary
 
-The plan `declarative-dancing-quiche.md` presents a robust strategy for polishing documentation and infrastructure for a v1.0 release. However, it **critically overlooks high-severity methodological flaws** identified in `codex-methodology-review.md`. 
+The plan `declarative-dancing-quiche.md` presents a robust strategy for polishing documentation and infrastructure for a v1.0 release. However, it **critically overlooks high-severity methodological flaws** identified in `codex-methodology-review.md`.
 
-Proceeding with this plan without addressing the core correctness issues (broken gate defaults, inconsistent gap semantics, valid-but-wrong in-sample error calculations) would result in a "polished but incorrect" library. 
+Proceeding with this plan without addressing the core correctness issues (broken gate defaults, inconsistent gap semantics, valid-but-wrong in-sample error calculations) would result in a "polished but incorrect" library.
 
 **Recommendation:** The plan must be restructured. "Phase 0" must be the resolution of the High and Medium severity findings from the Codex audit. The documentation efforts should follow *after* the API and logic are stabilized.
 

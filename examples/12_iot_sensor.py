@@ -36,7 +36,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import Ridge
 
 # temporalcv imports
@@ -95,17 +94,13 @@ def generate_sensor_data(
     n_hours = n_days * 24
     n_readings = n_hours * readings_per_hour
 
-    timestamps = pd.date_range(
-        "2024-01-01", periods=n_readings, freq="min"
-    )
+    timestamps = pd.date_range("2024-01-01", periods=n_readings, freq="min")
 
     # Time components
     hour_of_day = timestamps.hour + timestamps.minute / 60
 
     # Daily pattern: warmer during business hours (9-17)
-    daily_pattern = daily_amplitude * np.sin(
-        2 * np.pi * (hour_of_day - 6) / 24
-    )
+    daily_pattern = daily_amplitude * np.sin(2 * np.pi * (hour_of_day - 6) / 24)
 
     # Generate base signal
     noise = rng.normal(0, noise_std, n_readings)
@@ -118,12 +113,15 @@ def generate_sensor_data(
     temperature = np.where(is_anomaly, temperature + anomaly_values, temperature)
 
     # Create DataFrame
-    df = pd.DataFrame({
-        "temperature": temperature,
-        "is_anomaly": is_anomaly.astype(int),
-        "hour": timestamps.hour,
-        "minute": timestamps.minute,
-    }, index=timestamps)
+    df = pd.DataFrame(
+        {
+            "temperature": temperature,
+            "is_anomaly": is_anomaly.astype(int),
+            "hour": timestamps.hour,
+            "minute": timestamps.minute,
+        },
+        index=timestamps,
+    )
 
     return df
 
@@ -141,7 +139,7 @@ print(f"   Date range: {df.index[0]} to {df.index[-1]}")
 print(f"   Anomalies: {df['is_anomaly'].sum():,} ({df['is_anomaly'].mean()*100:.1f}%)")
 
 # Show temperature stats
-print(f"\n📈 Temperature Statistics:")
+print("\n📈 Temperature Statistics:")
 print(f"   Normal readings: mean={df[~df['is_anomaly'].astype(bool)]['temperature'].mean():.1f}°F")
 print(f"   Anomaly readings: mean={df[df['is_anomaly'].astype(bool)]['temperature'].mean():.1f}°F")
 print(f"   Overall range: {df['temperature'].min():.1f}°F to {df['temperature'].max():.1f}°F")
@@ -154,7 +152,8 @@ print("\n" + "=" * 70)
 print("PART 2: THE PROBLEM — ANOMALIES CORRUPT ROLLING FEATURES")
 print("=" * 70)
 
-print("""
+print(
+    """
 Rolling statistics are fundamental to sensor forecasting:
 
    temp_ma60 = temperature.rolling(60).mean()  # Hourly average
@@ -169,7 +168,8 @@ But a SINGLE anomaly can corrupt the entire rolling window:
    Rolling std explodes, making the model think "high volatility"
 
 This is a form of DATA LEAKAGE: the anomaly "leaks" into future features.
-""")
+"""
+)
 
 # =============================================================================
 # PART 3: WRONG Approach — Include Anomalies in Rolling Stats
@@ -188,9 +188,9 @@ df_wrong["temp_ma360"] = df_wrong["temperature"].shift(1).rolling(360).mean()
 
 df_wrong = df_wrong.dropna()
 
-print(f"❌ WRONG: Rolling stats computed on ALL data (including anomalies)")
-print(f"   Features include temp_ma60, temp_std60, temp_ma360")
-print(f"   A single spike corrupts rolling mean for 60+ minutes")
+print("❌ WRONG: Rolling stats computed on ALL data (including anomalies)")
+print("   Features include temp_ma60, temp_std60, temp_ma360")
+print("   A single spike corrupts rolling mean for 60+ minutes")
 
 # Show corruption example - find an anomaly that has enough data before/after
 anomaly_indices = df[df["is_anomaly"] == 1].index
@@ -204,13 +204,17 @@ window_end = anomaly_idx + pd.Timedelta(minutes=65)
 
 # Get values safely
 try:
-    before_vals = df_wrong.loc[window_start:anomaly_idx - pd.Timedelta(minutes=1), 'temp_ma60'].dropna()
-    after_vals = df_wrong.loc[anomaly_idx + pd.Timedelta(minutes=1):window_end, 'temp_ma60'].dropna()
+    before_vals = df_wrong.loc[
+        window_start : anomaly_idx - pd.Timedelta(minutes=1), "temp_ma60"
+    ].dropna()
+    after_vals = df_wrong.loc[
+        anomaly_idx + pd.Timedelta(minutes=1) : window_end, "temp_ma60"
+    ].dropna()
     if len(before_vals) > 0 and len(after_vals) > 0:
         print(f"\n🔍 Example of corruption around anomaly at {anomaly_idx}:")
         print(f"   temp_ma60 before anomaly: {before_vals.iloc[-1]:.2f}°F")
         print(f"   temp_ma60 after anomaly enters window: {after_vals.iloc[0]:.2f}°F")
-        print(f"   The rolling mean is distorted for the entire 60-minute window!")
+        print("   The rolling mean is distorted for the entire 60-minute window!")
     else:
         print(f"\n🔍 Anomaly at {anomaly_idx} demonstrates corruption in rolling stats")
 except Exception:
@@ -224,7 +228,8 @@ print("\n" + "=" * 70)
 print("PART 4: CORRECT APPROACH — ANOMALY-AWARE FEATURE ENGINEERING")
 print("=" * 70)
 
-print("""
+print(
+    """
 Solution: Mask anomalies before computing rolling statistics.
 
    # Create "clean" temperature series
@@ -234,7 +239,8 @@ Solution: Mask anomalies before computing rolling statistics.
    temp_ma60 = temp_clean.shift(1).rolling(60, min_periods=30).mean()
 
 Now anomalies don't corrupt the rolling windows.
-""")
+"""
+)
 
 # CORRECT: Mask anomalies, then calculate rolling stats
 df_correct = df.copy()
@@ -255,21 +261,25 @@ df_correct["recent_anomaly_count"] = df_correct["is_anomaly"].shift(1).rolling(6
 
 df_correct = df_correct.dropna()
 
-print(f"✅ CORRECT: Rolling stats computed on CLEAN data (anomalies masked)")
-print(f"   Anomalies replaced with NaN before rolling calculations")
-print(f"   min_periods ensures stability even with some NaN values")
+print("✅ CORRECT: Rolling stats computed on CLEAN data (anomalies masked)")
+print("   Anomalies replaced with NaN before rolling calculations")
+print("   min_periods ensures stability even with some NaN values")
 
 # Show corrected behavior
 try:
-    before_vals_correct = df_correct.loc[window_start:anomaly_idx - pd.Timedelta(minutes=1), 'temp_ma60'].dropna()
-    after_vals_correct = df_correct.loc[anomaly_idx + pd.Timedelta(minutes=1):window_end, 'temp_ma60'].dropna()
+    before_vals_correct = df_correct.loc[
+        window_start : anomaly_idx - pd.Timedelta(minutes=1), "temp_ma60"
+    ].dropna()
+    after_vals_correct = df_correct.loc[
+        anomaly_idx + pd.Timedelta(minutes=1) : window_end, "temp_ma60"
+    ].dropna()
     if len(before_vals_correct) > 0 and len(after_vals_correct) > 0:
-        print(f"\n🔍 Same window with anomaly-aware features:")
+        print("\n🔍 Same window with anomaly-aware features:")
         print(f"   temp_ma60 before anomaly: {before_vals_correct.iloc[-1]:.2f}°F")
         print(f"   temp_ma60 after anomaly (masked): {after_vals_correct.iloc[0]:.2f}°F")
-        print(f"   Rolling mean is STABLE because anomaly is masked!")
+        print("   Rolling mean is STABLE because anomaly is masked!")
 except Exception:
-    print(f"\n🔍 Anomaly-aware features provide stable rolling statistics")
+    print("\n🔍 Anomaly-aware features provide stable rolling statistics")
 
 # =============================================================================
 # PART 5: Model Comparison with WalkForwardCV
@@ -281,7 +291,14 @@ print("=" * 70)
 
 # Prepare features
 feature_cols_wrong = ["temp_lag1", "temp_ma60", "temp_std60", "temp_ma360", "hour"]
-feature_cols_correct = ["temp_lag1", "temp_ma60", "temp_std60", "temp_ma360", "hour", "recent_anomaly_count"]
+feature_cols_correct = [
+    "temp_lag1",
+    "temp_ma60",
+    "temp_std60",
+    "temp_ma360",
+    "hour",
+    "recent_anomaly_count",
+]
 
 # Align datasets
 common_idx = df_wrong.index.intersection(df_correct.index)
@@ -301,11 +318,11 @@ wfcv = WalkForwardCV(
     n_splits=5,
 )
 
-print(f"📊 WalkForwardCV Configuration:")
-print(f"   Window: Expanding from 3 days")
-print(f"   Horizon: 60 minutes (1-hour ahead)")
-print(f"   Test size: 1 day per fold")
-print(f"   Folds: 5")
+print("📊 WalkForwardCV Configuration:")
+print("   Window: Expanding from 3 days")
+print("   Horizon: 60 minutes (1-hour ahead)")
+print("   Test size: 1 day per fold")
+print("   Folds: 5")
 
 # Evaluate both approaches
 results_wrong = []
@@ -332,7 +349,7 @@ for fold_idx, (train_idx, test_idx) in enumerate(wfcv.split(X_wrong)):
     results_wrong.append(mae_wrong)
     results_correct.append(mae_correct)
 
-print(f"\n📊 Results (MAE in °F):")
+print("\n📊 Results (MAE in °F):")
 print("-" * 60)
 print(f"{'Fold':<8} {'WRONG (with anomalies)':<25} {'CORRECT (masked)':<20}")
 print("-" * 60)
@@ -350,14 +367,16 @@ print("\n" + "=" * 70)
 print("PART 6: PER-REGIME EVALUATION")
 print("=" * 70)
 
-print("""
+print(
+    """
 For production monitoring, we care about performance in BOTH regimes:
 
 1. NORMAL periods: Most of the time, model should be accurate
 2. ANOMALY periods: During/after anomalies, performance may degrade
 
 Separate evaluation helps understand operational reliability.
-""")
+"""
+)
 
 # Final fold evaluation with per-regime split
 train_idx, test_idx = list(wfcv.split(X_wrong))[-1]
@@ -390,13 +409,17 @@ if anomaly_mask.sum() > 0:
 else:
     mae_wrong_anomaly = mae_correct_anomaly = np.nan
 
-print(f"\n📊 Per-Regime MAE (last fold):")
+print("\n📊 Per-Regime MAE (last fold):")
 print("-" * 60)
 print(f"{'Regime':<15} {'WRONG':<15} {'CORRECT':<15} {'Improvement':<15}")
 print("-" * 60)
-print(f"{'Normal':<15} {mae_wrong_normal:<15.3f} {mae_correct_normal:<15.3f} {(mae_wrong_normal - mae_correct_normal) / mae_wrong_normal * 100:+.1f}%")
+print(
+    f"{'Normal':<15} {mae_wrong_normal:<15.3f} {mae_correct_normal:<15.3f} {(mae_wrong_normal - mae_correct_normal) / mae_wrong_normal * 100:+.1f}%"
+)
 if not np.isnan(mae_wrong_anomaly):
-    print(f"{'Anomaly':<15} {mae_wrong_anomaly:<15.3f} {mae_correct_anomaly:<15.3f} {(mae_wrong_anomaly - mae_correct_anomaly) / mae_wrong_anomaly * 100:+.1f}%")
+    print(
+        f"{'Anomaly':<15} {mae_wrong_anomaly:<15.3f} {mae_correct_anomaly:<15.3f} {(mae_wrong_anomaly - mae_correct_anomaly) / mae_wrong_anomaly * 100:+.1f}%"
+    )
 print("-" * 60)
 
 # =============================================================================
@@ -418,7 +441,7 @@ gate_result = gate_suspicious_improvement(
     warn_threshold=0.25,
 )
 
-print(f"\n📊 Gate: Suspicious Improvement Check")
+print("\n📊 Gate: Suspicious Improvement Check")
 print(f"   Model MAE (CORRECT): {np.mean(results_correct):.3f}°F")
 print(f"   Baseline MAE (lag-1): {baseline_mae:.3f}°F")
 print(f"   Improvement: {(baseline_mae - np.mean(results_correct)) / baseline_mae * 100:.1f}%")
@@ -432,7 +455,8 @@ print("\n" + "=" * 70)
 print("PART 8: KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. ANOMALIES CORRUPT ROLLING FEATURES
    - A single spike propagates through the entire rolling window
    - 1 anomaly → 60+ corrupted feature values (for 60-minute window)
@@ -463,7 +487,8 @@ print("""
    - Dropout anomalies: missing data periods (interpolation)
    - Multiple sensors: cross-sensor validation
    - Edge computing: model must run on limited hardware
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example 12 complete.")

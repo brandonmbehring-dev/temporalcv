@@ -51,9 +51,9 @@ class TestDMGoldenReference:
         )
 
         # Check p-value is in expected range (not rejecting null)
-        assert expected["pvalue_range"][0] <= result.pvalue <= expected["pvalue_range"][1], (
-            f"p-value {result.pvalue:.4f} not in expected range {expected['pvalue_range']}"
-        )
+        assert (
+            expected["pvalue_range"][0] <= result.pvalue <= expected["pvalue_range"][1]
+        ), f"p-value {result.pvalue:.4f} not in expected range {expected['pvalue_range']}"
 
     def test_dm_case_002_model1_better(self, golden_refs):
         """Model 1 clearly better should reject null."""
@@ -70,14 +70,14 @@ class TestDMGoldenReference:
         )
 
         # Should reject null (model 1 is better)
-        assert result.pvalue < 0.05, (
-            f"p-value {result.pvalue:.4f} should be < 0.05 (model 1 is clearly better)"
-        )
+        assert (
+            result.pvalue < 0.05
+        ), f"p-value {result.pvalue:.4f} should be < 0.05 (model 1 is clearly better)"
 
         # Statistic should be negative (model 1 has lower loss)
-        assert result.statistic < 0, (
-            f"Statistic {result.statistic:.4f} should be negative (model 1 is better)"
-        )
+        assert (
+            result.statistic < 0
+        ), f"Statistic {result.statistic:.4f} should be negative (model 1 is better)"
 
     def test_dm_case_003_multistep(self, golden_refs):
         """Multi-step HAC-adjusted test."""
@@ -94,9 +94,9 @@ class TestDMGoldenReference:
         )
 
         # Check p-value is in expected range
-        assert expected["pvalue_range"][0] <= result.pvalue <= expected["pvalue_range"][1], (
-            f"p-value {result.pvalue:.4f} not in expected range {expected['pvalue_range']}"
-        )
+        assert (
+            expected["pvalue_range"][0] <= result.pvalue <= expected["pvalue_range"][1]
+        ), f"p-value {result.pvalue:.4f} not in expected range {expected['pvalue_range']}"
 
 
 # =============================================================================
@@ -121,14 +121,14 @@ class TestWildBootstrapGoldenReference:
 
         # Check estimate matches expected
         tol = case["tolerance"]["estimate"]
-        assert abs(result.estimate - expected["estimate"]) < tol, (
-            f"Estimate {result.estimate:.4f} not within {tol} of expected {expected['estimate']}"
-        )
+        assert (
+            abs(result.estimate - expected["estimate"]) < tol
+        ), f"Estimate {result.estimate:.4f} not within {tol} of expected {expected['estimate']}"
 
         # Check p-value indicates rejection
-        assert result.p_value < 0.05, (
-            f"p-value {result.p_value:.4f} should be < 0.05 for clearly positive mean"
-        )
+        assert (
+            result.p_value < 0.05
+        ), f"p-value {result.p_value:.4f} should be < 0.05 for clearly positive mean"
 
     def test_wild_case_002_zero_mean(self, golden_refs):
         """Zero-centered fold statistics should not reject H0."""
@@ -146,6 +146,6 @@ class TestWildBootstrapGoldenReference:
         assert abs(result.estimate) < 0.1, f"Estimate {result.estimate:.4f} should be near zero"
 
         # Check p-value indicates non-rejection
-        assert result.p_value > 0.10, (
-            f"p-value {result.p_value:.4f} should be > 0.10 for zero-mean data"
-        )
+        assert (
+            result.p_value > 0.10
+        ), f"p-value {result.p_value:.4f} should be > 0.10 for zero-mean data"

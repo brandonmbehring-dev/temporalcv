@@ -28,16 +28,13 @@ Key Concepts
 from __future__ import annotations
 
 # sphinx_gallery_thumbnail_number = 1
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
 
 # temporalcv imports
-from temporalcv import WalkForwardCV
-from temporalcv.gates import gate_suspicious_improvement, run_gates, GateResult
+from temporalcv.gates import gate_suspicious_improvement
 from temporalcv.viz import apply_tufte_style
 
 # =============================================================================
@@ -82,10 +79,12 @@ def generate_autoregressive_data(
         y[t] = ar_coef * y[t - 1] + rng.normal(0, noise_std)
 
     # Create DataFrame
-    df = pd.DataFrame({
-        "y": y,
-        "time_index": np.arange(n_samples),
-    })
+    df = pd.DataFrame(
+        {
+            "y": y,
+            "time_index": np.arange(n_samples),
+        }
+    )
     df.index = pd.date_range("2020-01-01", periods=n_samples, freq="D")
 
     return df
@@ -109,7 +108,8 @@ print("\n" + "=" * 70)
 print("PART 2: THE BUG — ROLLING FEATURES ON FULL SERIES (WRONG)")
 print("=" * 70)
 
-print("""
+print(
+    """
 The common mistake: compute rolling statistics BEFORE train/test split.
 
    # WRONG - computes on full series including test data!
@@ -125,7 +125,8 @@ The model learns to exploit these artifacts, leading to:
 - Overfitting to training data
 - Poor generalization to production
 - Sometimes WORSE test MAE (model confused by self-referential features)
-""")
+"""
+)
 
 # Create the WRONG features
 df_wrong = df.copy()
@@ -153,9 +154,9 @@ y_pred_wrong = model_wrong.predict(X_test)
 
 # Evaluate
 mae_wrong = np.mean(np.abs(y_test - y_pred_wrong))
-print(f"\n❌ WRONG approach results:")
+print("\n❌ WRONG approach results:")
 print(f"   Test MAE: {mae_wrong:.4f}")
-print(f"   The model learned from features containing the target itself!")
+print("   The model learned from features containing the target itself!")
 
 # =============================================================================
 # PART 3: DETECTING THE BUG — Comparing to Baseline
@@ -165,7 +166,8 @@ print("\n" + "=" * 70)
 print("PART 3: DETECTING THE BUG — COMPARING TO BASELINE")
 print("=" * 70)
 
-print("""
+print(
+    """
 How do we detect this kind of bug? Compare to a persistence baseline:
 
 1. Persistence model: predict y[t] = y[t-1] (naïve forecast)
@@ -174,7 +176,8 @@ How do we detect this kind of bug? Compare to a persistence baseline:
 
 Key insight: Self-referential features (rolling mean including current y)
 don't help prediction — they hurt it by creating spurious correlations.
-""")
+"""
+)
 
 # Compute a persistence baseline for comparison
 # Persistence = predict y[t] = y[t-1]
@@ -183,7 +186,7 @@ persistence_pred = np.zeros_like(y_series)
 persistence_pred[1:] = y_series[:-1]
 persistence_mae = np.mean(np.abs(y_series[1:] - persistence_pred[1:]))
 
-print(f"\n📊 Baseline comparison:")
+print("\n📊 Baseline comparison:")
 print(f"   Persistence MAE (predict y[t-1]): {persistence_mae:.4f}")
 print(f"   WRONG model MAE:                  {mae_wrong:.4f}")
 improvement_wrong = (persistence_mae - mae_wrong) / persistence_mae * 100
@@ -197,14 +200,14 @@ gate_result_wrong = gate_suspicious_improvement(
     warn_threshold=0.08,  # WARN if >8% improvement
 )
 
-print(f"\n🔍 Running gate_suspicious_improvement...")
+print("\n🔍 Running gate_suspicious_improvement...")
 print(f"   Status: {gate_result_wrong.status}")
 print(f"   Message: {gate_result_wrong.message}")
 
 if str(gate_result_wrong.status) == "GateStatus.HALT":
-    print(f"\n🛑 HALT DETECTED!")
-    print(f"   >15% improvement over persistence is suspicious.")
-    print(f"   This often indicates leakage in feature engineering.")
+    print("\n🛑 HALT DETECTED!")
+    print("   >15% improvement over persistence is suspicious.")
+    print("   This often indicates leakage in feature engineering.")
 
 # =============================================================================
 # PART 4: THE FIX — Rolling Features with .shift() (CORRECT)
@@ -214,7 +217,8 @@ print("\n" + "=" * 70)
 print("PART 4: THE FIX — ROLLING FEATURES WITH .shift() (CORRECT)")
 print("=" * 70)
 
-print("""
+print(
+    """
 The fix is simple: use .shift(1) to ensure rolling windows only include
 past data at each point.
 
@@ -222,7 +226,8 @@ past data at each point.
    df['rolling_mean'] = df['y'].shift(1).rolling(10).mean()
 
 Now the rolling_mean at time t is computed from [t-11, t-1], not including t.
-""")
+"""
+)
 
 # Create the CORRECT features
 df_correct = df.copy()
@@ -256,7 +261,7 @@ y_pred_correct = model_correct.predict(X_test_c)
 
 # Evaluate
 mae_correct = np.mean(np.abs(y_test_c - y_pred_correct))
-print(f"\n✅ CORRECT approach results:")
+print("\n✅ CORRECT approach results:")
 print(f"   Test MAE: {mae_correct:.4f}")
 print(f"   Degradation from WRONG: {(mae_correct - mae_wrong) / mae_wrong * 100:+.1f}%")
 
@@ -271,7 +276,7 @@ print("=" * 70)
 # Compute improvement for CORRECT features
 improvement_correct = (persistence_mae - mae_correct) / persistence_mae * 100
 
-print(f"\n📊 CORRECT approach vs baseline:")
+print("\n📊 CORRECT approach vs baseline:")
 print(f"   Persistence MAE:              {persistence_mae:.4f}")
 print(f"   CORRECT model MAE:            {mae_correct:.4f}")
 print(f"   Improvement over persistence: {improvement_correct:+.1f}%")
@@ -283,13 +288,13 @@ gate_result_correct = gate_suspicious_improvement(
     warn_threshold=0.08,
 )
 
-print(f"\n🔍 Running gate_suspicious_improvement on CORRECT features...")
+print("\n🔍 Running gate_suspicious_improvement on CORRECT features...")
 print(f"   Status: {gate_result_correct.status}")
 print(f"   Message: {gate_result_correct.message}")
 
 if str(gate_result_correct.status) != "GateStatus.HALT":
-    print(f"\n✅ No suspicious improvement detected.")
-    print(f"   The model's performance is realistic for this data.")
+    print("\n✅ No suspicious improvement detected.")
+    print("   The model's performance is realistic for this data.")
 
 # =============================================================================
 # PART 6: Side-by-Side Comparison
@@ -299,9 +304,11 @@ print("\n" + "=" * 70)
 print("PART 6: SIDE-BY-SIDE COMPARISON")
 print("=" * 70)
 
-print("""
+print(
+    """
 Summary of WRONG vs CORRECT approaches:
-""")
+"""
+)
 
 print(f"{'Metric':<30} {'WRONG (Leaky)':<20} {'CORRECT':<20}")
 print("-" * 70)
@@ -317,7 +324,8 @@ print("\n" + "=" * 70)
 print("PART 7: KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. ROLLING FEATURES INCLUDE CURRENT VALUE BY DEFAULT
    - df['feat'] = df['y'].rolling(n).mean() includes y[t] at time t
    - This creates self-referential features that confuse the model
@@ -344,7 +352,8 @@ print("""
    - Any operation that "sees" current y is suspect
 
 The pattern: ensure features at time t use ONLY information from [0, t-1].
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example 16 complete.")
@@ -361,45 +370,53 @@ fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 # Left: MAE Comparison
 ax1 = axes[0]
 bars = ax1.bar(
-    ['Persistence\n(Baseline)', 'WRONG\n(Leaky Features)', 'CORRECT\n(.shift() used)'],
+    ["Persistence\n(Baseline)", "WRONG\n(Leaky Features)", "CORRECT\n(.shift() used)"],
     [persistence_mae, mae_wrong, mae_correct],
-    color=['#7f7f7f', '#d62728', '#2ca02c'],
-    edgecolor='black',
-    linewidth=1.5
+    color=["#7f7f7f", "#d62728", "#2ca02c"],
+    edgecolor="black",
+    linewidth=1.5,
 )
-ax1.set_ylabel('Mean Absolute Error (MAE)')
-ax1.set_title('Feature Engineering Impact on MAE')
+ax1.set_ylabel("Mean Absolute Error (MAE)")
+ax1.set_title("Feature Engineering Impact on MAE")
 
 # Add value labels
 for bar in bars:
     height = bar.get_height()
-    ax1.annotate(f'{height:.3f}',
-                 xy=(bar.get_x() + bar.get_width() / 2, height),
-                 xytext=(0, 3), textcoords="offset points",
-                 ha='center', va='bottom', fontsize=11)
+    ax1.annotate(
+        f"{height:.3f}",
+        xy=(bar.get_x() + bar.get_width() / 2, height),
+        xytext=(0, 3),
+        textcoords="offset points",
+        ha="center",
+        va="bottom",
+        fontsize=11,
+    )
 
 # Right: Gate Decision
 ax2 = axes[1]
-gate_statuses = ['WRONG Approach', 'CORRECT Approach']
-gate_colors = ['#d62728' if 'HALT' in str(gate_result_wrong.status) else '#2ca02c',
-               '#d62728' if 'HALT' in str(gate_result_correct.status) else '#2ca02c']
-gate_labels = [str(gate_result_wrong.status).split('.')[-1],
-               str(gate_result_correct.status).split('.')[-1]]
+gate_statuses = ["WRONG Approach", "CORRECT Approach"]
+gate_colors = [
+    "#d62728" if "HALT" in str(gate_result_wrong.status) else "#2ca02c",
+    "#d62728" if "HALT" in str(gate_result_correct.status) else "#2ca02c",
+]
+gate_labels = [
+    str(gate_result_wrong.status).split(".")[-1],
+    str(gate_result_correct.status).split(".")[-1],
+]
 
-ax2.barh(gate_statuses, [1, 1], color=gate_colors, edgecolor='black', linewidth=1.5)
+ax2.barh(gate_statuses, [1, 1], color=gate_colors, edgecolor="black", linewidth=1.5)
 ax2.set_xlim(0, 1.2)
-ax2.set_xlabel('')
-ax2.set_title('Validation Gate Decision')
+ax2.set_xlabel("")
+ax2.set_title("Validation Gate Decision")
 ax2.set_xticks([])
 
 for i, (status, label) in enumerate(zip(gate_statuses, gate_labels)):
-    ax2.text(0.5, i, label, ha='center', va='center', fontsize=14,
-             fontweight='bold', color='white')
+    ax2.text(0.5, i, label, ha="center", va="center", fontsize=14, fontweight="bold", color="white")
 
 # Apply Tufte styling
 for ax in axes:
     apply_tufte_style(ax)
 
 plt.tight_layout()
-plt.suptitle('FAILURE CASE: Rolling Features Without .shift()', y=1.02, fontsize=14)
+plt.suptitle("FAILURE CASE: Rolling Features Without .shift()", y=1.02, fontsize=14)
 plt.show()

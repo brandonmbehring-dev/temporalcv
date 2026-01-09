@@ -74,9 +74,9 @@ class TestSyntheticAR1Validation:
             random_state=42,
         )
 
-        assert result.status == GateStatus.PASS, (
-            f"Mean predictor should pass, got {result.status}. Ratio: {result.metric_value}"
-        )
+        assert (
+            result.status == GateStatus.PASS
+        ), f"Mean predictor should pass, got {result.status}. Ratio: {result.metric_value}"
 
     def test_optimal_predictor_passes(self) -> None:
         """
@@ -96,9 +96,9 @@ class TestSyntheticAR1Validation:
             random_state=42,
         )
 
-        assert result.status == GateStatus.PASS, (
-            f"Optimal predictor should pass, got {result.status}. Ratio: {result.metric_value}"
-        )
+        assert (
+            result.status == GateStatus.PASS
+        ), f"Optimal predictor should pass, got {result.status}. Ratio: {result.metric_value}"
 
         # Ratio should be near 1.0 (within reasonable tolerance)
         assert result.metric_value is not None
@@ -122,9 +122,9 @@ class TestSyntheticAR1Validation:
         expected_theoretical = 2.5 * np.sqrt(2 / np.pi)
         actual_theoretical = result.details["theoretical_mae"]
 
-        assert abs(actual_theoretical - expected_theoretical) < 0.01, (
-            f"Theoretical MAE: expected {expected_theoretical:.4f}, got {actual_theoretical:.4f}"
-        )
+        assert (
+            abs(actual_theoretical - expected_theoretical) < 0.01
+        ), f"Theoretical MAE: expected {expected_theoretical:.4f}, got {actual_theoretical:.4f}"
 
 
 class TestSyntheticAR1Parameters:
@@ -169,9 +169,11 @@ class TestSyntheticAR1Parameters:
                 random_state=42,
             )
 
-            assert result.status in (GateStatus.PASS, GateStatus.WARN, GateStatus.HALT), (
-                f"Invalid status for phi={phi}"
-            )
+            assert result.status in (
+                GateStatus.PASS,
+                GateStatus.WARN,
+                GateStatus.HALT,
+            ), f"Invalid status for phi={phi}"
 
 
 class TestSyntheticAR1Statistics:

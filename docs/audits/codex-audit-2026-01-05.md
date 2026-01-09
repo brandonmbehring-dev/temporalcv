@@ -202,4 +202,3 @@ Sources: `julia/src/`, `docs/knowledge/leakage_audit_trail.md`
 3) Which `coverage_gap` convention do you want to standardize on (empirical - target or target - empirical)?
 4) Should `GateResult` gain convenience properties (`real_mae`, `shuffled_mae`) or should docs switch to `details[...]` only?
 5) Do you want README to match CI, or CI to match README (macOS + py3.9)?
-

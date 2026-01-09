@@ -208,6 +208,6 @@ class TestDMTestHACVariance:
         coverage = fail_to_reject / N_SIMS
 
         # HAC-adjusted should still maintain valid Type I error control
-        assert 0.85 <= coverage <= 0.99, (
-            f"HAC fail-to-reject rate = {coverage:.1%}, expected 90-98%"
-        )
+        assert (
+            0.85 <= coverage <= 0.99
+        ), f"HAC fail-to-reject rate = {coverage:.1%}, expected 90-98%"

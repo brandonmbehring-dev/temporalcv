@@ -101,9 +101,9 @@ class TestSplitConformalCoverage:
         avg_coverage = np.mean(covers_true)
 
         # Should achieve 93-99% (conservative is OK)
-        assert 0.90 <= avg_coverage <= 0.99, (
-            f"95% conformal coverage = {avg_coverage:.1%}, expected 93-99%"
-        )
+        assert (
+            0.90 <= avg_coverage <= 0.99
+        ), f"95% conformal coverage = {avg_coverage:.1%}, expected 93-99%"
 
     def test_coverage_90_homoscedastic(self):
         """
@@ -141,9 +141,9 @@ class TestSplitConformalCoverage:
         avg_coverage = np.mean(covers_true)
 
         # 90% CI should achieve 88-97% (conservative OK)
-        assert 0.85 <= avg_coverage <= 0.99, (
-            f"90% conformal coverage = {avg_coverage:.1%}, expected 88-97%"
-        )
+        assert (
+            0.85 <= avg_coverage <= 0.99
+        ), f"90% conformal coverage = {avg_coverage:.1%}, expected 88-97%"
 
 
 # =============================================================================
@@ -194,9 +194,9 @@ class TestCalibrationSizeEffects:
         avg_coverage = np.mean(covers_true)
 
         # Small calibration = conservative (higher coverage OK)
-        assert 0.88 <= avg_coverage <= 0.99, (
-            f"Small calib coverage = {avg_coverage:.1%}, expected 90-99%"
-        )
+        assert (
+            0.88 <= avg_coverage <= 0.99
+        ), f"Small calib coverage = {avg_coverage:.1%}, expected 90-99%"
 
     def test_large_calibration_set(self):
         """
@@ -234,6 +234,6 @@ class TestCalibrationSizeEffects:
         avg_coverage = np.mean(covers_true)
 
         # Large calibration = closer to nominal
-        assert 0.92 <= avg_coverage <= 0.99, (
-            f"Large calib coverage = {avg_coverage:.1%}, expected 93-99%"
-        )
+        assert (
+            0.92 <= avg_coverage <= 0.99
+        ), f"Large calib coverage = {avg_coverage:.1%}, expected 93-99%"

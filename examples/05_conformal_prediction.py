@@ -41,9 +41,7 @@ Requirements
 from __future__ import annotations
 
 # sphinx_gallery_thumbnail_number = 1
-
 import warnings
-from typing import Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -104,7 +102,7 @@ def generate_regime_change_data(
     return y
 
 
-def create_features(series: np.ndarray, n_lags: int = 5) -> Tuple[np.ndarray, np.ndarray]:
+def create_features(series: np.ndarray, n_lags: int = 5) -> tuple[np.ndarray, np.ndarray]:
     """Create lagged features for forecasting."""
     n = len(series)
     features = []
@@ -129,7 +127,7 @@ def walk_forward_predict(
     y: np.ndarray,
     n_splits: int = 5,
     test_size: int = 50,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Generate walk-forward predictions using Ridge regression."""
     cv = WalkForwardCV(
         n_splits=n_splits,
@@ -170,7 +168,8 @@ def demonstrate_conformal_prediction():
     print("PART 1: Why Standard Methods Fail for Time Series")
     print("=" * 70)
 
-    print("""
+    print(
+        """
     Standard prediction intervals assume:
     - Gaussian residuals (violated in practice)
     - i.i.d. data (violated by autocorrelation)
@@ -183,7 +182,8 @@ def demonstrate_conformal_prediction():
 
     BUT: Standard conformal assumes exchangeability!
     For time series: use walk-forward calibration or adaptive methods.
-    """)
+    """
+    )
 
     # =========================================================================
     # Part 2: Walk-Forward Conformal Prediction
@@ -209,19 +209,19 @@ def demonstrate_conformal_prediction():
         alpha=0.10,  # 90% intervals
     )
 
-    print(f"\n--- Split Conformal (Walk-Forward Calibration) ---")
+    print("\n--- Split Conformal (Walk-Forward Calibration) ---")
     print(f"  Calibration size: {quality['calibration_size']}")
     print(f"  Holdout size: {quality['holdout_size']}")
     print(f"  Calibrated quantile: {quality['quantile']:.4f}")
-    print(f"\n  Coverage (90% target):")
+    print("\n  Coverage (90% target):")
     print(f"    Empirical: {quality['coverage']:.1%}")
     print(f"    Gap: {quality['coverage_gap']:+.1%}")
     print(f"  Mean interval width: {quality['mean_width']:.4f}")
     print(f"  Interval score: {quality['interval_score']:.4f} (lower is better)")
 
     # Check conditional coverage
-    if not np.isnan(quality['conditional_gap']):
-        print(f"\n  Conditional coverage (low/high prediction magnitude):")
+    if not np.isnan(quality["conditional_gap"]):
+        print("\n  Conditional coverage (low/high prediction magnitude):")
         print(f"    Low predictions: {quality['low_coverage']:.1%}")
         print(f"    High predictions: {quality['high_coverage']:.1%}")
         print(f"    Gap: {quality['conditional_gap']:.1%}")
@@ -267,7 +267,7 @@ def demonstrate_conformal_prediction():
     print(f"\nTarget coverage: {1 - alpha:.0%}")
 
     # Interpretation
-    if conformal_quality['coverage'] >= 1 - alpha - 0.05:
+    if conformal_quality["coverage"] >= 1 - alpha - 0.05:
         print("\n  ✓ Conformal achieves valid coverage")
     else:
         print("\n  ✗ Conformal undercoverage (may indicate distribution shift)")
@@ -319,19 +319,23 @@ def demonstrate_conformal_prediction():
     )
     adaptive_quality = evaluate_interval_quality(adaptive_intervals, actuals_shift[cal_size:])
 
-    print(f"\n--- Comparison Under Distribution Shift ---")
+    print("\n--- Comparison Under Distribution Shift ---")
     print(f"{'Method':<20} {'Coverage':<12} {'Width':<10}")
     print("-" * 42)
-    print(f"{'Static Conformal':<20} {static_quality['coverage']:.1%}        {static_quality['mean_width']:.4f}")
-    print(f"{'Adaptive Conformal':<20} {adaptive_quality['coverage']:.1%}        {adaptive_quality['mean_width']:.4f}")
+    print(
+        f"{'Static Conformal':<20} {static_quality['coverage']:.1%}        {static_quality['mean_width']:.4f}"
+    )
+    print(
+        f"{'Adaptive Conformal':<20} {adaptive_quality['coverage']:.1%}        {adaptive_quality['mean_width']:.4f}"
+    )
 
     # Show adaptation trajectory
-    print(f"\n  Adaptive quantile trajectory:")
+    print("\n  Adaptive quantile trajectory:")
     print(f"    Initial: {adaptive.quantile_history[0]:.4f}")
     print(f"    Final:   {adaptive.quantile_history[-1]:.4f}")
     print(f"    Change:  {adaptive.quantile_history[-1] - adaptive.quantile_history[0]:+.4f}")
 
-    if adaptive_quality['coverage'] > static_quality['coverage']:
+    if adaptive_quality["coverage"] > static_quality["coverage"]:
         print("\n  ✓ Adaptive conformal maintains better coverage under shift")
     else:
         print("\n  Note: Both methods affected by distribution shift")
@@ -342,7 +346,8 @@ def demonstrate_conformal_prediction():
     print("\n" + "=" * 70)
     print("BEST PRACTICES FOR PREDICTION INTERVALS")
     print("=" * 70)
-    print("""
+    print(
+        """
 1. NEVER use calibration data for coverage evaluation
    - Split data: calibration → calibrate, holdout → evaluate
    - Using calibration data inflates coverage
@@ -367,7 +372,8 @@ def demonstrate_conformal_prediction():
 6. COMPARE to bootstrap baseline
    - Bootstrap has no coverage guarantee
    - But useful calibration check for conformal
-    """)
+    """
+    )
 
     # =========================================================================
     # Summary Table
@@ -375,7 +381,8 @@ def demonstrate_conformal_prediction():
     print("=" * 70)
     print("METHOD SELECTION GUIDE")
     print("=" * 70)
-    print("""
+    print(
+        """
     ┌─────────────────────────────────────────────────────────────────────┐
     │ Scenario                        │ Recommended Method               │
     ├─────────────────────────────────────────────────────────────────────┤
@@ -385,7 +392,8 @@ def demonstrate_conformal_prediction():
     │ Very limited data (<100)        │ Adaptive with small gamma        │
     │ Coverage guarantee required     │ Conformal (not bootstrap)        │
     └─────────────────────────────────────────────────────────────────────┘
-    """)
+    """
+    )
 
 
 if __name__ == "__main__":
@@ -422,34 +430,58 @@ fig, axes = plt.subplots(2, 1, figsize=(12, 8))
 # Top: Prediction intervals with actuals
 ax1 = axes[0]
 x_range = np.arange(len(holdout_preds))
-ax1.fill_between(x_range, intervals.lower, intervals.upper,
-                 alpha=0.3, color='#1f77b4', label='90% Prediction Interval')
-ax1.plot(x_range, holdout_preds, 'b-', linewidth=1.5, label='Predictions')
-ax1.scatter(x_range[covered], holdout_actuals[covered],
-            c='#2ca02c', s=30, zorder=5, label=f'Covered ({coverage:.1%})')
-ax1.scatter(x_range[~covered], holdout_actuals[~covered],
-            c='#d62728', s=50, marker='x', zorder=5, label='Not Covered')
-ax1.set_xlabel('Test Index')
-ax1.set_ylabel('Value')
-ax1.set_title(f'Conformal Prediction Intervals (90% Target Coverage, {coverage:.1%} Achieved)')
-ax1.legend(loc='upper right')
+ax1.fill_between(
+    x_range,
+    intervals.lower,
+    intervals.upper,
+    alpha=0.3,
+    color="#1f77b4",
+    label="90% Prediction Interval",
+)
+ax1.plot(x_range, holdout_preds, "b-", linewidth=1.5, label="Predictions")
+ax1.scatter(
+    x_range[covered],
+    holdout_actuals[covered],
+    c="#2ca02c",
+    s=30,
+    zorder=5,
+    label=f"Covered ({coverage:.1%})",
+)
+ax1.scatter(
+    x_range[~covered],
+    holdout_actuals[~covered],
+    c="#d62728",
+    s=50,
+    marker="x",
+    zorder=5,
+    label="Not Covered",
+)
+ax1.set_xlabel("Test Index")
+ax1.set_ylabel("Value")
+ax1.set_title(f"Conformal Prediction Intervals (90% Target Coverage, {coverage:.1%} Achieved)")
+ax1.legend(loc="upper right")
 ax1.grid(True, alpha=0.3)
 
 # Bottom: Interval width over time
 ax2 = axes[1]
 widths = intervals.upper - intervals.lower
-ax2.bar(x_range, widths, color='#1f77b4', alpha=0.7, edgecolor='none')
-ax2.axhline(widths.mean(), color='#d62728', linestyle='--', linewidth=2,
-            label=f'Mean Width: {widths.mean():.3f}')
-ax2.set_xlabel('Test Index')
-ax2.set_ylabel('Interval Width')
-ax2.set_title('Prediction Interval Width (Constant for Split Conformal)')
-ax2.legend(loc='upper right')
+ax2.bar(x_range, widths, color="#1f77b4", alpha=0.7, edgecolor="none")
+ax2.axhline(
+    widths.mean(),
+    color="#d62728",
+    linestyle="--",
+    linewidth=2,
+    label=f"Mean Width: {widths.mean():.3f}",
+)
+ax2.set_xlabel("Test Index")
+ax2.set_ylabel("Interval Width")
+ax2.set_title("Prediction Interval Width (Constant for Split Conformal)")
+ax2.legend(loc="upper right")
 
 # Apply Tufte styling (remove grid, minimize spines)
 for ax in axes:
     apply_tufte_style(ax)
 
 plt.tight_layout()
-plt.suptitle('Conformal Prediction for Time Series Forecasting', y=1.02, fontsize=14)
+plt.suptitle("Conformal Prediction for Time Series Forecasting", y=1.02, fontsize=14)
 plt.show()

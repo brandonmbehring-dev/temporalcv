@@ -20,17 +20,17 @@ release = "1.0.0"
 # -- General configuration ---------------------------------------------------
 
 extensions = [
-    "sphinx.ext.autodoc",           # Auto-generate from docstrings
-    "sphinx.ext.napoleon",          # NumPy docstring parsing (MUST come before typehints)
-    "sphinx_autodoc_typehints",     # Better type hint rendering
-    "sphinx.ext.intersphinx",       # Link to numpy/scipy/sklearn docs
-    "sphinx.ext.viewcode",          # Source code links
-    "sphinx.ext.mathjax",           # Math rendering
-    "myst_parser",                  # Keep existing .md files
-    "sphinx_copybutton",            # Copy button for code blocks
-    "sphinxcontrib.mermaid",        # Flowchart diagrams
-    "sphinx_design",                # Cards, grids, tabs for better layout
-    "sphinx_gallery.gen_gallery",   # Auto-generate example gallery
+    "sphinx.ext.autodoc",  # Auto-generate from docstrings
+    "sphinx.ext.napoleon",  # NumPy docstring parsing (MUST come before typehints)
+    "sphinx_autodoc_typehints",  # Better type hint rendering
+    "sphinx.ext.intersphinx",  # Link to numpy/scipy/sklearn docs
+    "sphinx.ext.viewcode",  # Source code links
+    "sphinx.ext.mathjax",  # Math rendering
+    "myst_parser",  # Keep existing .md files
+    "sphinx_copybutton",  # Copy button for code blocks
+    "sphinxcontrib.mermaid",  # Flowchart diagrams
+    "sphinx_design",  # Cards, grids, tabs for better layout
+    "sphinx_gallery.gen_gallery",  # Auto-generate example gallery
 ]
 
 # Napoleon settings (enables auto-linking in See Also)
@@ -45,7 +45,7 @@ napoleon_use_admonition_for_references = False
 napoleon_use_ivar = False
 napoleon_use_param = True
 napoleon_use_rtype = True
-napoleon_preprocess_types = True   # Auto-link types in Params/Returns
+napoleon_preprocess_types = True  # Auto-link types in Params/Returns
 napoleon_type_aliases = {
     "ArrayLike": "numpy.typing.ArrayLike",
     "NDArray": "numpy.ndarray",

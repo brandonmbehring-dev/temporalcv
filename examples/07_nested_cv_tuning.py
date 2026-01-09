@@ -28,15 +28,14 @@ import warnings
 from typing import Any
 
 import numpy as np
-import pandas as pd
-from sklearn.base import BaseEstimator, RegressorMixin, clone
-from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.base import BaseEstimator, clone
+from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import GridSearchCV, cross_val_score
+from sklearn.model_selection import GridSearchCV
 
 # temporalcv imports
 from temporalcv import WalkForwardCV
-from temporalcv.viz import CVFoldsDisplay, MetricComparisonDisplay, apply_tufte_style
+from temporalcv.viz import CVFoldsDisplay, MetricComparisonDisplay
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -107,7 +106,7 @@ print("=" * 70)
 
 X, y = generate_ar_series(n=500, ar_coefs=[0.6, 0.2], seed=42)
 print(f"\nGenerated AR(2) series with {len(y)} observations")
-print(f"Features: 5 lagged values")
+print("Features: 5 lagged values")
 print(f"Data shape: X={X.shape}, y={y.shape}")
 
 # =============================================================================
@@ -118,7 +117,8 @@ print("\n" + "=" * 70)
 print("PART 2: The Problem - Hyperparameter Leakage")
 print("=" * 70)
 
-print("""
+print(
+    """
 Standard approach (WRONG for time series):
 
 1. Run GridSearchCV with KFold to find best hyperparameters
@@ -131,7 +131,8 @@ Problems:
 
 The score from GridSearchCV is NOT a valid estimate of future performance.
 It's contaminated by the hyperparameter selection process.
-""")
+"""
+)
 
 # Demonstrate the problem
 base_model = GradientBoostingRegressor(random_state=42)
@@ -166,7 +167,8 @@ print("\n" + "=" * 70)
 print("PART 3: Solution - Nested Cross-Validation")
 print("=" * 70)
 
-print("""
+print(
+    """
 Nested CV structure:
 
 OUTER LOOP (evaluation, never seen by inner loop):
@@ -180,7 +182,8 @@ OUTER LOOP (evaluation, never seen by inner loop):
 
 The outer test sets are NEVER used for hyperparameter selection.
 This gives an unbiased estimate of generalization performance.
-""")
+"""
+)
 
 
 def nested_time_series_cv(
@@ -288,7 +291,8 @@ def inner_cv_factory(n_train: int) -> WalkForwardCV:
 
 
 nested_results = nested_time_series_cv(
-    X, y,
+    X,
+    y,
     model=GradientBoostingRegressor(random_state=42),
     param_grid=param_grid,
     outer_cv=outer_cv,
@@ -306,7 +310,8 @@ print("=" * 70)
 non_nested_score = np.sqrt(-grid_search.best_score_)
 nested_score = nested_results["mean_outer_score"]
 
-print(f"""
+print(
+    f"""
 Comparison of Approaches:
 
   Non-Nested (GridSearchCV best_score_):
@@ -323,7 +328,8 @@ Comparison of Approaches:
 The nested score is typically HIGHER (worse) because it's an unbiased
 estimate of future performance. The non-nested score is optimistically
 biased by the hyperparameter selection process.
-""")
+"""
+)
 
 # =============================================================================
 # PART 5: Hyperparameter Stability Analysis
@@ -348,12 +354,14 @@ for param in param_names:
     else:
         print(f"  {param}: VARIES ({unique_values})")
 
-print("""
+print(
+    """
 If hyperparameters vary significantly across outer folds, it suggests:
 1. The optimal configuration depends on the time period
 2. More data or simpler models might be needed
 3. Consider using conservative (simpler) hyperparameters
-""")
+"""
+)
 
 # =============================================================================
 # PART 6: Practical Implementation Pattern
@@ -363,7 +371,8 @@ print("\n" + "=" * 70)
 print("PART 6: Practical Implementation Pattern")
 print("=" * 70)
 
-print("""
+print(
+    """
 Recommended workflow for hyperparameter tuning:
 
 1. SPLIT DATA INTO THREE PARTS
@@ -386,7 +395,8 @@ Recommended workflow for hyperparameter tuning:
 5. FINAL MODEL
    - Option A: Retrain on all data with consensus hyperparameters
    - Option B: Use ensemble of per-fold models
-""")
+"""
+)
 
 
 # Example: Final model with consensus hyperparameters
@@ -422,7 +432,8 @@ print("\n" + "=" * 70)
 print("KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. NEVER USE GridSearchCV.best_score_ AS YOUR PERFORMANCE ESTIMATE
    - It's contaminated by the hyperparameter selection process
    - Use nested CV for unbiased evaluation
@@ -443,7 +454,8 @@ print("""
    - Report nested CV score as expected performance
    - Use consensus or median hyperparameters
    - Retrain on all available data for deployment
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example completed successfully!")
@@ -462,9 +474,7 @@ fig, ax = plt.subplots(figsize=(10, 4))
 
 # Show outer CV structure
 cv = WalkForwardCV(n_splits=3, window_type="expanding", test_size=100)
-CVFoldsDisplay.from_cv(cv, X, y).plot(
-    ax=ax, title="Nested CV: Outer Loop (Evaluation)"
-)
+CVFoldsDisplay.from_cv(cv, X, y).plot(ax=ax, title="Nested CV: Outer Loop (Evaluation)")
 plt.tight_layout()
 plt.show()
 
@@ -479,8 +489,6 @@ results = {
     "Nested\n(Proper)": {"RMSE": nested_score},
 }
 
-display = MetricComparisonDisplay.from_dict(
-    results, lower_is_better={"RMSE": True}
-)
+display = MetricComparisonDisplay.from_dict(results, lower_is_better={"RMSE": True})
 display.plot(title="Nested vs Non-Nested CV Scores", show_values=True)
 plt.show()

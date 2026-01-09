@@ -354,9 +354,9 @@ class TestCrossModuleConsistency:
 
             # If CV creates sufficient gap, gate should pass
             if actual_gap >= required_gap:
-                assert result.status == GateStatus.PASS, (
-                    f"Gate failed: actual_extra_gap={actual_gap}, required={required_gap}"
-                )
+                assert (
+                    result.status == GateStatus.PASS
+                ), f"Gate failed: actual_extra_gap={actual_gap}, required={required_gap}"
             else:
                 # If CV gap isn't sufficient, gate should HALT (expected behavior)
                 assert result.status == GateStatus.HALT

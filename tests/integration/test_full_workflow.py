@@ -172,9 +172,9 @@ class TestCVWithGateValidation:
             all_results.append(result)
 
         report = run_gates(all_results)
-        assert report.status == "PASS", (
-            f"All CV splits should pass boundary gate. Failures: {report.failures}"
-        )
+        assert (
+            report.status == "PASS"
+        ), f"All CV splits should pass boundary gate. Failures: {report.failures}"
 
     def test_cv_walk_forward_with_validation(self) -> None:
         """

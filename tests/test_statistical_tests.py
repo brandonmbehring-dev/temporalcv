@@ -609,13 +609,13 @@ class TestPTTestVarianceRegression:
         result = pt_test(actual, predicted)
 
         # Should NOT be significant (p > 0.05)
-        assert result.pvalue > 0.05, (
-            f"Random guessing should not be significant, but p={result.pvalue:.4f}"
-        )
+        assert (
+            result.pvalue > 0.05
+        ), f"Random guessing should not be significant, but p={result.pvalue:.4f}"
         # Accuracy should be near 50%
-        assert 0.35 < result.accuracy < 0.65, (
-            f"Random accuracy should be near 50%, got {result.accuracy:.2f}"
-        )
+        assert (
+            0.35 < result.accuracy < 0.65
+        ), f"Random accuracy should be near 50%, got {result.accuracy:.2f}"
 
     def test_2class_variance_formula_correct(self) -> None:
         """
@@ -954,9 +954,9 @@ class TestComputeSelfNormalizedVariance:
         # Self-normalized variance for white noise ≈ σ²/3
         # For standard normal, σ² = 1, so expect var ≈ 1/3 ≈ 0.33
         # Allow reasonable range due to randomness
-        assert 0.05 < var < 2.0, (
-            f"SN variance {var:.6f} should be O(1) for white noise (expected ~0.33)"
-        )
+        assert (
+            0.05 < var < 2.0
+        ), f"SN variance {var:.6f} should be O(1) for white noise (expected ~0.33)"
 
     def test_ar1_series(self) -> None:
         """Test with AR(1) series showing autocorrelation."""
@@ -979,9 +979,9 @@ class TestComputeSelfNormalizedVariance:
         # For AR(1), SN variance should be larger than for white noise
         # (due to autocorrelation inflating partial sums)
         wn_var = compute_self_normalized_variance(rng.standard_normal(n))
-        assert var > wn_var * 0.5, (
-            f"AR(1) variance {var:.6f} should be comparable to or larger than WN {wn_var:.6f}"
-        )
+        assert (
+            var > wn_var * 0.5
+        ), f"AR(1) variance {var:.6f} should be comparable to or larger than WN {wn_var:.6f}"
 
     def test_empty_array(self) -> None:
         """Empty array should return 0."""
@@ -1034,9 +1034,9 @@ class TestDMTestSelfNormalized:
 
         # Both should indicate model 1 is better (negative statistic)
         if np.isfinite(result_hac.statistic) and np.isfinite(result_sn.statistic):
-            assert np.sign(result_hac.statistic) == np.sign(result_sn.statistic), (
-                f"HAC stat={result_hac.statistic:.3f}, SN stat={result_sn.statistic:.3f}"
-            )
+            assert np.sign(result_hac.statistic) == np.sign(
+                result_sn.statistic
+            ), f"HAC stat={result_hac.statistic:.3f}, SN stat={result_sn.statistic:.3f}"
 
     def test_backward_compatible(self) -> None:
         """Default variance_method should remain 'hac'."""
@@ -1048,9 +1048,9 @@ class TestDMTestSelfNormalized:
 
         result = dm_test(errors_1, errors_2)
 
-        assert result.variance_method == "hac", (
-            f"Default should be 'hac', got '{result.variance_method}'"
-        )
+        assert (
+            result.variance_method == "hac"
+        ), f"Default should be 'hac', got '{result.variance_method}'"
 
     def test_variance_method_stored(self) -> None:
         """Result should track which variance method was used."""
@@ -1126,9 +1126,9 @@ class TestDMTestSelfNormalized:
             alternative="greater",
             variance_method="self_normalized",
         )
-        assert result_less.pvalue < result_greater.pvalue, (
-            "Model 1 is better, so 'less' should have smaller p-value"
-        )
+        assert (
+            result_less.pvalue < result_greater.pvalue
+        ), "Model 1 is better, so 'less' should have smaller p-value"
 
     def test_significant_difference_detected(self) -> None:
         """Should detect significant difference between models."""
@@ -1436,14 +1436,14 @@ class TestGWTestPredictableSwitching:
         result = gw_test(errors_1, errors_2, n_lags=1)
 
         # R² should be substantial (pattern is very predictable)
-        assert result.r_squared > 0.1, (
-            f"Expected high R² for alternating pattern, got {result.r_squared:.4f}"
-        )
+        assert (
+            result.r_squared > 0.1
+        ), f"Expected high R² for alternating pattern, got {result.r_squared:.4f}"
 
         # Test should be significant
-        assert result.pvalue < 0.05, (
-            f"Expected significant result for alternating pattern, p={result.pvalue:.4f}"
-        )
+        assert (
+            result.pvalue < 0.05
+        ), f"Expected significant result for alternating pattern, p={result.pvalue:.4f}"
 
     def test_dm_vs_gw_equal_average_predictable(self, predictable_switching_errors: tuple) -> None:
         """Key insight: DM may not reject when GW does.
@@ -1462,9 +1462,9 @@ class TestGWTestPredictableSwitching:
         assert isinstance(gw_result, GWTestResult)
 
         # GW should detect the predictable pattern
-        assert gw_result.conditional_predictability is True, (
-            f"GW should detect predictability, but p={gw_result.pvalue:.4f}"
-        )
+        assert (
+            gw_result.conditional_predictability is True
+        ), f"GW should detect predictability, but p={gw_result.pvalue:.4f}"
 
 
 class TestGWTestIntegration:

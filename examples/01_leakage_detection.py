@@ -42,14 +42,11 @@ Requirements
 from __future__ import annotations
 
 import warnings
-from typing import Tuple
 
 import numpy as np
-from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import Ridge
 
 from temporalcv.gates import (
-    GateStatus,
     gate_signal_verification,
     gate_suspicious_improvement,
     run_gates,
@@ -64,7 +61,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 # =============================================================================
 
 
-def load_treasury_data() -> Tuple[np.ndarray, str]:
+def load_treasury_data() -> tuple[np.ndarray, str]:
     """
     Load 10-Year Treasury rate data from FRED, or generate realistic synthetic.
 
@@ -124,7 +121,7 @@ def _generate_synthetic_rates(
 # =============================================================================
 
 
-def create_clean_features(rates: np.ndarray, n_lags: int = 5) -> Tuple[np.ndarray, np.ndarray]:
+def create_clean_features(rates: np.ndarray, n_lags: int = 5) -> tuple[np.ndarray, np.ndarray]:
     """
     Create features WITHOUT leakage — the correct way.
 
@@ -149,7 +146,7 @@ def create_clean_features(rates: np.ndarray, n_lags: int = 5) -> Tuple[np.ndarra
     return X[valid_mask], y[valid_mask]
 
 
-def create_leaky_features(rates: np.ndarray, n_lags: int = 5) -> Tuple[np.ndarray, np.ndarray]:
+def create_leaky_features(rates: np.ndarray, n_lags: int = 5) -> tuple[np.ndarray, np.ndarray]:
     """
     Create features WITH leakage — the WRONG way (intentionally buggy).
 
@@ -347,7 +344,8 @@ def demonstrate_leakage_detection():
     print("\n" + "=" * 70)
     print("KEY TAKEAWAYS")
     print("=" * 70)
-    print("""
+    print(
+        """
 1. The SHUFFLED TARGET TEST is the definitive leakage detector.
    - If your model beats randomized targets, features encode target info.
    - This catches rolling stats computed on full series, lookahead bias, etc.
@@ -366,7 +364,8 @@ def demonstrate_leakage_detection():
    - HALT: Stop and investigate (critical failure)
    - WARN: Proceed with caution (verify externally)
    - PASS: Validation passed
-""")
+"""
+    )
 
     return report
 

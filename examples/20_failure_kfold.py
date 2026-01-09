@@ -34,17 +34,16 @@ Key Concepts
 from __future__ import annotations
 
 # sphinx_gallery_thumbnail_number = 1
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import KFold, cross_val_score
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Ridge
+from sklearn.model_selection import KFold, cross_val_score
 
 # temporalcv imports
 from temporalcv import WalkForwardCV
-from temporalcv.gates import gate_signal_verification, run_gates
+from temporalcv.gates import gate_signal_verification
 from temporalcv.viz import apply_tufte_style
 
 # =============================================================================
@@ -116,7 +115,7 @@ print("=" * 70)
 df = generate_trending_data(n_samples=500, trend=0.02, seed=42)
 
 print(f"\n📊 Generated trending time series: {len(df)} samples")
-print(f"   Trend: +0.02 per day (strong upward drift)")
+print("   Trend: +0.02 per day (strong upward drift)")
 print(f"   Date range: {df.index[0].date()} to {df.index[-1].date()}")
 
 # =============================================================================
@@ -127,7 +126,8 @@ print("\n" + "=" * 70)
 print("PART 2: THE PROBLEM — KFOLD IGNORES TEMPORAL ORDER")
 print("=" * 70)
 
-print("""
+print(
+    """
 Standard KFold randomly shuffles data into train/test splits:
 
    Fold 1: Train on [2020-03, 2020-07, 2021-01], Test on [2020-01, 2020-05]
@@ -136,7 +136,8 @@ Standard KFold randomly shuffles data into train/test splits:
 
 This means the model trains on FUTURE data to predict the PAST.
 For trending data, this is catastrophic leakage.
-""")
+"""
+)
 
 # =============================================================================
 # PART 3: WRONG Approach — Using KFold
@@ -155,19 +156,15 @@ kfold = KFold(n_splits=5, shuffle=True, random_state=42)
 model = RandomForestRegressor(n_estimators=50, max_depth=5, random_state=42)
 
 # Run KFold CV
-kfold_scores = cross_val_score(
-    model, X, y,
-    cv=kfold,
-    scoring="neg_mean_absolute_error"
-)
+kfold_scores = cross_val_score(model, X, y, cv=kfold, scoring="neg_mean_absolute_error")
 
-print(f"\n❌ KFold Results (WRONG):")
+print("\n❌ KFold Results (WRONG):")
 print(f"   MAE scores: {-kfold_scores}")
 print(f"   Mean MAE: {-kfold_scores.mean():.4f} (+/- {kfold_scores.std():.4f})")
-print(f"   This looks GREAT! But it's completely invalid...")
+print("   This looks GREAT! But it's completely invalid...")
 
 # Show what's happening in each fold
-print(f"\n🔍 What KFold is actually doing:")
+print("\n🔍 What KFold is actually doing:")
 for fold_idx, (train_idx, test_idx) in enumerate(kfold.split(X)):
     train_dates = df.index[train_idx]
     test_dates = df.index[test_idx]
@@ -176,7 +173,7 @@ for fold_idx, (train_idx, test_idx) in enumerate(kfold.split(X)):
     print(f"     Test:  {test_dates.min().date()} to {test_dates.max().date()}")
     # Check if any test date is before max train date
     if test_dates.min() < train_dates.max():
-        print(f"     ⚠️  LEAKAGE: Training on data from AFTER test dates!")
+        print("     ⚠️  LEAKAGE: Training on data from AFTER test dates!")
 
 # =============================================================================
 # PART 4: CORRECT Approach — WalkForwardCV
@@ -186,7 +183,8 @@ print("\n" + "=" * 70)
 print("PART 4: CORRECT APPROACH — WALKFORWARDCV")
 print("=" * 70)
 
-print("""
+print(
+    """
 WalkForwardCV respects temporal order:
 
    Fold 1: Train on [2020-01 to 2020-06], Test on [2020-07]
@@ -196,7 +194,8 @@ WalkForwardCV respects temporal order:
 
 Training ALWAYS uses past data. Testing ALWAYS on future data.
 No leakage, honest performance estimate.
-""")
+"""
+)
 
 # WalkForwardCV (CORRECT)
 wfcv = WalkForwardCV(
@@ -208,18 +207,14 @@ wfcv = WalkForwardCV(
 )
 
 # Run WalkForward CV
-wfcv_scores = cross_val_score(
-    model, X, y,
-    cv=wfcv,
-    scoring="neg_mean_absolute_error"
-)
+wfcv_scores = cross_val_score(model, X, y, cv=wfcv, scoring="neg_mean_absolute_error")
 
-print(f"\n✅ WalkForwardCV Results (CORRECT):")
+print("\n✅ WalkForwardCV Results (CORRECT):")
 print(f"   MAE scores: {-wfcv_scores}")
 print(f"   Mean MAE: {-wfcv_scores.mean():.4f} (+/- {wfcv_scores.std():.4f})")
 
 # Show the honest temporal splits
-print(f"\n🔍 What WalkForwardCV is doing:")
+print("\n🔍 What WalkForwardCV is doing:")
 for fold_idx, (train_idx, test_idx) in enumerate(wfcv.split(X)):
     train_dates = df.index[train_idx]
     test_dates = df.index[test_idx]
@@ -228,7 +223,7 @@ for fold_idx, (train_idx, test_idx) in enumerate(wfcv.split(X)):
     print(f"     Test:  {test_dates.min().date()} to {test_dates.max().date()}")
     # Verify no leakage
     if train_dates.max() < test_dates.min():
-        print(f"     ✅ Proper temporal order (train ends before test starts)")
+        print("     ✅ Proper temporal order (train ends before test starts)")
 
 # =============================================================================
 # PART 5: Comparing the Results
@@ -238,7 +233,7 @@ print("\n" + "=" * 70)
 print("PART 5: COMPARING THE RESULTS")
 print("=" * 70)
 
-print(f"\n📊 Side-by-Side Comparison:")
+print("\n📊 Side-by-Side Comparison:")
 print("-" * 50)
 print(f"{'Metric':<25} {'KFold':<15} {'WalkForward':<15}")
 print("-" * 50)
@@ -248,9 +243,11 @@ print(f"{'Temporal Validity':<25} {'NO ❌':<15} {'YES ✅':<15}")
 print("-" * 50)
 
 degradation = (-wfcv_scores.mean() - (-kfold_scores.mean())) / (-kfold_scores.mean()) * 100
-print(f"\n⚠️  Reality check:")
-print(f"   KFold MAE is {abs(degradation):.1f}% {'better' if degradation > 0 else 'worse'} than WalkForwardCV")
-print(f"   This 'improvement' is FAKE — it's due to leakage, not model quality.")
+print("\n⚠️  Reality check:")
+print(
+    f"   KFold MAE is {abs(degradation):.1f}% {'better' if degradation > 0 else 'worse'} than WalkForwardCV"
+)
+print("   This 'improvement' is FAKE — it's due to leakage, not model quality.")
 
 # =============================================================================
 # PART 6: Detecting the Bug with gate_signal_verification
@@ -260,13 +257,15 @@ print("\n" + "=" * 70)
 print("PART 6: DETECTING THE BUG WITH gate_signal_verification")
 print("=" * 70)
 
-print("""
+print(
+    """
 gate_signal_verification() can detect if a model exploits temporal position.
 It works by shuffling the target and checking if the model still performs well:
 
 - If model depends on temporal structure → performance degrades on shuffled data
 - If model exploits leaky features → performance stays good (HALT!)
-""")
+"""
+)
 
 # Train model on full data (simulating what KFold does)
 model_full = RandomForestRegressor(n_estimators=50, max_depth=5, random_state=42)
@@ -281,17 +280,17 @@ gate_result = gate_signal_verification(
     n_shuffles=50,
 )
 
-print(f"\n📊 Gate Result:")
+print("\n📊 Gate Result:")
 print(f"   Status: {gate_result.status}")
 print(f"   Message: {gate_result.message}")
 
 if str(gate_result.status) == "GateStatus.HALT":
-    print(f"\n🛑 HALT DETECTED!")
-    print(f"   The model has statistically significant signal on the data.")
-    print(f"   With proper temporal features, this is expected.")
-    print(f"   The concern is when KFold inflates this signal artificially.")
+    print("\n🛑 HALT DETECTED!")
+    print("   The model has statistically significant signal on the data.")
+    print("   With proper temporal features, this is expected.")
+    print("   The concern is when KFold inflates this signal artificially.")
 elif str(gate_result.status) == "GateStatus.PASS":
-    print(f"\n✅ PASS: Model's signal is within expected bounds.")
+    print("\n✅ PASS: Model's signal is within expected bounds.")
 
 # =============================================================================
 # PART 7: Why This Matters in Practice
@@ -301,7 +300,8 @@ print("\n" + "=" * 70)
 print("PART 7: WHY THIS MATTERS IN PRACTICE")
 print("=" * 70)
 
-print("""
+print(
+    """
 Real-world consequences of using KFold on time series:
 
 1. MODEL SELECTION FAILURE
@@ -323,7 +323,8 @@ Real-world consequences of using KFold on time series:
    - "But it worked in cross-validation!"
    - Hours/days spent debugging a non-bug
    - The real bug was the validation strategy
-""")
+"""
+)
 
 # =============================================================================
 # PART 8: Key Takeaways
@@ -333,7 +334,8 @@ print("\n" + "=" * 70)
 print("PART 8: KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. NEVER USE KFOLD FOR TIME SERIES
    - KFold ignores temporal order
    - Training on future to predict past = leakage
@@ -361,7 +363,8 @@ print("""
 
 The pattern: ALWAYS use temporal-aware cross-validation for time series.
 KFold is for i.i.d. data only.
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example 20 complete.")
@@ -377,25 +380,36 @@ fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
 # Left: MAE comparison showing fake improvement
 ax1 = axes[0]
-methods = ['KFold\n(WRONG)', 'WalkForward\n(CORRECT)']
+methods = ["KFold\n(WRONG)", "WalkForward\n(CORRECT)"]
 maes = [-kfold_scores.mean(), -wfcv_scores.mean()]
-colors = ['#d62728', '#2ca02c']
-bars = ax1.bar(methods, maes, color=colors, edgecolor='black', linewidth=1.5)
-ax1.set_ylabel('Mean Absolute Error (MAE)')
-ax1.set_title('Cross-Validation MAE Comparison')
+colors = ["#d62728", "#2ca02c"]
+bars = ax1.bar(methods, maes, color=colors, edgecolor="black", linewidth=1.5)
+ax1.set_ylabel("Mean Absolute Error (MAE)")
+ax1.set_title("Cross-Validation MAE Comparison")
 
 # Add value labels and percentage difference
 for bar, mae in zip(bars, maes):
-    ax1.annotate(f'{mae:.4f}',
-                 xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
-                 xytext=(0, 3), textcoords="offset points",
-                 ha='center', va='bottom', fontsize=11, fontweight='bold')
+    ax1.annotate(
+        f"{mae:.4f}",
+        xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
+        xytext=(0, 3),
+        textcoords="offset points",
+        ha="center",
+        va="bottom",
+        fontsize=11,
+        fontweight="bold",
+    )
 
 # Add arrow showing fake improvement
 fake_improvement = (maes[1] - maes[0]) / maes[0] * 100
-ax1.annotate(f'{abs(fake_improvement):.1f}% "improvement"\nis FAKE leakage',
-             xy=(0.5, (maes[0] + maes[1]) / 2),
-             fontsize=10, ha='center', color='#d62728', fontweight='bold')
+ax1.annotate(
+    f'{abs(fake_improvement):.1f}% "improvement"\nis FAKE leakage',
+    xy=(0.5, (maes[0] + maes[1]) / 2),
+    fontsize=10,
+    ha="center",
+    color="#d62728",
+    fontweight="bold",
+)
 
 # Right: CV fold structure visualization
 ax2 = axes[1]
@@ -408,35 +422,69 @@ for fold_idx, (train_idx, test_idx) in enumerate(kfold_viz.split(X)):
     # Plot train segments (scattered due to shuffle)
     train_dates = df.index[train_idx]
     test_dates = df.index[test_idx]
-    ax2.scatter(train_idx, [y_positions_kfold[fold_idx]] * len(train_idx),
-                c='#1f77b4', s=2, alpha=0.5)
-    ax2.scatter(test_idx, [y_positions_kfold[fold_idx]] * len(test_idx),
-                c='#ff7f0e', s=3, alpha=0.8)
+    ax2.scatter(
+        train_idx, [y_positions_kfold[fold_idx]] * len(train_idx), c="#1f77b4", s=2, alpha=0.5
+    )
+    ax2.scatter(
+        test_idx, [y_positions_kfold[fold_idx]] * len(test_idx), c="#ff7f0e", s=3, alpha=0.8
+    )
 
 # Show WalkForward structure (bottom 3 bars)
-wfcv_viz = WalkForwardCV(window_type="expanding", window_size=100, horizon=1, test_size=50, n_splits=3)
+wfcv_viz = WalkForwardCV(
+    window_type="expanding", window_size=100, horizon=1, test_size=50, n_splits=3
+)
 y_positions_wfcv = [0.5, 0.0, -0.5]
 for fold_idx, (train_idx, test_idx) in enumerate(wfcv_viz.split(X)):
-    ax2.barh(y_positions_wfcv[fold_idx], len(train_idx), left=min(train_idx),
-             height=0.35, color='#1f77b4', alpha=0.8,
-             label='Train' if fold_idx == 0 else '')
-    ax2.barh(y_positions_wfcv[fold_idx], len(test_idx), left=min(test_idx),
-             height=0.35, color='#ff7f0e', alpha=0.8,
-             label='Test' if fold_idx == 0 else '')
+    ax2.barh(
+        y_positions_wfcv[fold_idx],
+        len(train_idx),
+        left=min(train_idx),
+        height=0.35,
+        color="#1f77b4",
+        alpha=0.8,
+        label="Train" if fold_idx == 0 else "",
+    )
+    ax2.barh(
+        y_positions_wfcv[fold_idx],
+        len(test_idx),
+        left=min(test_idx),
+        height=0.35,
+        color="#ff7f0e",
+        alpha=0.8,
+        label="Test" if fold_idx == 0 else "",
+    )
 
-ax2.axhline(1.0, color='black', linestyle='--', linewidth=1)
-ax2.text(-30, 2.0, 'KFold\n(shuffled)', ha='right', va='center', fontsize=10, fontweight='bold', color='#d62728')
-ax2.text(-30, 0.0, 'WalkForward\n(temporal)', ha='right', va='center', fontsize=10, fontweight='bold', color='#2ca02c')
-ax2.set_xlabel('Sample Index (Time →)')
-ax2.set_title('CV Fold Structure: Shuffled vs Temporal')
+ax2.axhline(1.0, color="black", linestyle="--", linewidth=1)
+ax2.text(
+    -30,
+    2.0,
+    "KFold\n(shuffled)",
+    ha="right",
+    va="center",
+    fontsize=10,
+    fontweight="bold",
+    color="#d62728",
+)
+ax2.text(
+    -30,
+    0.0,
+    "WalkForward\n(temporal)",
+    ha="right",
+    va="center",
+    fontsize=10,
+    fontweight="bold",
+    color="#2ca02c",
+)
+ax2.set_xlabel("Sample Index (Time →)")
+ax2.set_title("CV Fold Structure: Shuffled vs Temporal")
 ax2.set_yticks([])
 ax2.set_xlim(-80, n_samples + 10)
-ax2.legend(loc='upper right')
+ax2.legend(loc="upper right")
 
 # Apply Tufte styling
 for ax in axes:
     apply_tufte_style(ax)
 
 plt.tight_layout()
-plt.suptitle('FAILURE CASE: KFold Leaks Future Information to Training', y=1.02, fontsize=14)
+plt.suptitle("FAILURE CASE: KFold Leaks Future Information to Training", y=1.02, fontsize=14)
 plt.show()

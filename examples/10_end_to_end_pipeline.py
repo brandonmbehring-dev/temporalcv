@@ -38,16 +38,13 @@ from sklearn.preprocessing import StandardScaler
 
 # temporalcv imports
 from temporalcv import WalkForwardCV
+from temporalcv.conformal import SplitConformalPredictor
 from temporalcv.gates import (
-    GateResult,
-    ValidationReport,
-    gate_temporal_boundary,
     gate_signal_verification,
+    gate_temporal_boundary,
     run_gates,
 )
-from temporalcv.persistence import compute_persistence_mae
 from temporalcv.statistical_tests import dm_test
-from temporalcv.conformal import SplitConformalPredictor
 
 warnings.filterwarnings("ignore")
 
@@ -104,9 +101,10 @@ def generate_energy_load_data(
 
     # Temperature (correlated with load)
     temperature = (
-        20 + 10 * np.sin(2 * np.pi * day_of_year / 365)  # Annual
-        + 5 * np.sin(2 * np.pi * hour / 24)              # Daily
-        + rng.normal(0, 3, n_hours)                       # Noise
+        20
+        + 10 * np.sin(2 * np.pi * day_of_year / 365)  # Annual
+        + 5 * np.sin(2 * np.pi * hour / 24)  # Daily
+        + rng.normal(0, 3, n_hours)  # Noise
     )
 
     # Base load
@@ -123,15 +121,17 @@ def generate_energy_load_data(
     )
 
     # Create DataFrame
-    df = pd.DataFrame({
-        "timestamp": timestamps,
-        "load": load,
-        "temperature": temperature,
-        "hour": hour,
-        "day_of_week": day_of_week,
-        "day_of_year": day_of_year,
-        "is_weekend": (day_of_week >= 5).astype(int),
-    })
+    df = pd.DataFrame(
+        {
+            "timestamp": timestamps,
+            "load": load,
+            "temperature": temperature,
+            "hour": hour,
+            "day_of_week": day_of_week,
+            "day_of_year": day_of_year,
+            "is_weekend": (day_of_week >= 5).astype(int),
+        }
+    )
 
     return df
 
@@ -153,10 +153,12 @@ print("\n" + "=" * 70)
 print("PART 2: Feature Engineering (With Shift Protection)")
 print("=" * 70)
 
-print("""
+print(
+    """
 CRITICAL: All rolling features MUST use .shift(1) to prevent lookahead bias.
 The current observation should NEVER be included in its own features.
-""")
+"""
+)
 
 
 def create_features(df: pd.DataFrame, forecast_horizon: int = 24) -> pd.DataFrame:
@@ -185,12 +187,8 @@ def create_features(df: pd.DataFrame, forecast_horizon: int = 24) -> pd.DataFram
 
     # Rolling statistics (shifted to exclude current observation)
     for window in [24, 168]:  # 1 day, 1 week
-        df[f"load_rolling_mean_{window}"] = (
-            df["load"].shift(1).rolling(window).mean()
-        )
-        df[f"load_rolling_std_{window}"] = (
-            df["load"].shift(1).rolling(window).std()
-        )
+        df[f"load_rolling_mean_{window}"] = df["load"].shift(1).rolling(window).mean()
+        df[f"load_rolling_std_{window}"] = df["load"].shift(1).rolling(window).std()
 
     # Same hour yesterday
     df["load_same_hour_yesterday"] = df["load"].shift(24)
@@ -216,12 +214,23 @@ df_features = create_features(df, forecast_horizon=forecast_horizon)
 
 # Define feature columns
 feature_cols = [
-    "hour", "day_of_week", "is_weekend",
-    "load_lag_1", "load_lag_2", "load_lag_3", "load_lag_24", "load_lag_48", "load_lag_168",
-    "load_rolling_mean_24", "load_rolling_std_24",
-    "load_rolling_mean_168", "load_rolling_std_168",
-    "load_same_hour_yesterday", "load_same_hour_last_week",
-    "temp_lag_1", "temp_rolling_mean_24",
+    "hour",
+    "day_of_week",
+    "is_weekend",
+    "load_lag_1",
+    "load_lag_2",
+    "load_lag_3",
+    "load_lag_24",
+    "load_lag_48",
+    "load_lag_168",
+    "load_rolling_mean_24",
+    "load_rolling_std_24",
+    "load_rolling_mean_168",
+    "load_rolling_std_168",
+    "load_same_hour_yesterday",
+    "load_same_hour_last_week",
+    "temp_lag_1",
+    "temp_rolling_mean_24",
 ]
 
 print(f"\nCreated {len(feature_cols)} features")
@@ -273,6 +282,7 @@ print(f"  Temporal Boundary: {gate1.status.value} - {gate1.message}")
 # Gate 2: Signal verification (checks for suspicious predictive power)
 # Using a simple model to verify features don't have leakage
 from sklearn.linear_model import LinearRegression
+
 simple_model = LinearRegression()
 
 gate2 = gate_signal_verification(
@@ -422,7 +432,7 @@ print(f"p-value: {dm_result.pvalue:.4f}")
 if dm_result.pvalue < 0.05:
     print(f"\nConclusion: {best_model_name} is SIGNIFICANTLY better than naive (p < 0.05)")
 else:
-    print(f"\nConclusion: No significant difference (p >= 0.05)")
+    print("\nConclusion: No significant difference (p >= 0.05)")
 
 # =============================================================================
 # PART 6: Conformal Prediction Intervals
@@ -432,10 +442,12 @@ print("\n" + "=" * 70)
 print("PART 6: Conformal Prediction Intervals")
 print("=" * 70)
 
-print("""
+print(
+    """
 Adding uncertainty quantification with conformal prediction.
 This provides prediction intervals with guaranteed coverage.
-""")
+"""
+)
 
 # Split training data for conformal calibration
 # Calibration set must be separate from model training AND test data
@@ -446,9 +458,7 @@ X_cal = X_train_scaled[-cal_size:]
 y_cal = y_train[-cal_size:]
 
 # Train model on proper training set
-best_model_for_conformal = type(models[best_model_name])(
-    **models[best_model_name].get_params()
-)
+best_model_for_conformal = type(models[best_model_name])(**models[best_model_name].get_params())
 best_model_for_conformal.fit(X_train_proper, y_train_proper)
 
 # Get calibration predictions
@@ -468,7 +478,7 @@ lower, upper = intervals.lower, intervals.upper
 coverage = np.mean((y_test >= lower) & (y_test <= upper))
 avg_width = intervals.mean_width
 
-print(f"\nConformal Prediction Results (target coverage: 90%):")
+print("\nConformal Prediction Results (target coverage: 90%):")
 print(f"  Actual coverage: {coverage:.1%}")
 print(f"  Average interval width: {avg_width:.2f} MW")
 
@@ -486,7 +496,8 @@ print("\n" + "=" * 70)
 print("PART 7: Pipeline Summary")
 print("=" * 70)
 
-print(f"""
+print(
+    f"""
 COMPLETE PIPELINE SUMMARY
 ========================
 
@@ -524,7 +535,8 @@ PRODUCTION CHECKLIST
 [x] Statistical significance tested (DM test)
 [x] Prediction intervals provided (conformal)
 [x] MASE computed (comparison to naive baseline)
-""")
+"""
+)
 
 
 @dataclass
@@ -567,7 +579,8 @@ print("\n" + "=" * 70)
 print("KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. FEATURE ENGINEERING
    - ALWAYS use .shift(1) for rolling statistics
    - Verify with gate_signal_verification before training
@@ -592,7 +605,8 @@ print("""
    - Package model + scaler + conformal together
    - Document expected performance (MAE, coverage)
    - Monitor for distribution shift in production
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example completed successfully!")

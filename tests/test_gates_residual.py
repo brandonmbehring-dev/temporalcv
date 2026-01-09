@@ -92,9 +92,9 @@ class TestResidualDiagnosticsBasic:
         kurtosis = result.details.get("tests", {}).get("jarque_bera", {}).get("kurtosis", 0)
         # t(2) should have high excess kurtosis (theoretical = infinity)
         # If kurtosis > 1, the distribution is clearly non-normal
-        assert result.status in (GateStatus.WARN, GateStatus.HALT) or kurtosis > 1.0, (
-            f"Expected non-normality detection, got status={result.status}, kurtosis={kurtosis}"
-        )
+        assert (
+            result.status in (GateStatus.WARN, GateStatus.HALT) or kurtosis > 1.0
+        ), f"Expected non-normality detection, got status={result.status}, kurtosis={kurtosis}"
 
     def test_non_normal_halts_when_configured(self):
         """Heavy-tailed residuals should HALT when halt_on_normality=True."""

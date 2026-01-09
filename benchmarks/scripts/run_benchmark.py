@@ -32,9 +32,7 @@ import sys
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-import numpy as np
+from typing import Any, Optional
 
 # Configure logging before imports
 logging.basicConfig(
@@ -83,7 +81,7 @@ FULL_SAMPLE = 1000  # Per frequency
 def build_adapters(
     model_set: str = "all",
     season_length: int = 1,
-) -> List[Any]:
+) -> list[Any]:
     """
     Build list of adapters for benchmarking.
 
@@ -112,56 +110,61 @@ def build_adapters(
     # Statsforecast models (wrapped for multi-series)
     if model_set in ("statsforecast", "all"):
         try:
-            from temporalcv.compare.adapters import MultiSeriesAdapter, StatsforecastAdapter
-
             # Determine n_jobs (use half of CPUs for safety, max 8)
             import os
+
+            from temporalcv.compare.adapters import MultiSeriesAdapter, StatsforecastAdapter
+
             n_jobs = min(os.cpu_count() // 2, 8) or 1
 
             # Core models (require MultiSeriesAdapter wrapper)
-            adapters.extend([
-                MultiSeriesAdapter(
-                    StatsforecastAdapter("AutoARIMA", season_length=season_length),
-                    n_jobs=n_jobs,
-                ),
-                MultiSeriesAdapter(
-                    StatsforecastAdapter("AutoETS", season_length=season_length),
-                    n_jobs=n_jobs,
-                ),
-                MultiSeriesAdapter(
-                    StatsforecastAdapter("AutoTheta", season_length=season_length),
-                    n_jobs=n_jobs,
-                ),
-            ])
+            adapters.extend(
+                [
+                    MultiSeriesAdapter(
+                        StatsforecastAdapter("AutoARIMA", season_length=season_length),
+                        n_jobs=n_jobs,
+                    ),
+                    MultiSeriesAdapter(
+                        StatsforecastAdapter("AutoETS", season_length=season_length),
+                        n_jobs=n_jobs,
+                    ),
+                    MultiSeriesAdapter(
+                        StatsforecastAdapter("AutoTheta", season_length=season_length),
+                        n_jobs=n_jobs,
+                    ),
+                ]
+            )
 
             # Intermittent demand models (no seasonality)
-            adapters.extend([
-                MultiSeriesAdapter(
-                    StatsforecastAdapter("CrostonClassic"),
-                    n_jobs=n_jobs,
-                ),
-                MultiSeriesAdapter(
-                    StatsforecastAdapter("ADIDA"),
-                    n_jobs=n_jobs,
-                ),
-                MultiSeriesAdapter(
-                    StatsforecastAdapter("IMAPA"),
-                    n_jobs=n_jobs,
-                ),
-            ])
+            adapters.extend(
+                [
+                    MultiSeriesAdapter(
+                        StatsforecastAdapter("CrostonClassic"),
+                        n_jobs=n_jobs,
+                    ),
+                    MultiSeriesAdapter(
+                        StatsforecastAdapter("ADIDA"),
+                        n_jobs=n_jobs,
+                    ),
+                    MultiSeriesAdapter(
+                        StatsforecastAdapter("IMAPA"),
+                        n_jobs=n_jobs,
+                    ),
+                ]
+            )
 
             # Simple models
-            adapters.extend([
-                MultiSeriesAdapter(
-                    StatsforecastAdapter("HistoricAverage"),
-                    n_jobs=n_jobs,
-                ),
-            ])
+            adapters.extend(
+                [
+                    MultiSeriesAdapter(
+                        StatsforecastAdapter("HistoricAverage"),
+                        n_jobs=n_jobs,
+                    ),
+                ]
+            )
 
         except ImportError:
-            logger.warning(
-                "statsforecast not available. Install with: pip install statsforecast"
-            )
+            logger.warning("statsforecast not available. Install with: pip install statsforecast")
 
     return adapters
 
@@ -175,7 +178,7 @@ def load_datasets(
     dataset_filter: Optional[str],
     sample_size: int,
     m5_path: Optional[Path],
-) -> List[Any]:
+) -> list[Any]:
     """
     Load datasets for benchmarking.
 
@@ -299,7 +302,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["m4_yearly", "m4_quarterly", "m4_monthly", "m4_weekly", "m4_daily", "m4_hourly", "m5"],
+        choices=[
+            "m4_yearly",
+            "m4_quarterly",
+            "m4_monthly",
+            "m4_weekly",
+            "m4_daily",
+            "m4_hourly",
+            "m5",
+        ],
         help="Run single dataset only",
     )
     parser.add_argument(
@@ -329,7 +340,8 @@ def parse_args() -> argparse.Namespace:
         help="Output directory for results",
     )
     parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="Verbose logging",
     )
@@ -459,9 +471,9 @@ def main() -> int:
             print(f"  {model}: {wins}")
 
     print(f"\nResults saved to: {output_dir}")
-    print(f"  - results.json (structured data)")
-    print(f"  - results.md (markdown tables)")
-    print(f"  - benchmark.log (run log)")
+    print("  - results.json (structured data)")
+    print("  - results.md (markdown tables)")
+    print("  - benchmark.log (run log)")
 
     return 0
 

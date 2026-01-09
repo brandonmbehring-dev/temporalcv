@@ -31,7 +31,6 @@ Requirements
 from __future__ import annotations
 
 # sphinx_gallery_thumbnail_number = 1
-
 import warnings
 
 import matplotlib.pyplot as plt
@@ -85,9 +84,7 @@ def create_features(series: np.ndarray, n_lags: int = 5):
 # =============================================================================
 
 
-def compute_mase(
-    actual: np.ndarray, predicted: np.ndarray, train_data: np.ndarray = None
-) -> float:
+def compute_mase(actual: np.ndarray, predicted: np.ndarray, train_data: np.ndarray = None) -> float:
     """
     Mean Absolute Scaled Error (Hyndman & Koehler 2006).
 
@@ -149,7 +146,7 @@ def demonstrate_high_persistence():
     # Generate data
     series = generate_high_persistence_data()
     acf1 = np.corrcoef(series[1:], series[:-1])[0, 1]
-    print(f"\nData characteristics:")
+    print("\nData characteristics:")
     print(f"  Length: {len(series)}")
     print(f"  Mean: {np.mean(series):.2f}")
     print(f"  Std: {np.std(series):.4f}")
@@ -177,8 +174,8 @@ def demonstrate_high_persistence():
 
     persistence_mae = np.mean(np.abs(y_test - persistence_preds))
     print(f"\n  Persistence baseline MAE: {persistence_mae:.6f}")
-    print(f"  Persistence MASE: 1.000 (by definition)")
-    print(f"  This is an EXTREMELY tough baseline to beat!")
+    print("  Persistence MASE: 1.000 (by definition)")
+    print("  This is an EXTREMELY tough baseline to beat!")
 
     # =========================================================================
     # Part 2: Model Comparison
@@ -203,13 +200,15 @@ def demonstrate_high_persistence():
         mc_ss = compute_mc_ss_ratio(y_test, preds)
         dir_acc = compute_directional_accuracy(y_test, preds)
 
-        results.append({
-            "name": name,
-            "mae": mae,
-            "mase": mase,
-            "mc_ss": mc_ss,
-            "dir_acc": dir_acc,
-        })
+        results.append(
+            {
+                "name": name,
+                "mae": mae,
+                "mase": mase,
+                "mc_ss": mc_ss,
+                "dir_acc": dir_acc,
+            }
+        )
 
         print(f"\n  {name}:")
         print(f"    MAE:  {mae:.6f} (vs persistence: {persistence_mae:.6f})")
@@ -224,7 +223,8 @@ def demonstrate_high_persistence():
     print("PART 3: Why Standard Metrics Mislead")
     print("=" * 70)
 
-    print("""
+    print(
+        """
     For high-persistence data (ACF(1) > 0.95):
 
     ┌─────────────────────────────────────────────────────────────────────┐
@@ -234,7 +234,8 @@ def demonstrate_high_persistence():
     │ R²       │ Near 1.0 even for naive models   │ Out-of-sample R²      │
     │ % Error  │ Meaningless when y ≈ constant    │ Relative to baseline  │
     └─────────────────────────────────────────────────────────────────────┘
-    """)
+    """
+    )
 
     # =========================================================================
     # Part 4: Validation Strategy
@@ -242,7 +243,8 @@ def demonstrate_high_persistence():
     print("=" * 70)
     print("PART 4: Recommended Validation Strategy")
     print("=" * 70)
-    print("""
+    print(
+        """
 1. ALWAYS compare to persistence baseline
    - If MASE ≥ 1, your model doesn't beat naive
    - Use DM test to verify statistical significance
@@ -262,7 +264,8 @@ def demonstrate_high_persistence():
 5. BE SKEPTICAL of impressive metrics
    - MAE of 0.001 is meaningless if persistence achieves 0.0005
    - Always report relative metrics (MASE, % improvement)
-""")
+"""
+    )
 
     # =========================================================================
     # Part 5: Summary Table
@@ -275,7 +278,9 @@ def demonstrate_high_persistence():
     print(f"{'Persistence':<20} {persistence_mae:<12.6f} {'1.000':<8} {'-':<10} {'Baseline':<15}")
     for r in results:
         verdict = "✓ Better" if r["mase"] < 1 else "✗ No better"
-        print(f"{r['name']:<20} {r['mae']:<12.6f} {r['mase']:<8.3f} {r['dir_acc']:<10.1%} {verdict:<15}")
+        print(
+            f"{r['name']:<20} {r['mae']:<12.6f} {r['mase']:<8.3f} {r['dir_acc']:<10.1%} {verdict:<15}"
+        )
 
 
 if __name__ == "__main__":
@@ -319,47 +324,62 @@ fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
 # Left: MAE comparison (shows why raw MAE is misleading)
 ax1 = axes[0]
-models = ['Persistence\n(Baseline)', 'Ridge\n(Simple)', 'GBM\n(Complex)']
+models = ["Persistence\n(Baseline)", "Ridge\n(Simple)", "GBM\n(Complex)"]
 maes = [persistence_mae, ridge_mae, gbm_mae]
-colors = ['#7f7f7f', '#1f77b4', '#ff7f0e']
-bars = ax1.bar(models, maes, color=colors, edgecolor='black', linewidth=1.5)
-ax1.set_ylabel('Mean Absolute Error (MAE)')
-ax1.set_title('Raw MAE: All Appear Nearly Identical')
+colors = ["#7f7f7f", "#1f77b4", "#ff7f0e"]
+bars = ax1.bar(models, maes, color=colors, edgecolor="black", linewidth=1.5)
+ax1.set_ylabel("Mean Absolute Error (MAE)")
+ax1.set_title("Raw MAE: All Appear Nearly Identical")
 ax1.set_ylim(0, max(maes) * 1.3)
 
 for bar, mae in zip(bars, maes):
-    ax1.annotate(f'{mae:.5f}',
-                 xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
-                 xytext=(0, 3), textcoords="offset points",
-                 ha='center', va='bottom', fontsize=10)
+    ax1.annotate(
+        f"{mae:.5f}",
+        xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
+        xytext=(0, 3),
+        textcoords="offset points",
+        ha="center",
+        va="bottom",
+        fontsize=10,
+    )
 
 # Right: MASE comparison (reveals true relative performance)
 ax2 = axes[1]
-models_mase = ['Persistence', 'Ridge', 'GBM']
+models_mase = ["Persistence", "Ridge", "GBM"]
 mases = [1.0, ridge_mase, gbm_mase]
-colors_mase = ['#7f7f7f',
-               '#2ca02c' if ridge_mase < 1 else '#d62728',
-               '#2ca02c' if gbm_mase < 1 else '#d62728']
-bars2 = ax2.bar(models_mase, mases, color=colors_mase, edgecolor='black', linewidth=1.5)
-ax2.axhline(1.0, color='black', linestyle='--', linewidth=2, label='MASE = 1.0 (no better than naive)')
-ax2.set_ylabel('MASE (Mean Absolute Scaled Error)')
-ax2.set_title('MASE: Reveals True Relative Performance')
+colors_mase = [
+    "#7f7f7f",
+    "#2ca02c" if ridge_mase < 1 else "#d62728",
+    "#2ca02c" if gbm_mase < 1 else "#d62728",
+]
+bars2 = ax2.bar(models_mase, mases, color=colors_mase, edgecolor="black", linewidth=1.5)
+ax2.axhline(
+    1.0, color="black", linestyle="--", linewidth=2, label="MASE = 1.0 (no better than naive)"
+)
+ax2.set_ylabel("MASE (Mean Absolute Scaled Error)")
+ax2.set_title("MASE: Reveals True Relative Performance")
 ax2.set_ylim(0, max(mases) * 1.3)
-ax2.legend(loc='upper right')
+ax2.legend(loc="upper right")
 
 for bar, mase in zip(bars2, mases):
-    label = f'{mase:.3f}'
+    label = f"{mase:.3f}"
     if mase < 1:
-        label += ' ✓'
-    ax2.annotate(label,
-                 xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
-                 xytext=(0, 3), textcoords="offset points",
-                 ha='center', va='bottom', fontsize=10, fontweight='bold')
+        label += " ✓"
+    ax2.annotate(
+        label,
+        xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
+        xytext=(0, 3),
+        textcoords="offset points",
+        ha="center",
+        va="bottom",
+        fontsize=10,
+        fontweight="bold",
+    )
 
 # Apply Tufte styling
 for ax in axes:
     apply_tufte_style(ax)
 
 plt.tight_layout()
-plt.suptitle('High-Persistence Series: Why MASE Matters More Than MAE', y=1.02, fontsize=14)
+plt.suptitle("High-Persistence Series: Why MASE Matters More Than MAE", y=1.02, fontsize=14)
 plt.show()

@@ -34,9 +34,10 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold, cross_val_score
 
+from temporalcv import WalkForwardCV
+
 # temporalcv imports
 from temporalcv.cv_financial import PurgedKFold
-from temporalcv import WalkForwardCV
 
 # =============================================================================
 # PART 1: Generate Synthetic Financial Data
@@ -79,21 +80,21 @@ def generate_synthetic_returns(
 
     for t in range(1, n_days):
         # GARCH(1,1)-like volatility
-        volatility[t] = np.sqrt(
-            0.00001 + 0.1 * returns[t - 1] ** 2 + 0.85 * volatility[t - 1] ** 2
-        )
+        volatility[t] = np.sqrt(0.00001 + 0.1 * returns[t - 1] ** 2 + 0.85 * volatility[t - 1] ** 2)
         returns[t] = rng.normal(0.0003, volatility[t])  # Small drift
 
     # Generate price from returns
     price = 100 * np.exp(np.cumsum(returns))
 
     # Create DataFrame
-    df = pd.DataFrame({
-        "date": dates,
-        "price": price,
-        "returns": returns,
-        "volatility": volatility,
-    })
+    df = pd.DataFrame(
+        {
+            "date": dates,
+            "price": price,
+            "returns": returns,
+            "volatility": volatility,
+        }
+    )
 
     # Generate features (lagged, so no lookahead bias)
     df["returns_lag1"] = df["returns"].shift(1)
@@ -125,7 +126,7 @@ df, forward_window = generate_synthetic_returns(n_days=1000, seed=42)
 print(f"\nGenerated {len(df)} days of synthetic financial data")
 print(f"Forward return window: {forward_window} days")
 print(f"\nFeatures: {[c for c in df.columns if c not in ['date', 'price', 'forward_return_5d']]}")
-print(f"\nTarget: forward_return_5d (sum of returns over next 5 days)")
+print("\nTarget: forward_return_5d (sum of returns over next 5 days)")
 
 # =============================================================================
 # PART 2: The Problem - Label Overlap
@@ -135,7 +136,8 @@ print("\n" + "=" * 70)
 print("PART 2: Understanding Label Overlap")
 print("=" * 70)
 
-print("""
+print(
+    """
 When predicting 5-day forward returns:
 
 Day 1 label: returns[2] + returns[3] + returns[4] + returns[5] + returns[6]
@@ -148,7 +150,8 @@ seen most of the information it needs to predict Day 2's label.
 
 This is NOT the same as time overlap. It's information leakage
 through shared label components.
-""")
+"""
+)
 
 # Quantify overlap
 overlap_days = forward_window - 1
@@ -157,7 +160,7 @@ overlap_fraction = overlap_days / forward_window
 print(f"For {forward_window}-day returns:")
 print(f"  - Adjacent labels share {overlap_days} days of data")
 print(f"  - Overlap fraction: {overlap_fraction:.0%}")
-print(f"  - Effective information leakage: HIGH")
+print("  - Effective information leakage: HIGH")
 
 # =============================================================================
 # PART 3: WRONG Approach - Standard KFold
@@ -169,8 +172,13 @@ print("=" * 70)
 
 # Prepare features and target
 feature_cols = [
-    "returns_lag1", "returns_lag2", "returns_lag5",
-    "vol_5d", "vol_20d", "momentum_5d", "momentum_20d"
+    "returns_lag1",
+    "returns_lag2",
+    "returns_lag5",
+    "vol_5d",
+    "vol_20d",
+    "momentum_5d",
+    "momentum_20d",
 ]
 X = df[feature_cols].values
 y = df["forward_return_5d"].values
@@ -184,7 +192,7 @@ scores_kfold = cross_val_score(model, X, y, cv=kfold, scoring="neg_mean_squared_
 rmse_kfold = np.sqrt(-scores_kfold.mean())
 
 print(f"  KFold RMSE: {rmse_kfold:.6f}")
-print(f"  WARNING: This score is OPTIMISTICALLY BIASED due to label overlap!")
+print("  WARNING: This score is OPTIMISTICALLY BIASED due to label overlap!")
 
 # =============================================================================
 # PART 4: BETTER Approach - WalkForwardCV
@@ -206,8 +214,8 @@ scores_wf = cross_val_score(model, X, y, cv=wf_cv, scoring="neg_mean_squared_err
 rmse_wf = np.sqrt(-scores_wf.mean())
 
 print(f"  WalkForward RMSE: {rmse_wf:.6f}")
-print(f"  This is more realistic but still doesn't handle label overlap")
-print(f"  within each fold.")
+print("  This is more realistic but still doesn't handle label overlap")
+print("  within each fold.")
 
 # =============================================================================
 # PART 5: BEST Approach - PurgedKFold
@@ -217,14 +225,16 @@ print("\n" + "=" * 70)
 print("PART 5: Best Approach - PurgedKFold with Embargo")
 print("=" * 70)
 
-print("""
+print(
+    """
 PurgedKFold handles label overlap by:
 
 1. PURGING: Remove training samples whose labels overlap with test labels
 2. EMBARGO: Add extra gap after test fold to prevent information leakage
 
 This ensures the model cannot exploit label overlap for better scores.
-""")
+"""
+)
 
 # Create PurgedKFold with label information
 dates = df["date"].values
@@ -232,7 +242,7 @@ dates = df["date"].values
 purged_cv = PurgedKFold(
     n_splits=5,
     purge_gap=forward_window,  # Purge samples with label overlap
-    embargo_pct=0.01,          # 1% of data as additional buffer
+    embargo_pct=0.01,  # 1% of data as additional buffer
 )
 
 # Manual CV loop to show what PurgedKFold does
@@ -268,7 +278,8 @@ print("\n" + "=" * 70)
 print("PART 6: Method Comparison")
 print("=" * 70)
 
-print(f"""
+print(
+    f"""
 Method Comparison (lower RMSE seems better, but context matters):
 
   KFold (shuffle=True):  RMSE = {rmse_kfold:.6f}  <- LEAKY, not reliable
@@ -282,7 +293,8 @@ The PurgedKFold RMSE is typically HIGHER than KFold because:
 
 If your KFold RMSE is much lower than PurgedKFold RMSE, you likely have
 significant information leakage that will hurt production performance.
-""")
+"""
+)
 
 # Leakage quantification
 leakage_ratio = (rmse_purged - rmse_kfold) / rmse_purged
@@ -296,7 +308,8 @@ print("\n" + "=" * 70)
 print("KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. LABEL OVERLAP is different from TIME OVERLAP
    - Even with proper time splits, overlapping labels leak information
    - Multi-day returns are the most common case
@@ -317,7 +330,8 @@ print("""
 5. COMBINE WITH VALIDATION GATES
    - gate_signal_verification catches many feature leakage issues
    - PurgedKFold handles label overlap specifically
-""")
+"""
+)
 
 # =============================================================================
 # PART 8: Advanced - Quantifying Label Overlap

@@ -212,9 +212,9 @@ class TestBreakEvenGap:
 
         # For IID data, metrics should be relatively stable
         # Sensitivity score should be low
-        assert result.sensitivity_score < 0.5, (
-            f"IID data should have low sensitivity, got {result.sensitivity_score:.3f}"
-        )
+        assert (
+            result.sensitivity_score < 0.5
+        ), f"IID data should have low sensitivity, got {result.sensitivity_score:.3f}"
 
 
 class TestDegradationThreshold:

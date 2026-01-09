@@ -272,9 +272,9 @@ class TestPTTestIntegration:
         result = pt_test(actual, predicted)
 
         # P-value should be large (not significant)
-        assert result.pvalue > 0.05, (
-            f"Random predictions should not be significant, got p={result.pvalue}"
-        )
+        assert (
+            result.pvalue > 0.05
+        ), f"Random predictions should not be significant, got p={result.pvalue}"
 
     def test_perfect_predictions_highly_significant(self) -> None:
         """
@@ -311,9 +311,9 @@ class TestPTTestIntegration:
 
         assert result.accuracy == 0.0, "Opposite predictions should have 0% accuracy"
         # One-sided test: accuracy << expected gives large p-value (wrong direction)
-        assert result.pvalue > 0.5, (
-            "One-sided PT test should not detect 'negative skill' as significant"
-        )
+        assert (
+            result.pvalue > 0.5
+        ), "One-sided PT test should not detect 'negative skill' as significant"
 
 
 # =============================================================================

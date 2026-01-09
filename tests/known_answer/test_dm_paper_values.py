@@ -364,9 +364,9 @@ class TestHarveySizeControl:
 
         # Harvey-adjusted should be closer to nominal 5%
         # Allow wide tolerance due to limited simulations
-        assert 0.01 < rejection_rate_with < 0.15, (
-            f"Harvey rejection rate {rejection_rate_with:.2%} outside [1%, 15%]"
-        )
+        assert (
+            0.01 < rejection_rate_with < 0.15
+        ), f"Harvey rejection rate {rejection_rate_with:.2%} outside [1%, 15%]"
 
         # Without adjustment, rejection rate tends to be higher (liberal test)
         # This assertion may fail sometimes due to randomness - it's informative

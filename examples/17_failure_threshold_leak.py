@@ -35,14 +35,12 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, roc_curve
 
 # temporalcv imports
-from temporalcv import WalkForwardCV
 from temporalcv.gates import gate_suspicious_improvement
-from temporalcv.viz import MetricComparisonDisplay, apply_tufte_style
+from temporalcv.viz import MetricComparisonDisplay
 
 # sphinx_gallery_thumbnail_number = 1
 
@@ -106,11 +104,13 @@ def generate_regime_data(
     regime = (rng.random(n_samples) < regime_prob).astype(int)
 
     # Create DataFrame
-    df = pd.DataFrame({
-        "regime": regime,  # 0=LOW, 1=HIGH
-        "x1": x1,
-        "x2": x2,
-    })
+    df = pd.DataFrame(
+        {
+            "regime": regime,  # 0=LOW, 1=HIGH
+            "x1": x1,
+            "x2": x2,
+        }
+    )
 
     # Add lagged features (strictly causal)
     df["x1_lag1"] = df["x1"].shift(1)
@@ -142,7 +142,8 @@ print("\n" + "=" * 70)
 print("PART 2: THE PROBLEM — THRESHOLD FROM FULL DATA")
 print("=" * 70)
 
-print("""
+print(
+    """
 A common workflow for probability-based classification:
 
 1. Train model on training data
@@ -153,7 +154,8 @@ A common workflow for probability-based classification:
 
 Step 3 is the problem: the threshold is tuned using test labels,
 then the model is evaluated on the same test set.
-""")
+"""
+)
 
 # =============================================================================
 # PART 3: WRONG Approach — Threshold from Full Dataset
@@ -188,9 +190,9 @@ j_scores = tpr - fpr
 optimal_idx = np.argmax(j_scores)
 threshold_wrong = thresholds[optimal_idx]
 
-print(f"❌ WRONG: Threshold computed on FULL data")
+print("❌ WRONG: Threshold computed on FULL data")
 print(f"   Optimal threshold (Youden's J): {threshold_wrong:.4f}")
-print(f"   This threshold was tuned using test labels!")
+print("   This threshold was tuned using test labels!")
 
 # Apply threshold to test data
 y_prob_test = model.predict_proba(X_test)[:, 1]
@@ -202,7 +204,7 @@ f1_wrong = f1_score(y_test, y_pred_wrong)
 
 print(f"\n   Test Accuracy: {acc_wrong * 100:.1f}%")
 print(f"   Test F1 Score: {f1_wrong:.3f}")
-print(f"   These metrics are INFLATED due to threshold leakage!")
+print("   These metrics are INFLATED due to threshold leakage!")
 
 # =============================================================================
 # PART 4: CORRECT Approach — Threshold from Training Data Only
@@ -212,7 +214,8 @@ print("\n" + "=" * 70)
 print("PART 4: CORRECT APPROACH — THRESHOLD FROM TRAINING DATA ONLY")
 print("=" * 70)
 
-print("""
+print(
+    """
 The correct workflow:
 
 1. Train model on training data
@@ -222,7 +225,8 @@ The correct workflow:
 5. Report accuracy
 
 Now the threshold never sees test labels.
-""")
+"""
+)
 
 # Get probabilities on TRAINING data only
 y_prob_train = model.predict_proba(X_train)[:, 1]
@@ -233,7 +237,7 @@ j_scores_train = tpr_train - fpr_train
 optimal_idx_train = np.argmax(j_scores_train)
 threshold_correct = thresholds_train[optimal_idx_train]
 
-print(f"✅ CORRECT: Threshold computed on TRAINING data only")
+print("✅ CORRECT: Threshold computed on TRAINING data only")
 print(f"   Optimal threshold (Youden's J): {threshold_correct:.4f}")
 
 # Apply threshold to test data
@@ -259,20 +263,24 @@ y_pred_default = (y_prob_test >= 0.5).astype(int)
 acc_default = accuracy_score(y_test, y_pred_default)
 f1_default = f1_score(y_test, y_pred_default)
 
-print(f"\n📊 Side-by-Side Comparison:")
+print("\n📊 Side-by-Side Comparison:")
 print("-" * 70)
 print(f"{'Method':<30} {'Threshold':<12} {'Accuracy':<12} {'F1 Score':<12}")
 print("-" * 70)
 print(f"{'Default (0.5)':<30} {0.5:<12.4f} {acc_default * 100:<12.1f}% {f1_default:<12.3f}")
-print(f"{'WRONG (full data)':<30} {threshold_wrong:<12.4f} {acc_wrong * 100:<12.1f}% {f1_wrong:<12.3f}")
-print(f"{'CORRECT (train only)':<30} {threshold_correct:<12.4f} {acc_correct * 100:<12.1f}% {f1_correct:<12.3f}")
+print(
+    f"{'WRONG (full data)':<30} {threshold_wrong:<12.4f} {acc_wrong * 100:<12.1f}% {f1_wrong:<12.3f}"
+)
+print(
+    f"{'CORRECT (train only)':<30} {threshold_correct:<12.4f} {acc_correct * 100:<12.1f}% {f1_correct:<12.3f}"
+)
 print("-" * 70)
 
 # Highlight the issue
 if acc_wrong > acc_correct:
     inflation = (acc_wrong - acc_correct) / acc_correct * 100
     print(f"\n⚠️  WRONG approach shows {inflation:.1f}% higher accuracy!")
-    print(f"   This inflation is FAKE — it's due to threshold leakage.")
+    print("   This inflation is FAKE — it's due to threshold leakage.")
 
 # =============================================================================
 # PART 6: Detecting with Validation Gates
@@ -282,7 +290,8 @@ print("\n" + "=" * 70)
 print("PART 6: DETECTING WITH VALIDATION GATES")
 print("=" * 70)
 
-print("""
+print(
+    """
 gate_suspicious_improvement() can flag when a model's accuracy gain
 over baseline is unrealistically high.
 
@@ -290,14 +299,15 @@ For classification, a naive baseline might be:
 - Always predict majority class
 - Random guessing
 - A simple rule-based classifier
-""")
+"""
+)
 
 # Baseline: majority class prediction
 majority_class = int(y_train.mean() >= 0.5)
 y_pred_baseline = np.full_like(y_test, majority_class)
 acc_baseline = accuracy_score(y_test, y_pred_baseline)
 
-print(f"\n📊 Baseline: Always predict majority class")
+print("\n📊 Baseline: Always predict majority class")
 print(f"   Majority class: {majority_class}")
 print(f"   Baseline accuracy: {acc_baseline * 100:.1f}%")
 
@@ -310,7 +320,7 @@ gate_wrong = gate_suspicious_improvement(
     warn_threshold=0.25,
 )
 
-print(f"\n🔍 Gate check for WRONG approach:")
+print("\n🔍 Gate check for WRONG approach:")
 print(f"   Improvement over baseline: {improvement_wrong * 100:.1f}%")
 print(f"   Status: {gate_wrong.status}")
 
@@ -323,7 +333,7 @@ gate_correct = gate_suspicious_improvement(
     warn_threshold=0.25,
 )
 
-print(f"\n🔍 Gate check for CORRECT approach:")
+print("\n🔍 Gate check for CORRECT approach:")
 print(f"   Improvement over baseline: {improvement_correct * 100:.1f}%")
 print(f"   Status: {gate_correct.status}")
 
@@ -335,7 +345,8 @@ print("\n" + "=" * 70)
 print("PART 7: OTHER SCENARIOS WHERE THIS BUG APPEARS")
 print("=" * 70)
 
-print("""
+print(
+    """
 Threshold leakage can occur in many places:
 
 1. BINARY CLASSIFICATION THRESHOLD
@@ -362,7 +373,8 @@ Threshold leakage can occur in many places:
 6. FEATURE SELECTION
    - Selecting features based on correlation with target
    - If done on full data, test correlations leak
-""")
+"""
+)
 
 # =============================================================================
 # PART 8: Key Takeaways
@@ -372,7 +384,8 @@ print("\n" + "=" * 70)
 print("PART 8: KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. THRESHOLDS MUST COME FROM TRAINING DATA ONLY
    - Never use test labels to tune classification threshold
    - This is true for any hyperparameter/decision boundary
@@ -399,7 +412,8 @@ print("""
 
 The pattern: NOTHING computed from the training pipeline should
 see test labels, directly or indirectly.
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example 17 complete.")

@@ -46,9 +46,9 @@ class TestTheoreticalBoundsBasic:
 
         result = gate_theoretical_bounds(model_mae, y)
 
-        assert result.status == GateStatus.PASS, (
-            f"MAE above theoretical should pass, got {result.status}"
-        )
+        assert (
+            result.status == GateStatus.PASS
+        ), f"MAE above theoretical should pass, got {result.status}"
         assert "phi_estimate" in result.details
         assert "theoretical_mae" in result.details
 
@@ -136,9 +136,9 @@ class TestTheoreticalBoundsTheory:
         estimated_phi = result.details["phi_estimate"]
 
         # Allow 10% relative error
-        assert abs(estimated_phi - true_phi) / true_phi < 0.10, (
-            f"Estimated phi ({estimated_phi:.3f}) should be close to true phi ({true_phi})"
-        )
+        assert (
+            abs(estimated_phi - true_phi) / true_phi < 0.10
+        ), f"Estimated phi ({estimated_phi:.3f}) should be close to true phi ({true_phi})"
 
     def test_innovation_sigma_estimation(self) -> None:
         """
@@ -164,14 +164,14 @@ class TestTheoreticalBoundsTheory:
 
         # Series variance >> innovation variance for high phi
         series_std = np.std(y)
-        assert estimated_sigma < series_std, (
-            "Innovation sigma should be smaller than series std for high phi"
-        )
+        assert (
+            estimated_sigma < series_std
+        ), "Innovation sigma should be smaller than series std for high phi"
 
         # Should be close to true innovation sigma
-        assert abs(estimated_sigma - true_sigma) / true_sigma < 0.15, (
-            f"Estimated sigma ({estimated_sigma:.3f}) should be close to true sigma ({true_sigma})"
-        )
+        assert (
+            abs(estimated_sigma - true_sigma) / true_sigma < 0.15
+        ), f"Estimated sigma ({estimated_sigma:.3f}) should be close to true sigma ({true_sigma})"
 
     def test_theoretical_mae_formula(self) -> None:
         """
@@ -189,9 +189,9 @@ class TestTheoreticalBoundsTheory:
 
         expected = sigma * np.sqrt(2 / np.pi)
 
-        assert abs(theoretical - expected) < 1e-10, (
-            f"Theoretical MAE ({theoretical}) should equal sigma * sqrt(2/pi) ({expected})"
-        )
+        assert (
+            abs(theoretical - expected) < 1e-10
+        ), f"Theoretical MAE ({theoretical}) should equal sigma * sqrt(2/pi) ({expected})"
 
 
 class TestAR1AssumptionWarning:
@@ -214,9 +214,9 @@ class TestAR1AssumptionWarning:
         result = gate_theoretical_bounds(model_mae=1.0, y_train=y)
 
         # AR(1) residuals should be white noise
-        assert result.details["ar1_assumption_warning"] is False, (
-            "AR(1) data should not trigger assumption warning"
-        )
+        assert (
+            result.details["ar1_assumption_warning"] is False
+        ), "AR(1) data should not trigger assumption warning"
 
     def test_ar2_data_triggers_warning(self) -> None:
         """
@@ -239,9 +239,9 @@ class TestAR1AssumptionWarning:
         result = gate_theoretical_bounds(model_mae=1.0, y_train=y)
 
         # AR(1) residuals should show autocorrelation
-        assert result.details["ar1_assumption_warning"] is True, (
-            "AR(2) data should trigger AR(1) assumption warning"
-        )
+        assert (
+            result.details["ar1_assumption_warning"] is True
+        ), "AR(2) data should trigger AR(1) assumption warning"
         assert "ar1_assumption_message" in result.details
 
     def test_warning_included_in_pass_message(self) -> None:
@@ -264,9 +264,9 @@ class TestAR1AssumptionWarning:
         result = gate_theoretical_bounds(model_mae=10.0, y_train=y)
 
         if result.details["ar1_assumption_warning"]:
-            assert "may not hold" in result.message, (
-                "Pass message should note AR(1) assumption caveat"
-            )
+            assert (
+                "may not hold" in result.message
+            ), "Pass message should note AR(1) assumption caveat"
 
 
 class TestTheoreticalBoundsEdgeCases:

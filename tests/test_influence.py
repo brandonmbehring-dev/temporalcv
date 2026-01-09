@@ -52,9 +52,9 @@ class TestInfluenceDiagnosticsBasic:
         result = compute_dm_influence(errors1, errors2)
 
         # Observation 50 should have high influence
-        assert result.observation_high_mask[50], (
-            "Outlier observation should be flagged as high influence"
-        )
+        assert result.observation_high_mask[
+            50
+        ], "Outlier observation should be flagged as high influence"
         assert result.n_high_influence_obs >= 1
 
     def test_outlier_detection_block_level(self) -> None:

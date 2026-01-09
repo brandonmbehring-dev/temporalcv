@@ -40,8 +40,7 @@ from sklearn.linear_model import Ridge
 
 # temporalcv imports
 from temporalcv import WalkForwardCV
-from temporalcv.metrics import compute_mase
-from temporalcv.gates import gate_suspicious_improvement, run_gates
+from temporalcv.gates import gate_suspicious_improvement
 
 # =============================================================================
 # PART 1: Generate Synthetic Web Traffic Data
@@ -100,11 +99,14 @@ def generate_web_traffic_data(
     traffic = np.maximum(traffic, 0)  # Traffic can't be negative
 
     # Create DataFrame
-    df = pd.DataFrame({
-        "traffic": traffic,
-        "day_of_week": day_of_week,
-        "is_weekend": (day_of_week >= 5).astype(int),
-    }, index=dates)
+    df = pd.DataFrame(
+        {
+            "traffic": traffic,
+            "day_of_week": day_of_week,
+            "is_weekend": (day_of_week >= 5).astype(int),
+        },
+        index=dates,
+    )
 
     # Add lagged features (strictly causal)
     df["traffic_lag1"] = df["traffic"].shift(1)
@@ -130,11 +132,11 @@ df = generate_web_traffic_data(n_days=365, seed=42)
 print(f"\n📊 Generated web traffic data: {len(df)} days")
 print(f"   Date range: {df.index[0].date()} to {df.index[-1].date()}")
 print(f"   Mean traffic: {df['traffic'].mean():.0f} visits/day")
-print(f"   Weekly pattern: Mon-Fri high, Sat-Sun low")
+print("   Weekly pattern: Mon-Fri high, Sat-Sun low")
 
 # Show weekly pattern
 weekly_avg = df.groupby("day_of_week")["traffic"].mean()
-print(f"\n📈 Average traffic by day of week:")
+print("\n📈 Average traffic by day of week:")
 days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 for dow, day_name in enumerate(days):
     print(f"   {day_name}: {weekly_avg[dow]:,.0f}")
@@ -147,7 +149,8 @@ print("\n" + "=" * 70)
 print("PART 2: WHY MASE MATTERS FOR SEASONAL DATA")
 print("=" * 70)
 
-print("""
+print(
+    """
 For seasonal data, standard MAE can be misleading:
 
    MAE = 500 visits/day
@@ -166,7 +169,8 @@ Interpretation:
 
 For web traffic with period=7, seasonal naive means: predict Monday
 with last Monday, predict Tuesday with last Tuesday, etc.
-""")
+"""
+)
 
 # =============================================================================
 # PART 3: Baseline — Seasonal Naive
@@ -190,10 +194,10 @@ seasonal_naive_pred = df_test["traffic_lag7"].values
 # Compute seasonal naive MAE
 seasonal_naive_mae = np.mean(np.abs(y_test - seasonal_naive_pred))
 
-print(f"📊 Seasonal Naive Baseline:")
-print(f"   Forecast: y[t] = y[t-7] (same day last week)")
+print("📊 Seasonal Naive Baseline:")
+print("   Forecast: y[t] = y[t-7] (same day last week)")
 print(f"   Test MAE: {seasonal_naive_mae:.2f} visits/day")
-print(f"   This is our reference for MASE calculation.")
+print("   This is our reference for MASE calculation.")
 
 # =============================================================================
 # PART 4: Train Models
@@ -205,9 +209,13 @@ print("=" * 70)
 
 # Prepare features
 feature_cols = [
-    "day_of_week", "is_weekend",
-    "traffic_lag1", "traffic_lag7", "traffic_lag14",
-    "traffic_ma7", "traffic_std7"
+    "day_of_week",
+    "is_weekend",
+    "traffic_lag1",
+    "traffic_lag7",
+    "traffic_lag14",
+    "traffic_ma7",
+    "traffic_std7",
 ]
 
 X_train = df_train[feature_cols].values
@@ -227,7 +235,7 @@ ridge_model.fit(X_train, y_train)
 gb_pred = gb_model.predict(X_test)
 ridge_pred = ridge_model.predict(X_test)
 
-print(f"✅ Trained 2 models: GradientBoosting, Ridge")
+print("✅ Trained 2 models: GradientBoosting, Ridge")
 print(f"   Training samples: {len(y_train)}")
 print(f"   Test samples: {len(y_test)}")
 
@@ -247,7 +255,7 @@ ridge_mae = np.mean(np.abs(y_test - ridge_pred))
 gb_mase = gb_mae / seasonal_naive_mae
 ridge_mase = ridge_mae / seasonal_naive_mae
 
-print(f"\n📊 Model Performance:")
+print("\n📊 Model Performance:")
 print("-" * 60)
 print(f"{'Model':<20} {'MAE':<15} {'MASE':<15} {'vs Baseline':<15}")
 print("-" * 60)
@@ -257,7 +265,7 @@ print(f"{'Ridge':<20} {ridge_mae:<15.2f} {ridge_mase:<15.3f} {'+' if ridge_mase 
 print("-" * 60)
 
 # Interpretation
-print(f"\n🔍 Interpretation:")
+print("\n🔍 Interpretation:")
 if gb_mase < 1:
     print(f"   GradientBoosting beats seasonal naive by {(1 - gb_mase) * 100:.1f}%")
 else:
@@ -276,12 +284,14 @@ print("\n" + "=" * 70)
 print("PART 6: WALKFORWARD CV WITH WEEKLY TEST WINDOWS")
 print("=" * 70)
 
-print("""
+print(
+    """
 For web traffic, we want to evaluate on FULL WEEKS:
 - test_size=7 ensures each fold tests a complete Mon-Sun cycle
 - This captures the weekly seasonality properly
 - Avoids biased evaluation from partial weeks
-""")
+"""
+)
 
 # Set up WalkForwardCV
 wfcv = WalkForwardCV(
@@ -293,7 +303,7 @@ wfcv = WalkForwardCV(
 )
 
 # Manual cross-validation to compute per-fold MASE
-print(f"\n📊 WalkForward CV Results (test_size=7 for full weeks):")
+print("\n📊 WalkForward CV Results (test_size=7 for full weeks):")
 print("-" * 70)
 print(f"{'Fold':<8} {'Train Size':<12} {'Test Dates':<25} {'GB MASE':<12} {'Ridge MASE':<12}")
 print("-" * 70)
@@ -332,7 +342,9 @@ for fold_idx, (train_idx, test_idx) in enumerate(wfcv.split(df[feature_cols].val
     ridge_mases.append(ridge_mase_fold)
 
     test_dates = df.index[test_idx]
-    print(f"{fold_idx + 1:<8} {len(train_idx):<12} {str(test_dates[0].date()) + ' to ' + str(test_dates[-1].date()):<25} {gb_mase_fold:<12.3f} {ridge_mase_fold:<12.3f}")
+    print(
+        f"{fold_idx + 1:<8} {len(train_idx):<12} {str(test_dates[0].date()) + ' to ' + str(test_dates[-1].date()):<25} {gb_mase_fold:<12.3f} {ridge_mase_fold:<12.3f}"
+    )
 
 print("-" * 70)
 print(f"{'Mean':<8} {'':<12} {'':<25} {np.mean(gb_mases):<12.3f} {np.mean(ridge_mases):<12.3f}")
@@ -357,7 +369,7 @@ gate_result = gate_suspicious_improvement(
     warn_threshold=0.15,  # WARN if >15% improvement
 )
 
-print(f"\n📊 Gate: Suspicious Improvement Check")
+print("\n📊 Gate: Suspicious Improvement Check")
 print(f"   Best model MAE: {best_model_mae:.2f}")
 print(f"   Seasonal naive MAE: {seasonal_naive_mae:.2f}")
 print(f"   Improvement: {improvement * 100:.1f}%")
@@ -365,13 +377,13 @@ print(f"   Status: {gate_result.status}")
 print(f"   Message: {gate_result.message}")
 
 if str(gate_result.status) == "GateStatus.HALT":
-    print(f"\n🛑 HALT: Improvement is suspiciously large!")
-    print(f"   Check for data leakage or feature engineering bugs.")
+    print("\n🛑 HALT: Improvement is suspiciously large!")
+    print("   Check for data leakage or feature engineering bugs.")
 elif str(gate_result.status) == "GateStatus.WARN":
-    print(f"\n⚠️  WARN: Large improvement detected.")
-    print(f"   Verify features are strictly causal (no future leakage).")
+    print("\n⚠️  WARN: Large improvement detected.")
+    print("   Verify features are strictly causal (no future leakage).")
 else:
-    print(f"\n✅ PASS: Improvement is within reasonable bounds.")
+    print("\n✅ PASS: Improvement is within reasonable bounds.")
 
 # =============================================================================
 # PART 8: Key Takeaways
@@ -381,7 +393,8 @@ print("\n" + "=" * 70)
 print("PART 8: KEY TAKEAWAYS")
 print("=" * 70)
 
-print("""
+print(
+    """
 1. USE MASE FOR SEASONAL DATA
    - MASE = MAE / MAE_seasonal_naive
    - MASE < 1 means beating the seasonal baseline
@@ -413,7 +426,8 @@ print("""
    - Holiday effects (not shown here)
    - Marketing campaigns, events
    - External regressors can help
-""")
+"""
+)
 
 print("\n" + "=" * 70)
 print("Example 11 complete.")

@@ -35,7 +35,6 @@ Requirements
 from __future__ import annotations
 
 import warnings
-from typing import Tuple
 
 import numpy as np
 from scipy import stats
@@ -56,7 +55,7 @@ def generate_ar1_with_forecasts(
     phi: float = 0.9,
     sigma: float = 1.0,
     seed: int = 42,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Generate AR(1) series and forecasts from two models.
 
@@ -256,7 +255,7 @@ def demonstrate_statistical_tests():
     # Generate data
     actual, persistence_preds, model_preds = generate_ar1_with_forecasts(n=300)
     print(f"\nData: {len(actual)} observations of AR(1) process")
-    print(f"Persistence parameter (phi): 0.9")
+    print("Persistence parameter (phi): 0.9")
 
     # Calculate errors
     model_errors = actual - model_preds
@@ -299,7 +298,7 @@ def demonstrate_statistical_tests():
         alternative="two-sided",
     )
 
-    print(f"\n--- Squared Error Loss ---")
+    print("\n--- Squared Error Loss ---")
     print(f"  {dm_result_sq['str']}")
     print(f"  Mean loss difference: {dm_result_sq['mean_loss_diff']:.4f}")
     print(f"  Significant at α=0.05: {'Yes' if dm_result_sq['significant'] else 'No'}")
@@ -313,7 +312,7 @@ def demonstrate_statistical_tests():
         alternative="two-sided",
     )
 
-    print(f"\n--- Absolute Error Loss ---")
+    print("\n--- Absolute Error Loss ---")
     print(f"  {dm_result_abs['str']}")
     print(f"  Mean loss difference: {dm_result_abs['mean_loss_diff']:.4f}")
     print(f"  Significant at α=0.05: {'Yes' if dm_result_abs['significant'] else 'No'}")
@@ -370,7 +369,8 @@ def demonstrate_statistical_tests():
     print("\n" + "=" * 70)
     print("WHEN TO USE WHICH TEST")
     print("=" * 70)
-    print("""
+    print(
+        """
     ┌─────────────────────────────────────────────────────────────────────┐
     │ Question                           │ Test to Use                   │
     ├─────────────────────────────────────────────────────────────────────┤
@@ -379,7 +379,8 @@ def demonstrate_statistical_tests():
     │ Is improvement > 0 (one-sided)?    │ DM with alternative="less"    │
     │ Multi-step forecast (h > 1)?       │ DM with HAC variance          │
     └─────────────────────────────────────────────────────────────────────┘
-    """)
+    """
+    )
 
     # =========================================================================
     # Key Takeaways
@@ -387,7 +388,8 @@ def demonstrate_statistical_tests():
     print("=" * 70)
     print("KEY TAKEAWAYS")
     print("=" * 70)
-    print("""
+    print(
+        """
 1. ALWAYS test significance — lower MAE ≠ better model
    - Random variation can create spurious improvements
    - DM test quantifies statistical significance
@@ -408,7 +410,8 @@ def demonstrate_statistical_tests():
 5. REPORT both metrics AND test results
    - "Model MAE: 0.123 (5% improvement over baseline)"
    - "DM test: p=0.03, significantly better at α=0.05"
-""")
+"""
+    )
 
 
 def visualize_statistical_tests():

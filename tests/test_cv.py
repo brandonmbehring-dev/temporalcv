@@ -342,9 +342,9 @@ class TestWindowTypes:
 
         # Each subsequent training set should be larger or equal
         for i in range(1, len(train_sizes)):
-            assert train_sizes[i] >= train_sizes[i - 1], (
-                f"Expanding window shrunk: {train_sizes[i - 1]} -> {train_sizes[i]}"
-            )
+            assert (
+                train_sizes[i] >= train_sizes[i - 1]
+            ), f"Expanding window shrunk: {train_sizes[i - 1]} -> {train_sizes[i]}"
 
     def test_sliding_window_fixed_size(self, sample_data: tuple) -> None:
         """Sliding window should maintain fixed size."""
@@ -547,9 +547,9 @@ class TestIntegration:
                 horizon=2,
                 extra_gap=0,
             )
-            assert result.status != GateStatus.HALT, (
-                f"Split failed temporal boundary: {result.message}"
-            )
+            assert (
+                result.status != GateStatus.HALT
+            ), f"Split failed temporal boundary: {result.message}"
 
     def test_splits_with_suspicious_improvement_gate(self, sample_data: tuple) -> None:
         """Splits can be validated with suspicious improvement gate."""

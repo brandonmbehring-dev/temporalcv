@@ -46,15 +46,14 @@ Requirements
 from __future__ import annotations
 
 import warnings
-from typing import List, Tuple
 
 import numpy as np
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error
 
-from temporalcv.cv import SplitInfo, WalkForwardCV
+from temporalcv.cv import WalkForwardCV
 from temporalcv.gates import gate_temporal_boundary
-from temporalcv.viz import CVFoldsDisplay, apply_tufte_style
+from temporalcv.viz import CVFoldsDisplay
 
 warnings.filterwarnings("ignore")
 
@@ -66,7 +65,7 @@ warnings.filterwarnings("ignore")
 # =============================================================================
 
 
-def load_forecasting_data() -> Tuple[np.ndarray, int, str]:
+def load_forecasting_data() -> tuple[np.ndarray, int, str]:
     """
     Load M3 monthly data or generate realistic synthetic series.
 
@@ -118,7 +117,7 @@ def _generate_synthetic_series(
 def create_lagged_features(
     series: np.ndarray,
     n_lags: int = 12,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Create lagged features for forecasting.
 
@@ -324,13 +323,15 @@ def demonstrate_walk_forward_cv():
     print("  ✓ Provides get_n_splits(), split(), __repr__")
 
     print("\nExample with cross_val_score:")
-    print("""
+    print(
+        """
     from sklearn.model_selection import cross_val_score
     from temporalcv import WalkForwardCV
 
     cv = WalkForwardCV(n_splits=5, horizon=12, extra_gap=0)
     scores = cross_val_score(model, X, y, cv=cv, scoring='neg_mean_absolute_error')
-    """)
+    """
+    )
 
     # =========================================================================
     # Key Takeaways
@@ -338,7 +339,8 @@ def demonstrate_walk_forward_cv():
     print("\n" + "=" * 70)
     print("KEY TAKEAWAYS")
     print("=" * 70)
-    print("""
+    print(
+        """
 1. ALWAYS use walk-forward CV for time-series (not random splits!)
    - Temporal ordering must be preserved
    - Training set must come before test set chronologically
@@ -358,7 +360,8 @@ def demonstrate_walk_forward_cv():
 5. INTEGRATE with sklearn ecosystem
    - cross_val_score, GridSearchCV, RandomizedSearchCV all work
    - Drop-in replacement for TimeSeriesSplit with better gap handling
-""")
+"""
+    )
 
 
 def visualize_walk_forward_cv():
@@ -399,20 +402,14 @@ def visualize_walk_forward_cv():
     fig, axes = plt.subplots(2, 1, figsize=(10, 6))
 
     # Expanding window
-    cv_expanding = WalkForwardCV(
-        n_splits=5, window_type="expanding", window_size=60, test_size=12
-    )
+    cv_expanding = WalkForwardCV(n_splits=5, window_type="expanding", window_size=60, test_size=12)
     CVFoldsDisplay.from_cv(cv_expanding, X).plot(
         ax=axes[0], title="Expanding Window (grows over time)"
     )
 
     # Sliding window
-    cv_sliding = WalkForwardCV(
-        n_splits=5, window_type="sliding", window_size=60, test_size=12
-    )
-    CVFoldsDisplay.from_cv(cv_sliding, X).plot(
-        ax=axes[1], title="Sliding Window (fixed size)"
-    )
+    cv_sliding = WalkForwardCV(n_splits=5, window_type="sliding", window_size=60, test_size=12)
+    CVFoldsDisplay.from_cv(cv_sliding, X).plot(ax=axes[1], title="Sliding Window (fixed size)")
 
     plt.tight_layout()
     plt.show()
