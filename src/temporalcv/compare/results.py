@@ -226,7 +226,7 @@ def load_benchmark_results(path: Path) -> tuple[ComparisonReport, Dict[str, Any]
     if not path.exists():
         raise FileNotFoundError(f"Results file not found: {path}")
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         data = json.load(f)
 
     if "report" not in data:

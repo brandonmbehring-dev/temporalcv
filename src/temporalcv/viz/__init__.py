@@ -87,8 +87,8 @@ from ._style import (
 )
 from .comparison import MetricComparisonDisplay
 from .cv import CVFoldsDisplay
-from .gates import GateComparisonDisplay, GateResultDisplay
 from .gateplots import plot_gate_comparison, plot_gate_result
+from .gates import GateComparisonDisplay, GateResultDisplay
 from .intervals import PredictionIntervalDisplay
 from .tsplots import (
     plot_cv_folds,

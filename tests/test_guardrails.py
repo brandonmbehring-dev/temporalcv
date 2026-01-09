@@ -10,7 +10,6 @@ Tests for:
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from temporalcv import (
     GuardrailResult,
@@ -21,7 +20,6 @@ from temporalcv import (
     check_suspicious_improvement,
     run_all_guardrails,
 )
-
 
 # =============================================================================
 # GuardrailResult Tests

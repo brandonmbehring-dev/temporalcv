@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from temporalcv.viz import PredictionIntervalDisplay
-from temporalcv.viz import plot_interval_width, plot_prediction_intervals
+from temporalcv.viz import PredictionIntervalDisplay, plot_interval_width, plot_prediction_intervals
 
 
 @dataclass

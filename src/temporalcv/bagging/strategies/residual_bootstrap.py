@@ -30,7 +30,6 @@ import numpy as np
 
 from temporalcv.bagging.base import BootstrapStrategy
 
-
 # Optional statsmodels import for STL
 try:
     from statsmodels.tsa.seasonal import STL

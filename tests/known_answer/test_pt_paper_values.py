@@ -26,7 +26,6 @@ from numpy.testing import assert_allclose
 
 from temporalcv.statistical_tests import pt_test
 
-
 # =============================================================================
 # Variance Formula Tests (Equation 8)
 # =============================================================================

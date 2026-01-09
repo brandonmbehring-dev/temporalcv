@@ -11,7 +11,6 @@ References:
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from temporalcv.gates import (
     GateStatus,

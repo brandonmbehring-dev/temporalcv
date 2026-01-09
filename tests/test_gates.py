@@ -15,16 +15,15 @@ import numpy as np
 import pytest
 
 from temporalcv.gates import (
-    GateStatus,
     GateResult,
+    GateStatus,
     ValidationReport,
     gate_signal_verification,
-    gate_synthetic_ar1,
     gate_suspicious_improvement,
+    gate_synthetic_ar1,
     gate_temporal_boundary,
     run_gates,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -50,7 +49,7 @@ class MockModel:
         self._mean: float = 0.0
         self._coeffs: np.ndarray | None = None
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "MockModel":
+    def fit(self, X: np.ndarray, y: np.ndarray) -> MockModel:
         """Fit model to data."""
         self._mean = float(np.mean(y))
         if self.prediction_type == "leaky":

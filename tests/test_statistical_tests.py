@@ -15,21 +15,20 @@ import pytest
 
 from temporalcv.statistical_tests import (
     DMTestResult,
-    PTTestResult,
     GWTestResult,
-    MultiModelComparisonResult,
     MultiHorizonResult,
+    MultiModelComparisonResult,
     MultiModelHorizonResult,
-    dm_test,
-    pt_test,
-    gw_test,
-    compare_multiple_models,
+    PTTestResult,
     compare_horizons,
     compare_models_horizons,
+    compare_multiple_models,
     compute_hac_variance,
     compute_self_normalized_variance,
+    dm_test,
+    gw_test,
+    pt_test,
 )
-
 
 # =============================================================================
 # Fixtures

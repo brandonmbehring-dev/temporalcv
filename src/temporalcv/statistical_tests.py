@@ -68,7 +68,6 @@ from typing import Literal, Optional, cast
 import numpy as np
 from scipy import stats
 
-
 # =============================================================================
 # Result dataclasses
 # =============================================================================
@@ -1903,7 +1902,7 @@ def compare_multiple_models(
 # =============================================================================
 
 
-from typing import Sequence
+from collections.abc import Sequence
 
 
 @dataclass(frozen=True)
@@ -2170,7 +2169,7 @@ class MultiModelHorizonResult:
     def summary(self) -> str:
         """Generate human-readable summary."""
         lines = [
-            f"Multi-Model × Multi-Horizon Comparison",
+            "Multi-Model × Multi-Horizon Comparison",
             f"Models: {', '.join(self.model_names)}",
             f"Horizons: {self.horizons}",
             f"α: {self.alpha}",

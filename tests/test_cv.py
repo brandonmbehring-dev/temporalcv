@@ -24,7 +24,6 @@ from temporalcv.cv import (
     WalkForwardCV,
 )
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -742,7 +741,7 @@ class TestSplitResult:
 
     def test_split_result_to_split_info(self) -> None:
         """SplitResult should convert to SplitInfo correctly."""
-        from temporalcv.cv import SplitResult, SplitInfo
+        from temporalcv.cv import SplitInfo, SplitResult
 
         sr = SplitResult(
             split_idx=2,
@@ -854,6 +853,7 @@ class TestWalkForwardEvaluate:
     def test_walk_forward_evaluate_basic(self) -> None:
         """walk_forward_evaluate should produce valid results."""
         from sklearn.linear_model import Ridge
+
         from temporalcv.cv import walk_forward_evaluate
 
         np.random.seed(42)
@@ -870,7 +870,8 @@ class TestWalkForwardEvaluate:
     def test_walk_forward_evaluate_with_cv(self) -> None:
         """walk_forward_evaluate should accept pre-configured CV."""
         from sklearn.linear_model import Ridge
-        from temporalcv.cv import walk_forward_evaluate, WalkForwardCV
+
+        from temporalcv.cv import WalkForwardCV, walk_forward_evaluate
 
         np.random.seed(42)
         X = np.random.randn(100, 3)
@@ -887,6 +888,7 @@ class TestWalkForwardEvaluate:
     def test_walk_forward_evaluate_sliding_window(self) -> None:
         """walk_forward_evaluate should work with sliding window."""
         from sklearn.linear_model import Ridge
+
         from temporalcv.cv import walk_forward_evaluate
 
         np.random.seed(42)
@@ -911,6 +913,7 @@ class TestWalkForwardEvaluate:
     def test_walk_forward_evaluate_split_details(self) -> None:
         """walk_forward_evaluate should provide split-level details."""
         from sklearn.linear_model import Ridge
+
         from temporalcv.cv import walk_forward_evaluate
 
         np.random.seed(42)

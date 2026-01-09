@@ -7,11 +7,11 @@ import numpy as np
 import pytest
 
 from temporalcv.gates import (
-    gate_signal_verification,
-    gate_synthetic_ar1,
-    gate_suspicious_improvement,
-    gate_temporal_boundary,
     gate_residual_diagnostics,
+    gate_signal_verification,
+    gate_suspicious_improvement,
+    gate_synthetic_ar1,
+    gate_temporal_boundary,
     run_gates,
 )
 

@@ -24,7 +24,6 @@ from temporalcv.benchmarks.base import (
     validate_dataset,
 )
 
-
 M5_DOWNLOAD_URL = "https://www.kaggle.com/competitions/m5-forecasting-accuracy/data"
 
 M5_INSTRUCTIONS = """

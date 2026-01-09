@@ -37,7 +37,6 @@ import pytest
 
 from temporalcv.statistical_tests import dm_test
 
-
 # Path to reference data
 REFERENCE_DIR = Path(__file__).parent / "r_reference"
 DM_REFERENCE_FILE = REFERENCE_DIR / "dm_reference.csv"

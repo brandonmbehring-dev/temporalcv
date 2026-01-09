@@ -31,7 +31,6 @@ from temporalcv.benchmarks.base import (
     validate_dataset,
 )
 
-
 # Standard FRED series for rate forecasting
 FRED_RATE_SERIES: Dict[str, str] = {
     "DGS10": "10-Year Treasury Constant Maturity Rate",

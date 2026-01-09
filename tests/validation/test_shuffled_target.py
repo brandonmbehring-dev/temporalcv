@@ -16,7 +16,6 @@ Reference: See SPECIFICATION.md for threshold definitions
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from temporalcv.gates import (
     GateStatus,
@@ -30,7 +29,7 @@ class MockMeanPredictor:
     def __init__(self) -> None:
         self._mean: float = 0.0
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "MockMeanPredictor":
+    def fit(self, X: np.ndarray, y: np.ndarray) -> MockMeanPredictor:
         self._mean = float(np.mean(y))
         return self
 
@@ -44,7 +43,7 @@ class MockLag1Predictor:
     def __init__(self, coefficient: float = 0.95) -> None:
         self.coefficient = coefficient
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "MockLag1Predictor":
+    def fit(self, X: np.ndarray, y: np.ndarray) -> MockLag1Predictor:
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:

@@ -9,15 +9,14 @@ import numpy as np
 import pytest
 
 from temporalcv.regimes import (
+    StratifiedMetricsResult,
     classify_direction_regime,
     classify_volatility_regime,
     compute_stratified_metrics,
     get_combined_regimes,
     get_regime_counts,
     mask_low_n_regimes,
-    StratifiedMetricsResult,
 )
-
 
 # =============================================================================
 # Test Fixtures

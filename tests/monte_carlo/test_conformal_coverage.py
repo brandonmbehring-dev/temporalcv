@@ -12,8 +12,7 @@ Tests verify:
 import numpy as np
 import pytest
 
-from temporalcv.conformal import SplitConformalPredictor, AdaptiveConformalPredictor
-
+from temporalcv.conformal import SplitConformalPredictor
 
 # =============================================================================
 # Helper: Simple Linear Model for Testing

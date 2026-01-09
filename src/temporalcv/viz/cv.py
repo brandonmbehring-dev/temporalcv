@@ -17,7 +17,7 @@ Examples
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -118,7 +118,7 @@ class CVFoldsDisplay(BaseDisplay):
         y: Optional[np.ndarray] = None,
         *,
         groups: Optional[np.ndarray] = None,
-    ) -> "CVFoldsDisplay":
+    ) -> CVFoldsDisplay:
         """
         Create display from a cross-validator object.
 
@@ -179,7 +179,7 @@ class CVFoldsDisplay(BaseDisplay):
         splits: List[Tuple[np.ndarray, np.ndarray]],
         *,
         n_samples: Optional[int] = None,
-    ) -> "CVFoldsDisplay":
+    ) -> CVFoldsDisplay:
         """
         Create display from pre-computed splits.
 
@@ -232,7 +232,7 @@ class CVFoldsDisplay(BaseDisplay):
         bar_height: float = 0.6,
         show_labels: bool = True,
         title: Optional[str] = None,
-    ) -> "CVFoldsDisplay":
+    ) -> CVFoldsDisplay:
         """
         Plot the cross-validation fold structure.
 

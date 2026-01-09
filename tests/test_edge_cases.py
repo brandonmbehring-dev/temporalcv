@@ -14,18 +14,16 @@ from temporalcv import WalkForwardCV
 from temporalcv.bagging import create_block_bagger
 from temporalcv.conformal import AdaptiveConformalPredictor
 from temporalcv.gates import (
-    gate_signal_verification,
+    GateStatus,
     gate_suspicious_improvement,
     gate_temporal_boundary,
-    GateStatus,
 )
 from temporalcv.persistence import (
+    compute_direction_accuracy,
     compute_move_conditional_metrics,
     compute_move_threshold,
-    compute_direction_accuracy,
 )
 from temporalcv.statistical_tests import dm_test, pt_test
-
 
 # =============================================================================
 # NaN Input Validation

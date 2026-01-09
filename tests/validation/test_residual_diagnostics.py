@@ -13,7 +13,6 @@ References:
 from __future__ import annotations
 
 import numpy as np
-import pytest
 from scipy import stats
 
 from temporalcv.gates import (

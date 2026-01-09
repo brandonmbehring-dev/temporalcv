@@ -12,15 +12,12 @@ import numpy as np
 import pytest
 
 from temporalcv.metrics.event import (
-    BrierScoreResult,
-    PRAUCResult,
     UndefinedMetricWarning,
     compute_calibrated_direction_brier,
     compute_direction_brier,
     compute_pr_auc,
     convert_predictions_to_direction_probs,
 )
-
 
 # =============================================================================
 # Test Fixtures

@@ -6,17 +6,15 @@ These tests verify invariants that should ALWAYS hold:
 3. GateResult always has required fields
 """
 
-import numpy as np
-import pytest
-from hypothesis import given, strategies as st, settings, assume
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
 
 from temporalcv.gates import (
-    GateStatus,
     GateResult,
-    run_gates,
+    GateStatus,
     gate_suspicious_improvement,
+    run_gates,
 )
-
 
 # === Strategies ===
 

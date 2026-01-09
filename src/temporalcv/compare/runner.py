@@ -35,7 +35,6 @@ from temporalcv.compare.base import (
     compute_comparison_metrics,
 )
 
-
 # =============================================================================
 # Dataset Protocol (for type checking)
 # =============================================================================

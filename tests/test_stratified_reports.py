@@ -9,7 +9,6 @@ Knowledge Tier: [T2] - Regime-conditional evaluation from myga-forecasting-v4
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from temporalcv.gates import (
     GateResult,

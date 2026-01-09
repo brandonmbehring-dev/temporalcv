@@ -6,8 +6,8 @@ Measures performance of CV splitting across various configurations.
 import numpy as np
 import pytest
 
-from temporalcv.cv import WalkForwardCV, CrossFitCV
-from temporalcv.cv_financial import PurgedKFold, CombinatorialPurgedCV, PurgedWalkForward
+from temporalcv.cv import CrossFitCV, WalkForwardCV
+from temporalcv.cv_financial import CombinatorialPurgedCV, PurgedKFold, PurgedWalkForward
 
 
 class TestWalkForwardCVBenchmarks:

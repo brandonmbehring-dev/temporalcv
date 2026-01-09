@@ -43,11 +43,8 @@ References
 
 from __future__ import annotations
 
-import warnings
-from typing import Optional, Union
-
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import ArrayLike
 
 
 def compute_pinball_loss(

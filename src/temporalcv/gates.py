@@ -250,7 +250,6 @@ def _compute_cv_mae(
     errors : np.ndarray, optional
         Raw absolute errors (only if return_errors=True).
     """
-    from temporalcv.cv import WalkForwardCV
 
     n = len(y)
     cv = WalkForwardCV(

@@ -18,7 +18,7 @@ Examples
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -28,7 +28,6 @@ from ._style import (
     COLORS,
     TUFTE_PALETTE,
     apply_tufte_style,
-    direct_label,
     set_tufte_labels,
     set_tufte_title,
 )
@@ -96,7 +95,7 @@ class MetricComparisonDisplay(BaseDisplay):
         self.model_names = list(model_names)
         self.metric_names = list(metric_names)
         self.values = np.asarray(values)
-        self.lower_is_better = lower_is_better or {m: True for m in metric_names}
+        self.lower_is_better = lower_is_better or dict.fromkeys(metric_names, True)
         self.baseline_idx = baseline_idx
 
         self.n_models = len(model_names)
@@ -109,7 +108,7 @@ class MetricComparisonDisplay(BaseDisplay):
         *,
         lower_is_better: Optional[Dict[str, bool]] = None,
         baseline: Optional[str] = None,
-    ) -> "MetricComparisonDisplay":
+    ) -> MetricComparisonDisplay:
         """
         Create display from a nested dictionary.
 
@@ -163,7 +162,7 @@ class MetricComparisonDisplay(BaseDisplay):
         *,
         lower_is_better: Optional[Dict[str, bool]] = None,
         baseline_idx: Optional[int] = None,
-    ) -> "MetricComparisonDisplay":
+    ) -> MetricComparisonDisplay:
         """
         Create display from arrays.
 
@@ -203,7 +202,7 @@ class MetricComparisonDisplay(BaseDisplay):
         show_best: bool = True,
         title: Optional[str] = None,
         metric_idx: Optional[int] = None,
-    ) -> "MetricComparisonDisplay":
+    ) -> MetricComparisonDisplay:
         """
         Plot the metric comparison.
 
@@ -269,7 +268,7 @@ class MetricComparisonDisplay(BaseDisplay):
         show_best: bool,
         title: Optional[str],
         metric_idx: int,
-    ) -> "MetricComparisonDisplay":
+    ) -> MetricComparisonDisplay:
         """Plot comparison for a single metric."""
         ax = self._get_ax_or_create(ax, figsize=(8, max(3, self.n_models * 0.6)))
 
@@ -369,7 +368,7 @@ class MetricComparisonDisplay(BaseDisplay):
         show_values: bool,
         show_best: bool,
         title: Optional[str],
-    ) -> "MetricComparisonDisplay":
+    ) -> MetricComparisonDisplay:
         """Plot grouped bar chart for multiple metrics."""
         figsize = (max(8, self.n_models * 2), 5)
         ax = self._get_ax_or_create(ax, figsize=figsize)
@@ -442,7 +441,7 @@ class MetricComparisonDisplay(BaseDisplay):
         ax: Optional[Axes] = None,
         tufte: bool = True,
         title: Optional[str] = None,
-    ) -> "MetricComparisonDisplay":
+    ) -> MetricComparisonDisplay:
         """
         Plot metrics relative to baseline (percent improvement).
 

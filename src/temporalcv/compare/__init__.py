@@ -59,11 +59,11 @@ from temporalcv.compare.base import (
     compute_comparison_metrics,
 )
 
-# Runner functions (always available)
-from temporalcv.compare.runner import (
-    compare_to_baseline,
-    run_benchmark_suite,
-    run_comparison,
+# Documentation generation (always available)
+from temporalcv.compare.docs import (
+    generate_benchmark_docs,
+    generate_ranking_table,
+    generate_summary_table,
 )
 
 # Result serialization (always available)
@@ -75,11 +75,11 @@ from temporalcv.compare.results import (
     save_checkpoint,
 )
 
-# Documentation generation (always available)
-from temporalcv.compare.docs import (
-    generate_benchmark_docs,
-    generate_ranking_table,
-    generate_summary_table,
+# Runner functions (always available)
+from temporalcv.compare.runner import (
+    compare_to_baseline,
+    run_benchmark_suite,
+    run_comparison,
 )
 
 __all__ = [

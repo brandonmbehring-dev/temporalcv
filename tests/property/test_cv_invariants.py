@@ -8,11 +8,10 @@ These tests verify invariants that should ALWAYS hold:
 """
 
 import numpy as np
-import pytest
-from hypothesis import given, strategies as st, settings, assume
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
 
-from temporalcv.cv import WalkForwardCV, SplitInfo
-
+from temporalcv.cv import WalkForwardCV
 
 # === Strategies ===
 

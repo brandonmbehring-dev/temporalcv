@@ -9,11 +9,14 @@ from enum import Enum
 from typing import Any, Dict, Optional
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pytest
 
-from temporalcv.viz import GateComparisonDisplay, GateResultDisplay
-from temporalcv.viz import plot_gate_comparison, plot_gate_result
+from temporalcv.viz import (
+    GateComparisonDisplay,
+    GateResultDisplay,
+    plot_gate_comparison,
+    plot_gate_result,
+)
 
 
 # Mock gate result classes for testing

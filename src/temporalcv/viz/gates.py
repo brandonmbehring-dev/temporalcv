@@ -16,7 +16,7 @@ Examples
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -26,8 +26,6 @@ from ._style import (
     COLORS,
     TUFTE_PALETTE,
     apply_tufte_style,
-    direct_label,
-    set_tufte_labels,
     set_tufte_title,
 )
 
@@ -87,7 +85,7 @@ class GateResultDisplay(BaseDisplay):
         self.metrics = metrics or {}
 
     @classmethod
-    def from_gate(cls, gate_result: Any) -> "GateResultDisplay":
+    def from_gate(cls, gate_result: Any) -> GateResultDisplay:
         """
         Create display from a GateResult object.
 
@@ -129,7 +127,7 @@ class GateResultDisplay(BaseDisplay):
         ax: Optional[Axes] = None,
         tufte: bool = True,
         show_message: bool = True,
-    ) -> "GateResultDisplay":
+    ) -> GateResultDisplay:
         """
         Plot the gate result.
 
@@ -259,7 +257,7 @@ class GateComparisonDisplay(BaseDisplay):
         self.n_gates = len(names)
 
     @classmethod
-    def from_gates(cls, gate_results: List[Any]) -> "GateComparisonDisplay":
+    def from_gates(cls, gate_results: List[Any]) -> GateComparisonDisplay:
         """
         Create display from a list of GateResult objects.
 
@@ -288,7 +286,7 @@ class GateComparisonDisplay(BaseDisplay):
         return cls(names, statuses, messages)
 
     @classmethod
-    def from_report(cls, report: Any) -> "GateComparisonDisplay":
+    def from_report(cls, report: Any) -> GateComparisonDisplay:
         """
         Create display from a GateReport object.
 
@@ -312,7 +310,7 @@ class GateComparisonDisplay(BaseDisplay):
         orientation: str = "horizontal",
         show_messages: bool = False,
         title: Optional[str] = None,
-    ) -> "GateComparisonDisplay":
+    ) -> GateComparisonDisplay:
         """
         Plot the gate comparison.
 

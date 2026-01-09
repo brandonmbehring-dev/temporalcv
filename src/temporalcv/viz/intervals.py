@@ -18,7 +18,7 @@ Examples
 
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -26,7 +26,6 @@ from matplotlib.axes import Axes
 from ._base import BaseDisplay
 from ._style import (
     COLORS,
-    TUFTE_PALETTE,
     apply_tufte_style,
     direct_label,
     set_tufte_labels,
@@ -119,7 +118,7 @@ class PredictionIntervalDisplay(BaseDisplay):
         actuals: Optional[np.ndarray] = None,
         *,
         x: Optional[np.ndarray] = None,
-    ) -> "PredictionIntervalDisplay":
+    ) -> PredictionIntervalDisplay:
         """
         Create display from a PredictionInterval object.
 
@@ -161,7 +160,7 @@ class PredictionIntervalDisplay(BaseDisplay):
         actuals: Optional[np.ndarray] = None,
         confidence: float = 0.90,
         x: Optional[np.ndarray] = None,
-    ) -> "PredictionIntervalDisplay":
+    ) -> PredictionIntervalDisplay:
         """
         Create display from arrays.
 
@@ -203,7 +202,7 @@ class PredictionIntervalDisplay(BaseDisplay):
         show_actuals: bool = True,
         show_coverage: bool = True,
         title: Optional[str] = None,
-    ) -> "PredictionIntervalDisplay":
+    ) -> PredictionIntervalDisplay:
         """
         Plot the prediction intervals.
 
@@ -314,7 +313,7 @@ class PredictionIntervalDisplay(BaseDisplay):
         ax: Optional[Axes] = None,
         tufte: bool = True,
         title: Optional[str] = None,
-    ) -> "PredictionIntervalDisplay":
+    ) -> PredictionIntervalDisplay:
         """
         Plot the interval widths over time.
 

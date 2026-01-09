@@ -12,18 +12,16 @@ Tests here ensure the components work together correctly.
 from __future__ import annotations
 
 import numpy as np
-import pytest
 from sklearn.linear_model import Ridge
 
 from temporalcv.cv import WalkForwardCV
 from temporalcv.gates import (
-    GateStatus,
     GateResult,
-    run_gates,
+    GateStatus,
     gate_signal_verification,
     gate_suspicious_improvement,
     gate_temporal_boundary,
-    gate_synthetic_ar1,
+    run_gates,
 )
 
 
@@ -34,7 +32,7 @@ class SimpleLSModel:
         self._coeffs: np.ndarray | None = None
         self._mean: float = 0.0
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "SimpleLSModel":
+    def fit(self, X: np.ndarray, y: np.ndarray) -> SimpleLSModel:
         X = np.asarray(X)
         y = np.asarray(y)
         self._mean = float(np.mean(y))

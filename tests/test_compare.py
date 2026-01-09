@@ -22,7 +22,6 @@ from temporalcv.compare import (
     run_comparison,
 )
 
-
 # =============================================================================
 # Test ModelResult
 # =============================================================================
@@ -448,13 +447,13 @@ class TestRunComparison:
     """Test run_comparison function."""
 
     @pytest.fixture
-    def synthetic_dataset(self) -> "Dataset":
+    def synthetic_dataset(self) -> Dataset:
         """Create synthetic dataset for testing."""
         from temporalcv.benchmarks import create_synthetic_dataset
 
         return create_synthetic_dataset(n_obs=50, train_fraction=0.8, seed=42)
 
-    def test_single_adapter(self, synthetic_dataset: "Dataset") -> None:
+    def test_single_adapter(self, synthetic_dataset: Dataset) -> None:
         """Should run comparison with single adapter."""
         adapter = NaiveAdapter()
 
@@ -469,7 +468,7 @@ class TestRunComparison:
         assert len(result.models) == 1
         assert result.best_model == "Naive"
 
-    def test_multiple_adapters(self, synthetic_dataset: "Dataset") -> None:
+    def test_multiple_adapters(self, synthetic_dataset: Dataset) -> None:
         """Should compare multiple adapters."""
         adapters = [
             NaiveAdapter(),
@@ -485,7 +484,7 @@ class TestRunComparison:
 
         assert len(result.models) == 2
 
-    def test_empty_adapters_raises(self, synthetic_dataset: "Dataset") -> None:
+    def test_empty_adapters_raises(self, synthetic_dataset: Dataset) -> None:
         """Should raise on empty adapters."""
         with pytest.raises(ValueError, match="adapters list cannot be empty"):
             run_comparison(synthetic_dataset, [], primary_metric="mae")
@@ -526,13 +525,13 @@ class TestCompareToBaseline:
     """Test compare_to_baseline function."""
 
     @pytest.fixture
-    def synthetic_dataset(self) -> "Dataset":
+    def synthetic_dataset(self) -> Dataset:
         """Create synthetic dataset."""
         from temporalcv.benchmarks import create_synthetic_dataset
 
         return create_synthetic_dataset(n_obs=50, seed=42)
 
-    def test_compare_to_default_baseline(self, synthetic_dataset: "Dataset") -> None:
+    def test_compare_to_default_baseline(self, synthetic_dataset: Dataset) -> None:
         """Should compare to Naive baseline by default."""
         adapter = SeasonalNaiveAdapter(season_length=4)
 

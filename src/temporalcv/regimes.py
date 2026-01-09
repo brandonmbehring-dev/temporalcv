@@ -46,10 +46,9 @@ References
 from __future__ import annotations
 
 import warnings
-from typing import Dict, List, Literal, Union, cast
+from typing import Dict, List, Literal
 
 import numpy as np
-from numpy.typing import NDArray
 
 
 def classify_volatility_regime(
@@ -366,7 +365,6 @@ def mask_low_n_regimes(
 
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass

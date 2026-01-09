@@ -50,7 +50,6 @@ from typing import Literal, Protocol, runtime_checkable
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
-
 # =============================================================================
 # Volatility Estimator Protocol
 # =============================================================================

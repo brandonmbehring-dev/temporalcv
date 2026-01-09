@@ -10,8 +10,9 @@ time series validation; theoretical guidance on "correct" gap is domain-specific
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Literal, Optional, Sequence
+from typing import Any, Literal, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike

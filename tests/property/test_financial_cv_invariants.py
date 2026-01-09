@@ -3,15 +3,15 @@
 Tests invariants of PurgedKFold, CombinatorialPurgedCV, and PurgedWalkForward.
 """
 
-import numpy as np
-import pytest
-from hypothesis import given, settings, assume
-from hypothesis import strategies as st
 from math import comb
 
+import numpy as np
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
+
 from temporalcv.cv_financial import (
-    PurgedKFold,
     CombinatorialPurgedCV,
+    PurgedKFold,
     PurgedWalkForward,
     compute_label_overlap,
     estimate_purge_gap,

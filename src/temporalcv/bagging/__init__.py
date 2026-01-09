@@ -38,15 +38,15 @@ References
 from typing import Optional
 
 from temporalcv.bagging.base import (
-    SupportsPredict,
     BootstrapStrategy,
+    SupportsPredict,
     TimeSeriesBagger,
 )
 from temporalcv.bagging.strategies import (
-    MovingBlockBootstrap,
-    StationaryBootstrap,
     FeatureBagging,
+    MovingBlockBootstrap,
     ResidualBootstrap,
+    StationaryBootstrap,
     create_residual_bagger,
 )
 

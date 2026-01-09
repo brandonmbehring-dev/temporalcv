@@ -14,15 +14,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from temporalcv.compare.adapters.multi_series import (
+    MultiSeriesAdapter,
+    ProgressAdapter,
+)
+
 # Always available
 from temporalcv.compare.base import (
     ForecastAdapter,
     NaiveAdapter,
     SeasonalNaiveAdapter,
-)
-from temporalcv.compare.adapters.multi_series import (
-    MultiSeriesAdapter,
-    ProgressAdapter,
 )
 
 __all__ = [

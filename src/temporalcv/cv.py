@@ -43,8 +43,9 @@ References
 from __future__ import annotations
 
 import logging
+from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Any, Generator, Iterator, List, Literal, Optional, Tuple, Union, cast
+from typing import Any, List, Literal, Optional, Tuple, Union, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -290,7 +291,7 @@ class WalkForwardResults:
     ...     print(f"  Split {split.split_idx}: MAE={split.mae:.4f}")
     """
 
-    splits: List["SplitResult"]
+    splits: List[SplitResult]
     cv_config: Optional[dict[str, Any]] = None
 
     def __post_init__(self) -> None:
@@ -1685,7 +1686,7 @@ class NestedWalkForwardCV:
 
         return best_params, cv_details
 
-    def fit(self, X: ArrayLike, y: ArrayLike) -> "NestedWalkForwardCV":
+    def fit(self, X: ArrayLike, y: ArrayLike) -> NestedWalkForwardCV:
         """
         Run nested cross-validation.
 

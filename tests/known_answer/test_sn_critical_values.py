@@ -24,14 +24,11 @@ References
 from __future__ import annotations
 
 import numpy as np
-import pytest
-from numpy.testing import assert_allclose
 
 from temporalcv.statistical_tests import (
     compute_self_normalized_variance,
     dm_test,
 )
-
 
 # =============================================================================
 # Published Critical Values

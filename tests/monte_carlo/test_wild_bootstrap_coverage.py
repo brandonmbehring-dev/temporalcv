@@ -14,7 +14,6 @@ import pytest
 
 from temporalcv.inference.wild_bootstrap import wild_cluster_bootstrap
 
-
 # =============================================================================
 # Basic Coverage Tests
 # =============================================================================

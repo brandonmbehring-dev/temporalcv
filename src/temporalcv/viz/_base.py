@@ -12,7 +12,7 @@ References
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Union
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
@@ -105,7 +105,7 @@ class BaseDisplay(ABC):
         self.figure_ = ax.figure
 
     @abstractmethod
-    def plot(self, *, ax: Optional[Axes] = None, tufte: bool = True) -> "BaseDisplay":
+    def plot(self, *, ax: Optional[Axes] = None, tufte: bool = True) -> BaseDisplay:
         """
         Plot the visualization.
 

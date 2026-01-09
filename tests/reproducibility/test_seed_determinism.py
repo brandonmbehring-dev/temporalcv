@@ -6,14 +6,14 @@ Verifies that stochastic functions produce identical results with the same seed.
 import numpy as np
 import pytest
 
-from temporalcv.gates import gate_signal_verification, gate_synthetic_ar1
 from temporalcv.bagging import (
     MovingBlockBootstrap,
-    StationaryBootstrap,
     ResidualBootstrap,
+    StationaryBootstrap,
     TimeSeriesBagger,
 )
-from temporalcv.conformal import SplitConformalPredictor, AdaptiveConformalPredictor
+from temporalcv.conformal import AdaptiveConformalPredictor, SplitConformalPredictor
+from temporalcv.gates import gate_signal_verification, gate_synthetic_ar1
 
 
 class DummyModel:

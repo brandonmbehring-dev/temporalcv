@@ -17,8 +17,7 @@ Theory [T1]:
 import numpy as np
 import pytest
 
-from temporalcv.gates import gate_theoretical_bounds, GateStatus
-
+from temporalcv.gates import GateStatus, gate_theoretical_bounds
 
 # =============================================================================
 # Local DGP Functions (duplicated from conftest for direct use)

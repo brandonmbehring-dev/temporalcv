@@ -10,21 +10,19 @@ End-to-end workflows testing complete pipelines:
 from __future__ import annotations
 
 import numpy as np
-import pytest
 from sklearn.linear_model import Ridge
 
 from temporalcv import WalkForwardCV
 from temporalcv.bagging import create_block_bagger
 from temporalcv.conformal import AdaptiveConformalPredictor
 from temporalcv.gates import (
+    GateStatus,
     gate_signal_verification,
     gate_suspicious_improvement,
     gate_temporal_boundary,
-    GateStatus,
 )
 from temporalcv.persistence import compute_move_conditional_metrics, compute_move_threshold
 from temporalcv.statistical_tests import dm_test, pt_test
-
 
 # =============================================================================
 # Integration Tests: Full Pipeline Workflows

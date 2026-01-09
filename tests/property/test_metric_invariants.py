@@ -4,20 +4,19 @@ Tests mathematical invariants of metric functions.
 """
 
 import numpy as np
-import pytest
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from temporalcv.metrics import (
-    compute_mae,
-    compute_mse,
-    compute_rmse,
-    compute_mape,
-    compute_smape,
     compute_bias,
-    compute_pinball_loss,
     compute_huber_loss,
     compute_linex_loss,
+    compute_mae,
+    compute_mape,
+    compute_mse,
+    compute_pinball_loss,
+    compute_rmse,
+    compute_smape,
 )
 
 

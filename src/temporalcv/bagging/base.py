@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import copy
 from abc import ABC, abstractmethod
-from typing import List, Literal, Optional, Protocol, Tuple, Union, runtime_checkable
+from typing import List, Literal, Optional, Protocol, Tuple, runtime_checkable
 
 import numpy as np
 
@@ -34,7 +34,7 @@ import numpy as np
 class SupportsPredict(Protocol):
     """Protocol for models with fit/predict interface."""
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "SupportsPredict":
+    def fit(self, X: np.ndarray, y: np.ndarray) -> SupportsPredict:
         """Fit model to data."""
         ...
 
@@ -219,7 +219,7 @@ class TimeSeriesBagger:
         """Whether the bagger has been fitted."""
         return self._fitted
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "TimeSeriesBagger":
+    def fit(self, X: np.ndarray, y: np.ndarray) -> TimeSeriesBagger:
         """
         Fit n_estimators on bootstrap samples.
 

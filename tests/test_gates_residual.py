@@ -12,8 +12,7 @@ This addresses the CRITICAL GAP identified in Phase E planning.
 import numpy as np
 import pytest
 
-from temporalcv.gates import gate_residual_diagnostics, GateStatus
-
+from temporalcv.gates import GateStatus, gate_residual_diagnostics
 
 # =============================================================================
 # Local DGP Functions (duplicated from conftest for direct use)

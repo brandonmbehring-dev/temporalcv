@@ -21,14 +21,14 @@ Examples
 
 from __future__ import annotations
 
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional
 
 import numpy as np
 from matplotlib.axes import Axes
 
+from .comparison import MetricComparisonDisplay
 from .cv import CVFoldsDisplay
 from .intervals import PredictionIntervalDisplay
-from .comparison import MetricComparisonDisplay
 
 __all__ = [
     "plot_cv_folds",

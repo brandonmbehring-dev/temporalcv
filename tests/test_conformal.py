@@ -13,16 +13,15 @@ import numpy as np
 import pytest
 
 from temporalcv.conformal import (
-    PredictionInterval,
-    SplitConformalPredictor,
     AdaptiveConformalPredictor,
     BootstrapUncertainty,
+    CoverageDiagnostics,
+    PredictionInterval,
+    SplitConformalPredictor,
+    compute_coverage_diagnostics,
     evaluate_interval_quality,
     walk_forward_conformal,
-    CoverageDiagnostics,
-    compute_coverage_diagnostics,
 )
-
 
 # =============================================================================
 # Test Fixtures

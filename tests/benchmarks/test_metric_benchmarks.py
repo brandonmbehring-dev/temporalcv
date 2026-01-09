@@ -7,25 +7,25 @@ import numpy as np
 import pytest
 
 from temporalcv.metrics import (
-    compute_mae,
-    compute_mse,
-    compute_rmse,
-    compute_mape,
-    compute_smape,
-    compute_mase,
-    compute_mrae,
-    compute_theils_u,
-    compute_pinball_loss,
     compute_crps,
-    compute_interval_score,
-    compute_sharpe_ratio,
-    compute_max_drawdown,
-    compute_linex_loss,
     compute_huber_loss,
+    compute_interval_score,
+    compute_linex_loss,
+    compute_mae,
+    compute_mape,
+    compute_mase,
+    compute_max_drawdown,
+    compute_mrae,
+    compute_mse,
+    compute_pinball_loss,
+    compute_rmse,
+    compute_sharpe_ratio,
+    compute_smape,
+    compute_theils_u,
 )
 from temporalcv.persistence import (
-    compute_move_threshold,
     compute_move_conditional_metrics,
+    compute_move_threshold,
 )
 
 

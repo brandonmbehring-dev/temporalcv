@@ -24,7 +24,6 @@ from temporalcv.benchmarks.base import (
     validate_dataset,
 )
 
-
 MONASH_URL = "https://forecastingdata.org/"
 
 M3_HORIZONS: Dict[str, int] = {

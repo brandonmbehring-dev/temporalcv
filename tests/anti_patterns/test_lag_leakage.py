@@ -15,7 +15,6 @@ Gate: gate_signal_verification
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from temporalcv.gates import (
     GateStatus,
@@ -34,7 +33,7 @@ class LeakyModel:
     def __init__(self) -> None:
         self._coeffs: np.ndarray | None = None
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "LeakyModel":
+    def fit(self, X: np.ndarray, y: np.ndarray) -> LeakyModel:
         """Fit using least squares."""
         X = np.asarray(X)
         y = np.asarray(y)

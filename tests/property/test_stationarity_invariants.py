@@ -4,17 +4,16 @@ Tests invariants of stationarity tests using Hypothesis.
 """
 
 import numpy as np
-import pytest
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from temporalcv.stationarity import (
+    StationarityConclusion,
     adf_test,
-    kpss_test,
-    pp_test,
     check_stationarity,
     difference_until_stationary,
-    StationarityConclusion,
+    kpss_test,
+    pp_test,
 )
 
 

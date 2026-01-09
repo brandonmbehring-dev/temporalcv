@@ -51,7 +51,7 @@ from __future__ import annotations
 import logging
 import warnings
 from dataclasses import dataclass
-from typing import Dict, List, Literal, Optional, Tuple, Union, cast
+from typing import Dict, List, Optional, Tuple, cast
 
 import numpy as np
 
@@ -198,7 +198,7 @@ class SplitConformalPredictor:
         self,
         predictions: np.ndarray,
         actuals: np.ndarray,
-    ) -> "SplitConformalPredictor":
+    ) -> SplitConformalPredictor:
         """
         Calibrate conformal predictor on held-out data.
 
@@ -421,7 +421,7 @@ class AdaptiveConformalPredictor:
         self,
         initial_predictions: np.ndarray,
         initial_actuals: np.ndarray,
-    ) -> "AdaptiveConformalPredictor":
+    ) -> AdaptiveConformalPredictor:
         """
         Initialize with calibration data.
 
@@ -670,7 +670,7 @@ class BellmanConformalPredictor:
         self,
         predictions: np.ndarray,
         actuals: np.ndarray,
-    ) -> "BellmanConformalPredictor":
+    ) -> BellmanConformalPredictor:
         """
         Initialize with calibration data and solve initial DP.
 
@@ -1090,7 +1090,7 @@ class BootstrapUncertainty:
         self,
         predictions: np.ndarray,
         actuals: np.ndarray,
-    ) -> "BootstrapUncertainty":
+    ) -> BootstrapUncertainty:
         """
         Fit bootstrap estimator.
 

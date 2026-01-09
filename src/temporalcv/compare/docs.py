@@ -19,7 +19,6 @@ from typing import Any, Dict, List, Optional
 
 from temporalcv.compare.base import ComparisonReport, ComparisonResult
 
-
 # =============================================================================
 # Main Generator
 # =============================================================================

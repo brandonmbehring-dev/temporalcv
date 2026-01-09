@@ -14,7 +14,6 @@ import pytest
 
 from temporalcv.statistical_tests import dm_test
 
-
 # =============================================================================
 # DM Test Coverage Under Null
 # =============================================================================

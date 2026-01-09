@@ -8,16 +8,14 @@ import numpy as np
 import pytest
 
 from temporalcv.bagging import (
-    BootstrapStrategy,
-    TimeSeriesBagger,
+    FeatureBagging,
     MovingBlockBootstrap,
     StationaryBootstrap,
-    FeatureBagging,
+    TimeSeriesBagger,
     create_block_bagger,
-    create_stationary_bagger,
     create_feature_bagger,
+    create_stationary_bagger,
 )
-
 
 # =============================================================================
 # Simple Model for Testing

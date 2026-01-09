@@ -12,9 +12,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from temporalcv.statistical_tests import dm_test
 from temporalcv.inference.wild_bootstrap import wild_cluster_bootstrap
-
+from temporalcv.statistical_tests import dm_test
 
 # =============================================================================
 # Fixtures

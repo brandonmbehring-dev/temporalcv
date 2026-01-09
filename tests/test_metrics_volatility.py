@@ -24,7 +24,6 @@ from temporalcv.metrics.volatility_weighted import (
     compute_volatility_weighted_mae,
 )
 
-
 # =============================================================================
 # Test Fixtures
 # =============================================================================
