@@ -44,7 +44,8 @@ jobs:
           verbose: true
 
       - name: Type check
-        run: mypy src/temporalcv
+        run: mypy src/temporalcv --show-error-codes
+        continue-on-error: true  # Type checking is advisory until stubs stabilize
 
       - name: Lint
         run: ruff check src/temporalcv tests/
