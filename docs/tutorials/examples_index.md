@@ -24,7 +24,7 @@ Foundational examples that introduce temporalcv's key features.
 
 The minimal example to get started with temporalcv. Demonstrates:
 - Basic `WalkForwardCV` usage with gap enforcement
-- Running validation gates (`gate_shuffled_target`, `gate_suspicious_improvement`)
+- Running validation gates (`gate_signal_verification`, `gate_suspicious_improvement`)
 - Interpreting HALT/WARN/PASS results
 
 **When to use**: Your first introduction to the library.
@@ -236,7 +236,7 @@ df['ma_20'] = df['price'].rolling(20).mean()
 df['ma_20'] = df['price'].shift(1).rolling(20).mean()
 ```
 
-**Gate that catches it**: `gate_shuffled_target()` returns HALT.
+**Gate that catches it**: `gate_signal_verification()` returns HALT.
 
 ---
 

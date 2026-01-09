@@ -50,16 +50,16 @@ Some features require additional packages:
 2. **Overfitting to test period** — Model memorized test patterns during development
 3. **Weak baseline** — Wrong persistence lag or inappropriate baseline model
 
-**Solution**: Run `gate_shuffled_target()` first to detect leakage:
+**Solution**: Run `gate_signal_verification()` first to detect leakage:
 ```python
-from temporalcv.gates import gate_shuffled_target
+from temporalcv.gates import gate_signal_verification
 
-result = gate_shuffled_target(model, X, y, n_shuffles=100)
+result = gate_signal_verification(model, X, y, n_shuffles=100)
 if result.status == GateStatus.HALT:
     print("Leakage detected! Check feature engineering.")
 ```
 
-### "gate_shuffled_target returns high p-value even with leakage"
+### "gate_signal_verification returns high p-value even with leakage"
 
 **Problem**: Insufficient shuffles to detect small effects.
 
@@ -71,7 +71,7 @@ if result.status == GateStatus.HALT:
 **Solution**: Use more shuffles:
 ```python
 # Default is 100, which allows p-values down to ~0.01
-result = gate_shuffled_target(model, X, y, n_shuffles=100)
+result = gate_signal_verification(model, X, y, n_shuffles=100)
 ```
 
 ### "gate_temporal_boundary returns HALT"
@@ -286,17 +286,17 @@ print(f"DM statistic: {result.statistic:.3f} (p={result.pvalue:.3f})")
 
 ## Performance
 
-### "gate_shuffled_target is slow"
+### "gate_signal_verification is slow"
 
 **Problem**: Permutation test requires fitting model many times.
 
 **Solution**: Use effect_size method for development, permutation for production:
 ```python
 # Fast development check (heuristic)
-result = gate_shuffled_target(model, X, y, method="effect_size")
+result = gate_signal_verification(model, X, y, method="effect_size")
 
 # Rigorous production check (statistical p-value)
-result = gate_shuffled_target(model, X, y, method="permutation", n_shuffles=100)
+result = gate_signal_verification(model, X, y, method="permutation", n_shuffles=100)
 ```
 
 ### "Conformal prediction is slow"

@@ -232,7 +232,7 @@ Gate returns HALT
 │       • Verify date indexing is correct
 │       • Add gap parameter if h-step forecast
 │
-├─ gate_shuffled_target → Target looks randomly shuffled
+├─ gate_signal_verification → Target looks randomly shuffled
 │   │
 │   └─ FIX: Your features contain the target
 │       • Check rolling calculations (need .shift(1))

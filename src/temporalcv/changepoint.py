@@ -35,7 +35,7 @@ try:
     HAS_PANDAS = True
 except ImportError:
     HAS_PANDAS = False
-    pd = None  # type: ignore[assignment]
+    pd = None
 
 # Optional ruptures import
 try:
@@ -44,7 +44,7 @@ try:
     HAS_RUPTURES = True
 except ImportError:
     HAS_RUPTURES = False
-    rpt = None  # type: ignore[assignment]
+    rpt = None
 
 
 @dataclass(frozen=True)

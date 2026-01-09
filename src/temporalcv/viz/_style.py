@@ -285,7 +285,7 @@ def direct_label(
         xy=(x, y),
         xytext=offset,
         textcoords="offset points",
-        **defaults,
+        **defaults,  # type: ignore[arg-type]
     )
 
 
@@ -327,14 +327,14 @@ def direct_label_line(
         offset = (-5, 0)
         ha = "right"
     elif position == "max":
-        idx = np.argmax(y)
+        idx = int(np.argmax(y))
         offset = (0, 5)
         ha = "center"
     else:
         raise ValueError(f"position must be 'start', 'end', or 'max', got {position}")
 
     kwargs.setdefault("ha", ha)
-    direct_label(ax, x[idx], y[idx], text, offset=offset, **kwargs)
+    direct_label(ax, float(x[idx]), float(y[idx]), text, offset=offset, **kwargs)
 
 
 # =============================================================================
@@ -424,7 +424,7 @@ def add_subtle_grid(ax: Axes, axis: str = "y", **kwargs: Any) -> Axes:
     }
     defaults.update(kwargs)
 
-    ax.grid(True, axis=axis, **defaults)
+    ax.grid(True, axis=axis, **defaults)  # type: ignore[arg-type]
     return ax
 
 
@@ -449,7 +449,7 @@ def set_tufte_title(ax: Axes, title: str, **kwargs: Any) -> None:
         "pad": 10,
     }
     defaults.update(kwargs)
-    ax.set_title(title, **defaults)
+    ax.set_title(title, **defaults)  # type: ignore[arg-type]
 
 
 def set_tufte_labels(
@@ -479,6 +479,6 @@ def set_tufte_labels(
     defaults.update(kwargs)
 
     if xlabel:
-        ax.set_xlabel(xlabel, **defaults)
+        ax.set_xlabel(xlabel, **defaults)  # type: ignore[arg-type]
     if ylabel:
-        ax.set_ylabel(ylabel, **defaults)
+        ax.set_ylabel(ylabel, **defaults)  # type: ignore[arg-type]

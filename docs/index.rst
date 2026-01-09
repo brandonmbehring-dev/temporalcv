@@ -88,7 +88,7 @@ Installation
    api/compare
    api/viz
 
-.. toctree:
+.. toctree::
    :maxdepth: 1
    :caption: Reference
 
@@ -97,6 +97,7 @@ Installation
    knowledge/assumptions
    knowledge/notation
    testing_strategy
+   validation_evidence
 
 .. toctree::
    :maxdepth: 1
@@ -104,7 +105,7 @@ Installation
 
    model_cards/README
    model_cards/walk_forward_cv
-   model_cards/gate_shuffled_target
+   model_cards/gate_signal_verification
 
 .. toctree::
    :maxdepth: 1

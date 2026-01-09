@@ -67,3 +67,16 @@ Thumbs.db
 # Benchmark data and intermediate files
 None/
 .tracking/
+.benchmarks/
+
+# Claude Code / AI tools
+.claude/
+.mcp.json
+
+# Internal development files
+AI_CONTEXT.md
+AUDIT_*.md
+CURRENT_WORK.md
+codex-*.md
+gemini_*.md
+ROADMAP.md

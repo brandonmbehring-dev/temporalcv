@@ -69,7 +69,7 @@
 | Gap | Python | R | Julia | temporalcv |
 |-----|--------|---|-------|------------|
 | Leakage detection framework | ❌ | ❌ | ❌ | `gates.py` |
-| Shuffled target test | ❌ | ❌ | ❌ | `gate_shuffled_target()` |
+| Shuffled target test | ❌ | ❌ | ❌ | `gate_signal_verification()` |
 | Suspicious improvement detection | ❌ | ❌ | ❌ | `gate_suspicious_improvement()` |
 | 3-stage validation gates | ❌ | ❌ | ❌ | External → Internal → Statistical |
 
@@ -160,7 +160,7 @@ Native Julia implementation.
 ```python
 from temporalcv import ValidationReport, run_gates
 from temporalcv.gates import (
-    gate_shuffled_target,
+    gate_signal_verification,
     gate_synthetic_ar1,
     gate_suspicious_improvement,
 )
@@ -172,7 +172,7 @@ report = run_gates(
     model=my_model,
     X=X, y=y,
     gates=[
-        gate_shuffled_target(n_shuffles=5),
+        gate_signal_verification(n_shuffles=5),
         gate_synthetic_ar1(phi=0.95),
         gate_suspicious_improvement(threshold=0.20),
     ]

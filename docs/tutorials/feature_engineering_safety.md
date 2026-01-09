@@ -214,9 +214,9 @@ df['RSI'] = talib.RSI(df['close'].shift(1), timeperiod=14)  # shift for safety
 The gold standard. If your model beats a shuffled target, you have leakage.
 
 ```python
-from temporalcv import gate_shuffled_target
+from temporalcv import gate_signal_verification
 
-result = gate_shuffled_target(
+result = gate_signal_verification(
     model=your_model,
     X=X_train,
     y=y_train,
@@ -248,7 +248,7 @@ if acf1 > 0.9:
 mase = compute_mase(predictions, actuals, y_train)
 if mase < 0.8 and acf1 > 0.9:
     print("WARNING: Suspiciously good performance")
-    print("Run gate_shuffled_target() before proceeding")
+    print("Run gate_signal_verification() before proceeding")
 ```
 
 ### Method 3: Horizon Consistency Check

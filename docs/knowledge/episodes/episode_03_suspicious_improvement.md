@@ -95,7 +95,7 @@ The threshold can trigger false positives in legitimate cases:
    - Solution: Use seasonal persistence as baseline
 
 2. **Regime changes**: Model captures regime shifts
-   - Solution: Verify with `gate_shuffled_target()` first
+   - Solution: Verify with `gate_signal_verification()` first
 
 3. **External features**: Genuinely informative external data
    - Solution: If shuffled target passes, improvement may be real
@@ -111,7 +111,7 @@ Model shows 25% improvement over persistence
 [gate_suspicious_improvement] → HALT
     |
     v
-Run gate_shuffled_target()
+Run gate_signal_verification()
     |
     ├── HALT → Feature encodes target position → BUG
     |

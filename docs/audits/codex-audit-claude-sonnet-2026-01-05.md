@@ -246,7 +246,7 @@ src/temporalcv/
 ```python
 # temporalcv/__init__.py
 from temporalcv.cv import WalkForwardCV, CrossFitCV, NestedWalkForwardCV, ...
-from temporalcv.gates import gate_shuffled_target, gate_suspicious_improvement, ...
+from temporalcv.gates import gate_signal_verification, gate_suspicious_improvement, ...
 from temporalcv.statistical_tests import dm_test, pt_test, gw_test, ...
 from temporalcv.conformal import SplitConformal, AdaptiveConformalPredictor, ...
 # ... 60+ exports
@@ -287,7 +287,7 @@ from temporalcv.gates import shuffled_target
 **Option C: Hybrid** (recommended for v2.0):
 ```python
 # Common imports stay flat
-from temporalcv import WalkForwardCV, dm_test, gate_shuffled_target
+from temporalcv import WalkForwardCV, dm_test, gate_signal_verification
 
 # Advanced imports require module
 from temporalcv.tests import gw_test, reality_check_test
@@ -607,7 +607,7 @@ cv = WalkForwardCV(n_splits=5, horizon=3, extra_gap=0)
 
 ```python
 # Inconsistent use of "threshold" vs "tolerance"
-gate_shuffled_target(..., threshold=0.05)      # Uses threshold ✓
+gate_signal_verification(..., threshold=0.05)      # Uses threshold ✓
 gate_suspicious_improvement(..., threshold=0.20)  # Uses threshold ✓
 gate_synthetic_ar1(..., tolerance=1.5)         # Uses TOLERANCE (same concept!)
 ```
@@ -753,8 +753,8 @@ tests/
          y_full = np.array([...])  # Full time series
          y_lag1 = np.roll(y_full, 1)  # Lag uses future test data!
 
-         # Test that gate_shuffled_target catches this
-         result = gate_shuffled_target(model, X, y, ...)
+         # Test that gate_signal_verification catches this
+         result = gate_signal_verification(model, X, y, ...)
          assert result.status == GateStatus.HALT
      ```
    - **Coverage**: 10 bug categories from lever_of_archimedes/patterns/data_leakage_prevention.md
@@ -765,8 +765,8 @@ tests/
    - **Examples**:
      ```python
      def test_shuffled_target_reproducible(self):
-         result1 = gate_shuffled_target(..., random_state=42)
-         result2 = gate_shuffled_target(..., random_state=42)
+         result1 = gate_signal_verification(..., random_state=42)
+         result2 = gate_signal_verification(..., random_state=42)
          assert result1.metric_value == result2.metric_value
      ```
    - **Golden reference tests**: Documented (comparing against R's forecast package) but **not implemented** ⚠️
@@ -1052,7 +1052,7 @@ result = compute_move_conditional_metrics(pred_changes, actual_changes, threshol
    - ✅ Notes section explains Harvey correction
    - **Grade**: A
 
-3. **gate_shuffled_target()** (gates.py:200+):
+3. **gate_signal_verification()** (gates.py:200+):
    - ✅ Purpose clear
    - ✅ Parameters documented
    - ⚠️ `strict` parameter semantics could be clearer
@@ -1390,7 +1390,7 @@ Sliding window:
    ```python
    # User has to manually run each gate
    results = [
-       gate_shuffled_target(model, X, y, n_shuffles=100, random_state=42),
+       gate_signal_verification(model, X, y, n_shuffles=100, random_state=42),
        gate_suspicious_improvement(model_metric, baseline_metric),
        gate_temporal_boundary(train_end, test_start, horizon=1),
        gate_synthetic_ar1(model, n_samples=500, phi=0.95, random_state=42),
@@ -1434,7 +1434,7 @@ Sliding window:
 3. **No Progress Reporting for Long Operations**:
    ```python
    # Takes 30+ seconds with large n_shuffles, no feedback
-   result = gate_shuffled_target(model, X, y, n_shuffles=1000)
+   result = gate_signal_verification(model, X, y, n_shuffles=1000)
 
    # Takes minutes with large n_bootstrap, no feedback
    result = reality_check_test(benchmark_errors, model_errors_dict, n_bootstrap=10000)
@@ -1443,7 +1443,7 @@ Sliding window:
    **Solutions**:
    - Option A: Add `verbose` parameter
      ```python
-     gate_shuffled_target(..., n_shuffles=1000, verbose=True)
+     gate_signal_verification(..., n_shuffles=1000, verbose=True)
      # Output: "Shuffle 1/1000... 2/1000... 3/1000..."
      ```
    - Option B: Integrate `tqdm` (optional dependency)
@@ -1502,7 +1502,7 @@ if var_d <= 0:
 | `WalkForwardCV.split()` | O(n) | Index generation | ✅ Excellent |
 | `compute_hac_variance()` | O(n × bandwidth) | Autocovariance loop (lines 418-428) | ✅ Good |
 | `dm_test()` | O(n × h) | HAC variance | ✅ Good |
-| `gate_shuffled_target()` | O(n × n_shuffles × T_fit) | Model fitting | ⚠️ Can be slow |
+| `gate_signal_verification()` | O(n × n_shuffles × T_fit) | Model fitting | ⚠️ Can be slow |
 | `reality_check_test()` | O(n × n_bootstrap × n_models) | Bootstrap loop | ⚠️ Can be slow |
 | `spa_test()` | O(n × n_bootstrap × n_models) | Similar to RC | ⚠️ Can be slow |
 
@@ -1516,7 +1516,7 @@ if var_d <= 0:
 
 **Scenario**: Random Forest (100 trees) on 1000 samples, 100 shuffles
 ```python
-gate_shuffled_target(
+gate_signal_verification(
     model=RandomForestRegressor(n_estimators=100),
     X=X_train,  # (1000, 50)
     y=y_train,  # (1000,)
@@ -1689,7 +1689,7 @@ def _compute_bootstrap_stats(loss_diffs, bootstrap_indices, n_bootstrap):
 **For v1.1.0**:
 1. **Add `n_jobs` parameter** to gates and bootstrap tests
    ```python
-   gate_shuffled_target(..., n_shuffles=100, n_jobs=-1)
+   gate_signal_verification(..., n_shuffles=100, n_jobs=-1)
    reality_check_test(..., n_bootstrap=10000, n_jobs=-1)
    ```
    Use `joblib.Parallel` for cross-platform compatibility
@@ -1701,7 +1701,7 @@ def _compute_bootstrap_stats(loss_diffs, bootstrap_indices, n_bootstrap):
 
 4. **Performance regression tests**:
    - Track DM test time vs (n, bandwidth)
-   - Track gate_shuffled_target time vs (n, n_shuffles, model complexity)
+   - Track gate_signal_verification time vs (n, n_shuffles, model complexity)
    - Fail CI if performance degrades >20%
 
 **For v2.0**:
@@ -1778,7 +1778,7 @@ def _compute_bootstrap_stats(loss_diffs, bootstrap_indices, n_bootstrap):
 **temporalcv's UNIQUE features** (not in any other library):
 
 1. **Leakage Detection Gates** 🏆
-   - `gate_shuffled_target()` - Permutation testing for feature leakage
+   - `gate_signal_verification()` - Permutation testing for feature leakage
    - `gate_synthetic_ar1()` - Validates against theoretical bounds
    - `gate_suspicious_improvement()` - Flags >20% improvement as HALT
    - **No other library has systematic validation gates**
@@ -1811,7 +1811,7 @@ def _compute_bootstrap_stats(loss_diffs, bootstrap_indices, n_bootstrap):
 
    # Wrap sktime forecaster, use temporalcv validation
    model = SktimeAdapter(AutoARIMA())
-   result = gate_shuffled_target(model, X, y, n_shuffles=100)
+   result = gate_signal_verification(model, X, y, n_shuffles=100)
    ```
    **Status**: Exists but **untested in integration tests** ⚠️
 
@@ -1855,7 +1855,7 @@ def _compute_bootstrap_stats(loss_diffs, bootstrap_indices, n_bootstrap):
 
    # Use alongside built-in gates
    report = run_gates([
-       gate_shuffled_target(...),
+       gate_signal_verification(...),
        gate_custom_check(...),
    ])
    ```
@@ -1984,7 +1984,7 @@ if self.extra_gap < 0:
 
 3. **Add Progress Reporting** 📊 (2 days)
    ```python
-   gate_shuffled_target(..., n_shuffles=1000, verbose=True)
+   gate_signal_verification(..., n_shuffles=1000, verbose=True)
    # Output: "Shuffle 100/1000 (10.0%) | Elapsed: 30s | ETA: 4m30s"
    ```
 
@@ -2008,7 +2008,7 @@ if self.extra_gap < 0:
 
 1. **Parallelization** 🚀 (5 days)
    - Add `n_jobs` parameter to:
-     - `gate_shuffled_target()`
+     - `gate_signal_verification()`
      - `reality_check_test()`
      - `spa_test()`
    - Use `joblib.Parallel` for cross-platform compatibility
@@ -2048,7 +2048,7 @@ if self.extra_gap < 0:
 1. **Hierarchical API** (v2.0 - breaking change):
    ```python
    # Current (flat)
-   from temporalcv import dm_test, WalkForwardCV, gate_shuffled_target
+   from temporalcv import dm_test, WalkForwardCV, gate_signal_verification
 
    # Proposed (hierarchical)
    from temporalcv.tests import dm_test, pt_test

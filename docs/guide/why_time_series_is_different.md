@@ -165,7 +165,7 @@ df['rolling_mean'] = df['price'].rolling(5).mean()
 df['rolling_mean'] = df['price'].shift(1).rolling(5).mean()
 ```
 
-temporalcv's `gate_shuffled_target` detects when features contain future information.
+temporalcv's `gate_signal_verification` detects when features contain future information.
 
 ### Mistake 2: Normalizing on Full Dataset
 

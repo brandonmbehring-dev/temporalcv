@@ -17,7 +17,7 @@ Proceeding with this plan without addressing the core correctness issues (broken
 The plan rates the project as "8.6/10 (Excellent)" and "Production-ready", but the internal audit (`codex-methodology-review.md`) contradicts this.
 
 ### A. Broken Defenses (High Severity)
-- **The Issue:** `codex-methodology-review.md` notes that `gate_shuffled_target` defaults (permutation mode with low `n_shuffles`) make it mathematically impossible to achieve significance at $\alpha=0.05$.
+- **The Issue:** `codex-methodology-review.md` notes that `gate_signal_verification` defaults (permutation mode with low `n_shuffles`) make it mathematically impossible to achieve significance at $\alpha=0.05$.
 - **Impact:** The library's core promise—"Definitive Leakage Detection"—is currently failing in default configurations. Documenting this behavior without fixing it cements a flaw.
 - **Action:** Fix the defaults (raise `n_shuffles`, enforce `strict=True` by default, or switch to `effect_size`) before polishing the docs.
 
@@ -68,7 +68,7 @@ The plan correctly identifies missing RST files, but misses the opportunity to d
 I recommend inserting a **Phase 0** and **Phase 1** before the documentation work.
 
 ### Phase 0: Methodological Corrections (Urgent)
-1.  **Fix Gate Defaults:** Update `gate_shuffled_target` to use safe defaults (e.g., `strict=True` or `n_shuffles=100`).
+1.  **Fix Gate Defaults:** Update `gate_signal_verification` to use safe defaults (e.g., `strict=True` or `n_shuffles=100`).
 2.  **Unify Gap Semantics:** Decide on "Total Gap" vs "Extra Gap" and refactor `gates.py` and `cv.py` to match.
 3.  **Fix Versioning:** Update `__init__.py` to `1.0.0-rc1`.
 

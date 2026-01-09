@@ -130,7 +130,7 @@ These assumptions apply across all modules:
 
 ## gates.py
 
-### gate_shuffled_target()
+### gate_signal_verification()
 
 | Assumption | Required For | Violation Consequence | Validation |
 |------------|--------------|----------------------|------------|

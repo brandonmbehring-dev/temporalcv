@@ -5,6 +5,8 @@
 [![CI](https://github.com/brandonmbehring-dev/temporalcv/actions/workflows/ci.yml/badge.svg)](https://github.com/brandonmbehring-dev/temporalcv/actions)
 [![PyPI](https://img.shields.io/pypi/v/temporalcv.svg)](https://pypi.org/project/temporalcv/)
 [![Python](https://img.shields.io/pypi/pyversions/temporalcv.svg)](https://pypi.org/project/temporalcv/)
+[![Coverage](https://img.shields.io/badge/coverage-83%25-green)](docs/testing_strategy.md)
+[![Tests](https://img.shields.io/badge/tests-318%20passing-brightgreen)](tests/)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/brandonmbehring-dev/temporalcv/blob/main/notebooks/demo.ipynb)
 
 **▶️ [See it in action](notebooks/01_why_temporal_cv.ipynb)** — Watch the validation gates catch leakage and guide you to a fix (GitHub renders with outputs).
@@ -165,13 +167,13 @@ temporalcv has modular dependencies for specific features:
 
 ```python
 from temporalcv import run_gates, WalkForwardCV
-from temporalcv.gates import gate_shuffled_target, gate_suspicious_improvement
+from temporalcv.gates import gate_signal_verification, gate_suspicious_improvement
 
 # Validate your model doesn't have leakage
 # Step 1: Compute gate results
 # Note: n_shuffles>=100 required for statistical power in permutation mode (default)
 gate_results = [
-    gate_shuffled_target(my_model, X, y, n_shuffles=100),
+    gate_signal_verification(my_model, X, y, n_shuffles=100),
     gate_suspicious_improvement(model_mae, persistence_mae, threshold=0.20),
 ]
 
@@ -338,6 +340,28 @@ print(report.to_markdown())
 ### Internal
 - [Planning Documentation](docs/plans/INDEX.md)
 - [Ecosystem Gap Analysis](docs/plans/reference/ecosystem_gaps.md)
+
+### Validation & Quality Assurance
+
+temporalcv's statistical computations are validated against established libraries and academic references:
+
+| Validation Type | Reference Source | What It Validates |
+|-----------------|------------------|-------------------|
+| **DM Test golden values** | R `forecast::dm.test()` | Statistic and p-value computation |
+| **Monte Carlo Type I error** | 500 simulations | 5% nominal error rate (±2%) |
+| **Conformal coverage** | Synthetic AR(1) | 95% nominal coverage achieved |
+| **Harvey small-sample** | Harvey (1997) | Student-t p-value correction |
+
+**Test Coverage**:
+- **83% line coverage** across 318 tests
+- **Core modules**: 89-94% coverage (gates, CV, statistical tests)
+- **6-layer validation architecture**: Unit → Integration → Anti-pattern → Property → Monte Carlo → Benchmark
+
+**Benchmark Results**:
+- Validated on **M4 Competition** (4,773 series across 6 frequencies)
+- See [Full Results](docs/benchmarks.md) | [Methodology](docs/benchmarks/methodology.md)
+
+For complete validation evidence, see [Testing Strategy](docs/testing_strategy.md) and [Validation Evidence](docs/validation_evidence.md).
 
 ### Help & Support
 - [**Troubleshooting Guide**](docs/troubleshooting.md) - Common issues and solutions

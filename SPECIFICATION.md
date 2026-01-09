@@ -538,7 +538,7 @@ block_length = max(1, floor(n^(1/3)))
 
 | Gate | CI Support | Rationale |
 |------|------------|-----------|
-| `gate_shuffled_target` | ✓ | Resamples (X, y) blocks, refits model |
+| `gate_signal_verification` | ✓ | Resamples (X, y) blocks, refits model |
 | `gate_synthetic_ar1` | ✓ | Resamples synthetic series |
 | `gate_suspicious_improvement` | ✗ | Takes pre-computed metrics only |
 | `gate_temporal_boundary` | ✗ | Structural check, no metric |

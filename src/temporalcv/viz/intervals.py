@@ -62,8 +62,8 @@ class PredictionIntervalDisplay(BaseDisplay):
         The axes used for plotting.
     figure_ : matplotlib.figure.Figure
         The figure containing the plot.
-    coverage_ : float
-        Empirical coverage if actuals provided.
+    coverage_ : float or None
+        Empirical coverage if actuals provided, None otherwise.
 
     See Also
     --------
@@ -82,6 +82,9 @@ class PredictionIntervalDisplay(BaseDisplay):
     >>> display = PredictionIntervalDisplay.from_conformal(intervals, test_actuals)
     >>> display.plot()
     """
+
+    coverage_: Optional[float]
+    _covered: Optional[np.ndarray]
 
     def __init__(
         self,
@@ -349,7 +352,7 @@ class PredictionIntervalDisplay(BaseDisplay):
         )
 
         # Mean width line
-        mean_width = np.mean(widths)
+        mean_width = float(np.mean(widths))
         ax.axhline(
             mean_width,
             color=COLORS["halt"],
@@ -360,7 +363,7 @@ class PredictionIntervalDisplay(BaseDisplay):
         # Direct label for mean
         direct_label(
             ax,
-            self.x[-1],
+            float(self.x[-1]),
             mean_width,
             f"Mean: {mean_width:.3f}",
             offset=(5, 3),

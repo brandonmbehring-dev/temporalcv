@@ -206,7 +206,7 @@ class CVFoldsDisplay(BaseDisplay):
         gaps = []
         for train, test in splits:
             if len(train) > 0 and len(test) > 0:
-                gap_start = train[-1] + 1
+                gap_start = int(train[-1] + 1)
                 gap_end = test[0]
                 if gap_end > gap_start:
                     gaps.append(np.arange(gap_start, gap_end))

@@ -17,7 +17,7 @@ Validation gates are **pre-flight checks** for your ML pipeline. They catch prob
 ```mermaid
 graph TD
     A[Start: New ML Pipeline] --> B{Running gates?}
-    B -->|No| C[Run gate_shuffled_target first]
+    B -->|No| C[Run gate_signal_verification first]
     B -->|Yes| D{What did gates return?}
 
     D -->|HALT| E[STOP: Critical issue detected]
@@ -45,7 +45,7 @@ graph TD
 
 ## Gate Reference
 
-### `gate_shuffled_target` — The Definitive Leakage Detector
+### `gate_signal_verification` — The Definitive Leakage Detector
 
 **What it tests**: Whether features encode information about target position (not just value).
 
@@ -55,9 +55,9 @@ graph TD
 3. If model still performs well → features leak target position
 
 ```python
-from temporalcv.gates import gate_shuffled_target
+from temporalcv.gates import gate_signal_verification
 
-result = gate_shuffled_target(
+result = gate_signal_verification(
     model=my_model,
     X=X,
     y=y,
@@ -146,7 +146,7 @@ The recommended order:
 
 ```python
 from temporalcv.gates import (
-    gate_shuffled_target,
+    gate_signal_verification,
     gate_temporal_boundary,
     gate_suspicious_improvement
 )
@@ -154,7 +154,7 @@ from temporalcv import run_gates
 
 # 1. Collect gate results
 gate_results = [
-    gate_shuffled_target(model, X, y, n_shuffles=100),
+    gate_signal_verification(model, X, y, n_shuffles=100),
     gate_temporal_boundary(cv, horizon=h),
     gate_suspicious_improvement(model_mae, baseline_mae),
 ]

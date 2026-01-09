@@ -87,7 +87,7 @@ A model with `break_even_gap=1` is concerning—performance drops immediately wi
    - Gradual degradation is expected as forecasting horizon increases
 
 3. **Combine with validation gates**
-   - Run `gate_shuffled_target()` first
+   - Run `gate_signal_verification()` first
    - Use diagnostics for deeper investigation after gates pass
 
 ## API Reference

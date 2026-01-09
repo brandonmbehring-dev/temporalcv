@@ -10,7 +10,7 @@
 ## Executive summary
 - The `gap` vs `extra_gap` drift now spans code, docstrings, Sphinx docs, model cards, tutorials, notebooks, tests, and scripts. This is a correctness and adoption blocker, not just documentation polish.
 - Several notebooks contain execution-breaking code (invalid `horizon=0`, `gap=` usage, duplicate keyword arguments, `.gap` property access), which undermines pedagogy and likely breaks notebook CI runs.
-- Documentation for `gate_shuffled_target` and conformal coverage metrics is internally inconsistent (strict semantics, details keys, and `coverage_gap` sign), risking incorrect interpretation of validation results.
+- Documentation for `gate_signal_verification` and conformal coverage metrics is internally inconsistent (strict semantics, details keys, and `coverage_gap` sign), risking incorrect interpretation of validation results.
 - README dependency/CI claims still diverge from actual configuration, creating avoidable user confusion.
 
 ## Strengths
@@ -69,14 +69,14 @@ Recommendation options:
 
 Sources: `notebooks/00_time_series_fundamentals.ipynb`, `notebooks/01_why_temporal_cv.ipynb`, `notebooks/02_gap_enforcement.ipynb`, `notebooks/08_validation_workflow.ipynb`, `notebooks/demo.ipynb`
 
-### High: `gate_shuffled_target` docs conflict with code and reported fields
+### High: `gate_signal_verification` docs conflict with code and reported fields
 Impact:
 - Users may misinterpret results or copy code that raises AttributeError.
 - Documentation undermines trust in the leakage “gold standard.”
 
 Evidence:
 - `strict` described as “strict inequality for p-value” in docs, but code uses it to increase `n_shuffles` for resolution. `docs/api/gates.md`, `src/temporalcv/gates.py`
-- Model card shows details keys (`shuffled_mae_mean`, `shuffled_mae_std`) that do not exist; code uses `mae_shuffled_avg` and `mae_shuffled_all`. `docs/model_cards/gate_shuffled_target.md`, `src/temporalcv/gates.py`
+- Model card shows details keys (`shuffled_mae_mean`, `shuffled_mae_std`) that do not exist; code uses `mae_shuffled_avg` and `mae_shuffled_all`. `docs/model_cards/gate_signal_verification.md`, `src/temporalcv/gates.py`
 - Tutorial uses nonexistent attributes `result.real_mae` / `result.shuffled_mae` and compares enum to string. `docs/tutorials/feature_engineering_safety.md`, `src/temporalcv/gates.py`
 
 Recommendation options:
@@ -87,7 +87,7 @@ Recommendation options:
   - Pros: Preserves existing docs with minimal changes.
   - Cons: Adds API surface area.
 
-Sources: `docs/api/gates.md`, `docs/model_cards/gate_shuffled_target.md`, `docs/tutorials/feature_engineering_safety.md`, `src/temporalcv/gates.py`
+Sources: `docs/api/gates.md`, `docs/model_cards/gate_signal_verification.md`, `docs/tutorials/feature_engineering_safety.md`, `src/temporalcv/gates.py`
 
 ### High: `coverage_gap` sign is inconsistent across conformal APIs and docs
 Impact:
@@ -193,7 +193,7 @@ Sources: `julia/src/`, `docs/knowledge/leakage_audit_trail.md`
 - Add a “gap migration” task: update docstrings, Sphinx API, model cards, tutorials, knowledge episodes, notebooks, tests, and scripts in one sweep.
 - Add a “notebook stabilization” task: fix `horizon=0`, remove duplicate kwargs, update `gate_temporal_boundary` signatures, and add try/except for intentional failure demos.
 - Add a “conformal semantics” task: unify `coverage_gap` sign (or rename fields) and update docs accordingly.
-- Add a “gate_shuffled_target docs sync” task: align strict semantics and details keys across docs/model cards/tutorials.
+- Add a “gate_signal_verification docs sync” task: align strict semantics and details keys across docs/model cards/tutorials.
 - Add a “testing strategy audit” task: reconcile claimed layers with actual test paths or implement missing tests.
 
 ## Open questions for you

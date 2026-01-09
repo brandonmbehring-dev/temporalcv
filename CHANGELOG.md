@@ -33,7 +33,7 @@ Statistical extensions and enhanced features (implemented, documented retroactiv
 - Both grid search and randomized search modes
 
 #### Block Bootstrap CI
-- `bootstrap_ci=True` parameter for `gate_shuffled_target()` and `gate_synthetic_ar1()`
+- `bootstrap_ci=True` parameter for `gate_signal_verification()` and `gate_synthetic_ar1()`
 - Returns `ci_lower`, `ci_upper`, `bootstrap_std` in gate details
 - Moving block bootstrap preserving temporal dependence (Kunsch 1989)
 
@@ -42,7 +42,7 @@ Statistical extensions and enhanced features (implemented, documented retroactiv
 - `compute_coverage_diagnostics()` — by time window and regime
 
 #### Documentation
-- Model cards for `WalkForwardCV` and `gate_shuffled_target` (docs/model_cards/)
+- Model cards for `WalkForwardCV` and `gate_signal_verification` (docs/model_cards/)
 
 ### Technical Notes
 
@@ -91,7 +91,7 @@ Release candidate 1 for v1.0.0 - statistical rigor improvements and API stabiliz
 
 ### Breaking Changes
 
-#### `gate_shuffled_target()` - New Default Behavior
+#### `gate_signal_verification()` - New Default Behavior
 - **Default method changed from heuristic to true permutation test**
 - Old behavior: `method="effect_size"` (fast, n_shuffles=5, improvement ratio)
 - New behavior: `method="permutation"` (rigorous, n_shuffles=100, p-value)
@@ -382,7 +382,7 @@ Major metrics expansion release with comprehensive evaluation toolkit.
 - 40 new tests (104 total)
 
 #### Phase 1: Validation Gates and Statistical Tests
-- `gate_shuffled_target()` - definitive leakage detection
+- `gate_signal_verification()` - definitive leakage detection
 - `gate_synthetic_ar1()` - theoretical bounds validation
 - `gate_suspicious_improvement()` - >20% improvement trigger
 - `gate_temporal_boundary()` - gap enforcement validation

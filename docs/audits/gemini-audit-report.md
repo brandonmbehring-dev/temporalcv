@@ -5,7 +5,7 @@
 
 ## 1. Executive Summary
 
-This audit reveals a **foundational flaw** in the library's primary unique selling point (`gate_shuffled_target`) and identifies opportunities to improve code structure and pedagogy. While the infrastructure and educational content are excellent, the core "Leakage Gate" methodology is currently inverted, rejecting valid models as leaky.
+This audit reveals a **foundational flaw** in the library's primary unique selling point (`gate_signal_verification`) and identifies opportunities to improve code structure and pedagogy. While the infrastructure and educational content are excellent, the core "Leakage Gate" methodology is currently inverted, rejecting valid models as leaky.
 
 **Scorecard:**
 - **Code Quality:** 8/10 (Solid, but some redundancy)
@@ -35,7 +35,7 @@ This audit reveals a **foundational flaw** in the library's primary unique selli
 ## 3. Code Structure & Best Practices
 
 ### 3.1 DRY Violations in `gates.py`
-*   **Observation:** Both `gate_shuffled_target` and `gate_synthetic_ar1` implement their own Walk-Forward CV loop with `sklearn.base.clone`.
+*   **Observation:** Both `gate_signal_verification` and `gate_synthetic_ar1` implement their own Walk-Forward CV loop with `sklearn.base.clone`.
 *   **Risk:** If you change how CV is handled (e.g. error handling), you must update it in two places.
 *   **Fix:** Extract `_compute_cv_metrics(model, X, y, cv, metric_func)` into a private helper or `utils.py`.
 
@@ -55,7 +55,7 @@ This audit reveals a **foundational flaw** in the library's primary unique selli
 *   **Problem:** The README buries the lead. Users see architecture diagrams before code.
 *   **Option A (Status Quo):** Architecture first. **Pros:** Sets mental model. **Cons:** High friction.
 *   **Option B (Action-First):** "Hello World" snippet at top. **Pros:** Immediate utility. **Cons:** May encourage copy-paste.
-*   **Recommendation:** **Option B**. Move the 5-line `gate_shuffled_target` (renamed) + `WalkForwardCV` example to the very top.
+*   **Recommendation:** **Option B**. Move the 5-line `gate_signal_verification` (renamed) + `WalkForwardCV` example to the very top.
 
 ### 4.2 Visualizing "Gap" and "Embargo"
 *   **Problem:** Financial CV concepts are abstract and prone to off-by-one errors.
@@ -74,7 +74,7 @@ This audit reveals a **foundational flaw** in the library's primary unique selli
 ## 5. Final Action Plan (Road to v1.0)
 
 1.  **Methodological Pivot [P0]:**
-    *   Rename `gate_shuffled_target` -> `verify_model_signal`.
+    *   Rename `gate_signal_verification` -> `verify_model_signal`.
     *   Update logic: PASS if p < 0.05 (Signal found).
 2.  **Refactoring [P1]:**
     *   Centralize CV loops in `gates.py`.
@@ -86,4 +86,4 @@ This audit reveals a **foundational flaw** in the library's primary unique selli
 4.  **Infrastructure [P2]:**
     *   Move `scripts/` to `benchmarks/`.
 
-**Conclusion:** The library is code-complete but requires a semantic pivot on its core gate to avoid being misleading. Once `gate_shuffled_target` is redefined as a signal check, the library is ready for release.
+**Conclusion:** The library is code-complete but requires a semantic pivot on its core gate to avoid being misleading. Once `gate_signal_verification` is redefined as a signal check, the library is ready for release.

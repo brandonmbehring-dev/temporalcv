@@ -190,5 +190,5 @@ cv = WalkForwardCV(n_splits=5, horizon=4, extra_gap=0)
 ## See Also
 
 - `gate_temporal_boundary`: Verify gap enforcement meets requirements
-- `gate_shuffled_target`: First-stage leakage detection
+- `gate_signal_verification`: First-stage leakage detection
 - `sklearn.model_selection.TimeSeriesSplit`: sklearn's built-in (no gap support)

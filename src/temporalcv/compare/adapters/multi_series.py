@@ -16,7 +16,7 @@ Example
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional, cast
 
 import numpy as np
 
@@ -143,7 +143,7 @@ class MultiSeriesAdapter(ForecastAdapter):
                 )
                 predictions[i] = np.nan
 
-        return predictions
+        return cast(np.ndarray, predictions)
 
     def _fit_predict_parallel(
         self,
@@ -169,7 +169,7 @@ class MultiSeriesAdapter(ForecastAdapter):
             Predictions with shape (n_series, test_size)
         """
         try:
-            from joblib import Parallel, delayed
+            from joblib import Parallel, delayed  # type: ignore[import-untyped]
         except ImportError:
             logger.warning("joblib not available, falling back to sequential")
             return self.fit_predict(train_values, test_size, horizon)
@@ -189,13 +189,13 @@ class MultiSeriesAdapter(ForecastAdapter):
                     self._base.model_name,
                     e,
                 )
-                return np.full(test_size, np.nan)
+                return cast(np.ndarray, np.full(test_size, np.nan))
 
         results = Parallel(n_jobs=self._n_jobs)(
             delayed(fit_single)(i) for i in range(n_series)
         )
 
-        return np.array(results)
+        return cast(np.ndarray, np.array(results))
 
     def get_params(self) -> Dict[str, Any]:
         """
@@ -236,7 +236,7 @@ class ProgressAdapter(ForecastAdapter):
     def __init__(
         self,
         base_adapter: ForecastAdapter,
-        progress_callback: Optional[callable] = None,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
     ):
         """Initialize progress wrapper."""
         self._base = base_adapter
@@ -286,10 +286,10 @@ class ProgressAdapter(ForecastAdapter):
                 predictions[i] = np.nan
 
             # Report progress
-            if self._callback:
+            if self._callback is not None:
                 self._callback(i + 1, n_series)
 
-        return predictions
+        return cast(np.ndarray, predictions)
 
     def get_params(self) -> Dict[str, Any]:
         """Get parameters from base adapter."""

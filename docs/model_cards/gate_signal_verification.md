@@ -1,4 +1,4 @@
-# gate_shuffled_target Model Card
+# gate_signal_verification Model Card
 
 **Version**: 1.0.0
 **Module**: `temporalcv.gates`
@@ -10,7 +10,7 @@
 
 ## Component Details
 
-`gate_shuffled_target` is the **definitive leakage detection test** for time-series ML pipelines. It shuffles the target vector to destroy temporal relationships, then tests whether the model can still beat the shuffled baseline.
+`gate_signal_verification` is the **definitive leakage detection test** for time-series ML pipelines. It shuffles the target vector to destroy temporal relationships, then tests whether the model can still beat the shuffled baseline.
 
 **Key Insight**: If a model beats a shuffled target, it's using information about target *position* rather than legitimate predictive signal—this indicates data leakage.
 
@@ -165,9 +165,9 @@ result.details = {
 ### Quick Check During Development
 
 ```python
-from temporalcv.gates import gate_shuffled_target
+from temporalcv.gates import gate_signal_verification
 
-result = gate_shuffled_target(
+result = gate_signal_verification(
     model, X, y,
     method="effect_size",  # Fast heuristic
 )
@@ -178,7 +178,7 @@ print(f"Improvement: {result.metric_value:.1%}")
 ### Rigorous Testing for Publication
 
 ```python
-result = gate_shuffled_target(
+result = gate_signal_verification(
     model, X, y,
     method="permutation",  # Statistical rigor
     strict=True,           # n_shuffles >= 199
@@ -192,10 +192,10 @@ if result.status == "HALT":
 ### In Validation Pipeline
 
 ```python
-from temporalcv.gates import gate_shuffled_target, gate_synthetic_ar1
+from temporalcv.gates import gate_signal_verification, gate_synthetic_ar1
 
 # Stage 1: External validation (run first)
-result1 = gate_shuffled_target(model, X, y)
+result1 = gate_signal_verification(model, X, y)
 if result1.status == "HALT":
     raise ValueError("Leakage detected - do not proceed")
 

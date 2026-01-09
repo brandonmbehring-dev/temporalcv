@@ -13,11 +13,11 @@ These categories were identified through multiple production ML projects. Each b
 | # | Category | What Goes Wrong | Gate That Catches It |
 |---|----------|-----------------|---------------------|
 | 1 | Target Alignment | Train/test date boundaries violated | `gate_temporal_boundary()` |
-| 2 | Future Data in Lags | Lag features use future information | `gate_shuffled_target()` |
+| 2 | Future Data in Lags | Lag features use future information | `gate_signal_verification()` |
 | 3 | Persistence Implementation | Predicted levels instead of changes | Manual verification |
-| 4 | Feature Selection on Target | Feature selection used test target | `gate_shuffled_target()` |
-| 5 | Regime Computation | Thresholds computed from full series | `gate_shuffled_target()` |
-| 6 | Weights Computation | Look-ahead in sample weighting | `gate_shuffled_target()` |
+| 4 | Feature Selection on Target | Feature selection used test target | `gate_signal_verification()` |
+| 5 | Regime Computation | Thresholds computed from full series | `gate_signal_verification()` |
+| 6 | Weights Computation | Look-ahead in sample weighting | `gate_signal_verification()` |
 | 7 | Walk-Forward Splits | Incorrect gap calculation | `gate_temporal_boundary()` |
 | 8 | Multiple Sources of Truth | Conflicting documentation | SPECIFICATION.md |
 | 9 | Internal-Only Validation | No external verification | `gate_synthetic_ar1()` |
@@ -65,7 +65,7 @@ for train_idx, test_idx in cv.split(X, y):
     train_mean = y[train_idx].rolling(10).mean()
 ```
 
-**Prevention**: `gate_shuffled_target()` detects when features encode target position.
+**Prevention**: `gate_signal_verification()` detects when features encode target position.
 
 ---
 
@@ -103,7 +103,7 @@ selected = SelectKBest(k=5).fit(X_all, y_all)
 selected = SelectKBest(k=5).fit(X_train, y_train)
 ```
 
-**Prevention**: `gate_shuffled_target()` catches this—selected features will encode target position.
+**Prevention**: `gate_signal_verification()` catches this—selected features will encode target position.
 
 ---
 
@@ -123,7 +123,7 @@ threshold = compute_move_threshold(y_train, percentile=70)
 ```
 
 **Prevention**:
-- `gate_shuffled_target()` catches this indirectly
+- `gate_signal_verification()` catches this indirectly
 - Explicit training-only computation in `compute_move_threshold()`
 - Documentation warning in docstrings
 
@@ -144,7 +144,7 @@ weights = compute_importance_weights(y_all)
 weights = compute_importance_weights(y_train)
 ```
 
-**Prevention**: `gate_shuffled_target()` can detect when weights encode future information.
+**Prevention**: `gate_signal_verification()` can detect when weights encode future information.
 
 ---
 
@@ -197,7 +197,7 @@ test = data[102:107]  # Gap of 2 for h=2
 **Root Cause**: Model validated only on internal cross-validation, not external data.
 
 **Solution Order**:
-1. `gate_shuffled_target()` — Does model beat random alignment?
+1. `gate_signal_verification()` — Does model beat random alignment?
 2. `gate_synthetic_ar1()` — Does model beat theoretical bounds?
 3. Then internal validation
 
@@ -225,7 +225,7 @@ Data was already weekly → model misinterpreted
 
 | Gate | Categories Caught | Detection Mechanism |
 |------|------------------|---------------------|
-| `gate_shuffled_target()` | 2, 4, 5, 6 | Model shouldn't beat random target alignment |
+| `gate_signal_verification()` | 2, 4, 5, 6 | Model shouldn't beat random target alignment |
 | `gate_synthetic_ar1()` | 9 | Model shouldn't beat theoretical optimum |
 | `gate_suspicious_improvement()` | 1, 2, 3, 4, 5 | >20% improvement = likely bug |
 | `gate_temporal_boundary()` | 1, 7 | Explicit gap enforcement |
@@ -237,12 +237,12 @@ Data was already weekly → model misinterpreted
 For any new model, run gates in this order:
 
 ```python
-from temporalcv import run_gates, gate_shuffled_target, gate_synthetic_ar1
+from temporalcv import run_gates, gate_signal_verification, gate_synthetic_ar1
 from temporalcv import gate_suspicious_improvement, gate_temporal_boundary
 
 # 1. External verification FIRST
 gates = [
-    gate_shuffled_target(model, X, y),
+    gate_signal_verification(model, X, y),
     gate_synthetic_ar1(model),
 ]
 

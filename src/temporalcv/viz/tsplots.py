@@ -202,7 +202,7 @@ def plot_interval_width(
 
 
 def plot_metric_comparison(
-    results: dict,
+    results: dict[str, dict[str, float]],
     *,
     ax: Optional[Axes] = None,
     tufte: bool = True,

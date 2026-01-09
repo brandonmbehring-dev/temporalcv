@@ -570,7 +570,7 @@ print("=" * 70)
 print("""
 1. FEATURE ENGINEERING
    - ALWAYS use .shift(1) for rolling statistics
-   - Verify with gate_shuffled_target before training
+   - Verify with gate_signal_verification before training
 
 2. VALIDATION GATES
    - Run gates BEFORE training, not after

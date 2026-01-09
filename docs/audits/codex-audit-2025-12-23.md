@@ -42,14 +42,14 @@
 ## Medium-impact issues (consistency, API drift, and silent failures)
 
 - Docs and plans reference APIs that do not exist or have wrong signatures.
-  - Examples: `src/temporalcv/__init__.py:20-25` and `docs/plans/reference/api_design.md:9-33` show `run_gates(model=..., gates=[gate_shuffled_target(...)])`, but `run_gates` only accepts `List[GateResult]`.
+  - Examples: `src/temporalcv/__init__.py:20-25` and `docs/plans/reference/api_design.md:9-33` show `run_gates(model=..., gates=[gate_signal_verification(...)])`, but `run_gates` only accepts `List[GateResult]`.
   - `docs/plans/reference/api_design.md:17, 101-108` references `temporalcv.tests` and splitters not implemented; CLI examples are aspirational.
   - `docs/tutorials/leakage_detection.md:64-69` uses `result.details['real_mae']` and `['shuffled_mae']`, but code emits `mae_real` and `mae_shuffled_avg`.
 
 - "NEVER FAIL SILENTLY" is violated in several places.
   - `src/temporalcv/statistical_tests.py:347-358` returns `pvalue=1.0` and `statistic=nan` when variance is degenerate, with no warning.
   - `src/temporalcv/persistence.py:354-369` and following can return NaNs for empty or no-move cases without warning.
-  - `gate_shuffled_target` returns 0.0 MAE if no splits are possible (`src/temporalcv/gates.py:278-287`), which can create false PASS.
+  - `gate_signal_verification` returns 0.0 MAE if no splits are possible (`src/temporalcv/gates.py:278-287`), which can create false PASS.
 
 - PT test effective sample size is unchecked.
   - `src/temporalcv/statistical_tests.py:535-555` filters zeros for 2-class mode but does not validate `n_effective`, potentially far below the stated minimum. P-values can be meaningless [8].
@@ -57,7 +57,7 @@
 - WalkForwardCV does not enforce horizon constraints.
   - `src/temporalcv/cv.py` does not accept `horizon`; enforcement relies on users manually setting gap, but docs imply enforcement [1][2].
 
-- gate_shuffled_target reuses the same model instance across folds and shuffles.
+- gate_signal_verification reuses the same model instance across folds and shuffles.
   - `src/temporalcv/gates.py:278-295` calls `model.fit` repeatedly without cloning; stateful or warm-start models can leak across shuffles, biasing the gate.
 
 - PR-AUC implementation uses trapezoidal integration, not average precision, and this difference is not emphasized.
@@ -169,7 +169,7 @@ Gaps:
   - Pros: Cleaner examples; makes safe patterns easy.
   - Cons: Adds API surface.
 
-10) Clone models inside gate_shuffled_target.
+10) Clone models inside gate_signal_verification.
 - Option A: Clone per fold and per shuffle using sklearn.clone when available.
   - Pros: Prevents state leakage across fits; more correct for warm-start models.
   - Cons: Slight overhead; non-sklearn models need fallback.

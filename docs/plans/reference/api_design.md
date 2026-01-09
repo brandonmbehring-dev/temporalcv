@@ -9,7 +9,7 @@
 ```python
 from temporalcv import ValidationReport, run_gates
 from temporalcv.gates import (
-    gate_shuffled_target,
+    gate_signal_verification,
     gate_synthetic_ar1,
     gate_suspicious_improvement,
     gate_temporal_boundary,
@@ -20,7 +20,7 @@ from temporalcv.cv import WalkForwardCV
 # === Core validation workflow ===
 # Pre-compute gates, then aggregate
 gates = [
-    gate_shuffled_target(model=my_model, X=X, y=y, n_shuffles=5, random_state=42),
+    gate_signal_verification(model=my_model, X=X, y=y, n_shuffles=5, random_state=42),
     gate_synthetic_ar1(model=my_model, phi=0.95, random_state=42),
     gate_suspicious_improvement(model_metric=model_mae, baseline_metric=baseline_mae),
 ]
@@ -90,7 +90,7 @@ from temporalcv import run_gates, WalkForwardCV
 
 # Gates submodule
 from temporalcv.gates import (
-    gate_shuffled_target,
+    gate_signal_verification,
     gate_synthetic_ar1,
     gate_suspicious_improvement,
     gate_temporal_boundary,

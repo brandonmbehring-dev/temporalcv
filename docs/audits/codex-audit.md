@@ -8,10 +8,10 @@
 ## High-impact issues (correctness and statistical validity)
 
 1) SPECIFICATION.md is authoritative but diverges from code and docs.
-- Examples: gate_shuffled_target default n_shuffles is 100 in SPECIFICATION.md vs 5 in code and docs; DM/PT minimum sample sizes differ between spec, assumptions, and code; bagging auto block length is sqrt(n) in spec vs n^(1/3) in code.
+- Examples: gate_signal_verification default n_shuffles is 100 in SPECIFICATION.md vs 5 in code and docs; DM/PT minimum sample sizes differ between spec, assumptions, and code; bagging auto block length is sqrt(n) in spec vs n^(1/3) in code.
 - Consequence: "single source of truth" is violated and results are not reproducible across readers.
 
-2) gate_shuffled_target is not a permutation test and uses in-sample evaluation.
+2) gate_signal_verification is not a permutation test and uses in-sample evaluation.
 - Fits and evaluates on the same data; improvement ratio is treated like a p-value threshold even though no permutation p-value is computed.
 - High-capacity models can memorize shuffled targets, leading to false PASS even with leakage, while in-sample bias inflates observed improvement.
 - Use out-of-sample evaluation or time-series CV for this gate [1][2].
@@ -66,7 +66,7 @@
 - Option 2: Amend SPECIFICATION.md to match code and document rationale. Pros: minimal code churn. Cons: weakens the authoritative spec posture.
 - Option 3: Version the spec and add deprecation warnings for mismatched defaults. Pros: explicit transition path. Cons: more governance overhead.
 
-2) Redesign gate_shuffled_target.
+2) Redesign gate_signal_verification.
 - Option 1: Use a single temporal holdout (last split) for real and shuffled targets. Pros: simple and fast. Cons: higher variance, split choice matters.
 - Option 2: Use WalkForwardCV inside the gate and compute a permutation p-value over folds. Pros: closer to out-of-sample leakage detection [1][2]. Cons: slower and more complex.
 - Option 3: Accept user-provided predictions and scores. Pros: flexibility for complex pipelines. Cons: more burden on users.

@@ -22,7 +22,7 @@ Model cards provide transparent documentation of component behavior, assumptions
 | Component | Type | Card |
 |-----------|------|------|
 | **WalkForwardCV** | Cross-validator | [walk_forward_cv.md](walk_forward_cv.md) |
-| **gate_shuffled_target** | Validation gate | [gate_shuffled_target.md](gate_shuffled_target.md) |
+| **gate_signal_verification** | Validation gate | [gate_signal_verification.md](gate_signal_verification.md) |
 
 ---
 

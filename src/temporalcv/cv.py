@@ -42,6 +42,7 @@ References
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Generator, Iterator, List, Literal, Optional, Tuple, Union, cast
 
@@ -49,6 +50,8 @@ import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import clone
 from sklearn.model_selection import BaseCrossValidator
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -1263,8 +1266,8 @@ def walk_forward_evaluate(
     try:
         import pandas as pd
 
-        if hasattr(X, "index") and isinstance(X.index, pd.DatetimeIndex):  # type: ignore[union-attr]
-            dates = X.index  # type: ignore[union-attr]
+        if hasattr(X, "index") and isinstance(X.index, pd.DatetimeIndex):
+            dates = X.index
     except ImportError:
         pass  # pandas not available
 
@@ -1273,8 +1276,10 @@ def walk_forward_evaluate(
 
     for split_idx, (train_idx, test_idx) in enumerate(cv.split(X_arr)):
         if verbose:
-            print(f"Split {split_idx}: train[{train_idx[0]}:{train_idx[-1]}], "
-                  f"test[{test_idx[0]}:{test_idx[-1]}]")
+            logger.info(
+                "Split %d: train[%d:%d], test[%d:%d]",
+                split_idx, train_idx[0], train_idx[-1], test_idx[0], test_idx[-1]
+            )
 
         # Clone model for this split
         try:
@@ -1707,8 +1712,10 @@ class NestedWalkForwardCV:
         param_combinations = self._get_param_combinations(rng)
 
         if self.verbose:
-            print(f"NestedWalkForwardCV: {len(param_combinations)} param combinations")
-            print(f"  Outer: {self.n_outer_splits} splits, Inner: {self.n_inner_splits} splits")
+            logger.info(
+                "NestedWalkForwardCV: %d param combinations, Outer: %d splits, Inner: %d splits",
+                len(param_combinations), self.n_outer_splits, self.n_inner_splits
+            )
 
         # Outer CV
         outer_cv = WalkForwardCV(
@@ -1727,7 +1734,7 @@ class NestedWalkForwardCV:
 
         for fold_idx, (train_outer, test_outer) in enumerate(outer_cv.split(X_arr)):
             if self.verbose:
-                print(f"  Outer fold {fold_idx + 1}/{self.n_outer_splits}")
+                logger.info("Outer fold %d/%d", fold_idx + 1, self.n_outer_splits)
 
             X_train_outer = X_arr[train_outer]
             y_train_outer = y_arr[train_outer]
@@ -1763,8 +1770,7 @@ class NestedWalkForwardCV:
             outer_scores.append(score)
 
             if self.verbose >= 2:
-                print(f"    Best params: {fold_best_params}")
-                print(f"    Outer score: {score:.4f}")
+                logger.info("  Best params: %s, Outer score: %.4f", fold_best_params, score)
 
         # Determine best params by voting
         params_tuples = [tuple(sorted(p.items())) for p in best_params_per_fold]
@@ -1805,9 +1811,10 @@ class NestedWalkForwardCV:
             self._best_estimator = None
 
         if self.verbose:
-            print(f"  Best params: {best_params}")
-            print(f"  Outer score: {np.mean(outer_scores):.4f} ± {np.std(outer_scores):.4f}")
-            print(f"  Params stability: {params_stability:.1%}")
+            logger.info(
+                "Best params: %s, Outer score: %.4f ± %.4f, Params stability: %.1f%%",
+                best_params, np.mean(outer_scores), np.std(outer_scores), params_stability * 100
+            )
 
         return self
 
@@ -1836,7 +1843,7 @@ class NestedWalkForwardCV:
                     "predict() requires refit=True. Set refit=True and call fit() again."
                 )
             raise RuntimeError("Call fit() before predict().")
-        return self._best_estimator.predict(X)
+        return cast(np.ndarray, self._best_estimator.predict(X))
 
     @property
     def best_params_(self) -> dict[str, Any]:
@@ -1890,7 +1897,7 @@ class NestedWalkForwardCV:
         """Fraction of folds that selected the same best_params_."""
         if self._cv_results is None:
             raise RuntimeError("Call fit() first.")
-        return self._cv_results["params_stability"]
+        return cast(float, self._cv_results["params_stability"])
 
     def get_result(self) -> NestedCVResult:
         """

@@ -37,7 +37,7 @@ temporalcv provides **temporal cross-validation primitives** for the ML ecosyste
 ### Core Capabilities
 
 1. **Validation Gates** (HALT/WARN/PASS/SKIP framework)
-   - `gate_shuffled_target()` - Definitive leakage detection
+   - `gate_signal_verification()` - Definitive leakage detection
    - `gate_synthetic_ar1()` - Theoretical bounds validation
    - `gate_suspicious_improvement()` - >20% improvement trigger
    - `gate_temporal_boundary()` - Gap enforcement

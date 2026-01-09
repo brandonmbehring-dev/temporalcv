@@ -1270,22 +1270,27 @@ class TestNestedWalkForwardCV:
         nested_cv_slide.fit(X, y)
         assert nested_cv_slide.best_params_ is not None
 
-    def test_verbose_output(self, nested_cv_data: tuple, capsys: pytest.CaptureFixture) -> None:
-        """verbose=1 should print progress."""
+    def test_verbose_output(
+        self, nested_cv_data: tuple, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """verbose=1 should log progress."""
+        import logging
+
         X, y = nested_cv_data
 
-        nested_cv = NestedWalkForwardCV(
-            estimator=Ridge(),
-            param_grid={"alpha": [0.1]},
-            n_outer_splits=2,
-            n_inner_splits=2,
-            verbose=1,
-        )
-        nested_cv.fit(X, y)
+        with caplog.at_level(logging.INFO, logger="temporalcv.cv"):
+            nested_cv = NestedWalkForwardCV(
+                estimator=Ridge(),
+                param_grid={"alpha": [0.1]},
+                n_outer_splits=2,
+                n_inner_splits=2,
+                verbose=1,
+            )
+            nested_cv.fit(X, y)
 
-        captured = capsys.readouterr()
-        assert "NestedWalkForwardCV" in captured.out
-        assert "Outer fold" in captured.out
+        log_output = " ".join(record.message for record in caplog.records)
+        assert "NestedWalkForwardCV" in log_output
+        assert "Outer fold" in log_output
 
     def test_get_result_method(self, nested_cv_data: tuple) -> None:
         """get_result() should return NestedCVResult."""

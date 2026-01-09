@@ -91,7 +91,7 @@ All 6 tasks completed:
 **Files**: `src/temporalcv/gates.py`, `tests/test_gates.py`
 
 ```python
-def gate_shuffled_target(
+def gate_signal_verification(
     ...,
     method: Literal["effect_size", "permutation"] = "permutation",
     n_shuffles: int | None = None,  # 5 for effect_size, 100 for permutation

@@ -42,7 +42,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 # Type alias for numeric arrays
-NumericArray = Union[np.ndarray, list, tuple]
+NumericArray = Union[np.ndarray, list[float], tuple[float, ...]]
 
 
 def _validate_inputs(

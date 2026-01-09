@@ -9,7 +9,7 @@
 | Gap | Python | R | Julia | temporalcv |
 |-----|--------|---|-------|------------|
 | **Leakage detection framework** | ❌ | ❌ | ❌ | `gates.py` + anti-pattern tests |
-| **Shuffled target test** | ❌ | ❌ | ❌ | `gate_shuffled_target()` |
+| **Shuffled target test** | ❌ | ❌ | ❌ | `gate_signal_verification()` |
 | **Suspicious improvement detection** | ❌ | ❌ | ❌ | `gate_suspicious_improvement()` |
 | **3-stage validation gates** | ❌ | ❌ | ❌ | External → Internal → Statistical |
 

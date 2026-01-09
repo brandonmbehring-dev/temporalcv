@@ -100,7 +100,7 @@
 **Why it matters**: Stateful or warm-start models can leak state across folds, biasing the gate.
 
 **Options**:
-- **Option A: Clone model per fold (like `gate_shuffled_target`)**.
+- **Option A: Clone model per fold (like `gate_signal_verification`)**.
   - Pros: Consistent behavior; safer for stateful models.
   - Cons: Slight overhead for models without `clone`.
 - **Option B: Accept a `model_factory` callable** and instantiate per fold.
@@ -121,7 +121,7 @@
   - Cons: Additional implementation and docs.
 
 ### 8) API docs for gates are missing important parameters
-**Evidence**: `docs/api/gates.md:70-120` omits `n_cv_splits`, `permutation`, and `block_size` for `gate_shuffled_target`, and omits `n_cv_splits` for `gate_synthetic_ar1`.
+**Evidence**: `docs/api/gates.md:70-120` omits `n_cv_splits`, `permutation`, and `block_size` for `gate_signal_verification`, and omits `n_cv_splits` for `gate_synthetic_ar1`.
 
 **Why it matters**: Users cannot discover or correctly tune key parameters, undermining reproducibility.
 

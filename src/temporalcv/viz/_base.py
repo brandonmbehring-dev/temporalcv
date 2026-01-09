@@ -12,11 +12,11 @@ References
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.figure import Figure
+from matplotlib.figure import Figure, SubFigure
 
 from ._style import apply_tufte_style
 
@@ -38,7 +38,7 @@ class BaseDisplay(ABC):
     ----------
     ax_ : matplotlib.axes.Axes
         The axes used for plotting. Set after `plot()` is called.
-    figure_ : matplotlib.figure.Figure
+    figure_ : matplotlib.figure.Figure or SubFigure
         The figure containing the plot. Set after `plot()` is called.
 
     Examples
@@ -62,7 +62,7 @@ class BaseDisplay(ABC):
     """
 
     ax_: Axes
-    figure_: Figure
+    figure_: Union[Figure, SubFigure]
 
     def _validate_plot_params(
         self,
@@ -126,7 +126,7 @@ class BaseDisplay(ABC):
     def _get_ax_or_create(
         self,
         ax: Optional[Axes] = None,
-        figsize: tuple = (8, 5),
+        figsize: tuple[float, float] = (8, 5),
     ) -> Axes:
         """
         Get existing axes or create new figure with specified size.

@@ -63,7 +63,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
-from typing import Literal, Optional
+from typing import Literal, Optional, cast
 
 import numpy as np
 from scipy import stats
@@ -1049,8 +1049,8 @@ def gw_test(
 
     # Compute loss differential
     if loss == "squared":
-        loss_1 = errors_1**2
-        loss_2 = errors_2**2
+        loss_1: np.ndarray = errors_1**2
+        loss_2: np.ndarray = errors_2**2
     elif loss == "absolute":
         loss_1 = np.abs(errors_1)
         loss_2 = np.abs(errors_2)
@@ -1118,7 +1118,7 @@ def gw_test(
     # Use proper centered formula: SS_tot = sum((y - y_bar)²)
     # Here y = ones, y_bar = 1, so SS_tot would be 0
     # Instead, use: R² = 1 - SS_res / n (uncentered R²)
-    ss_res = np.sum(resid**2)
+    ss_res: float = np.sum(resid**2)
     r_squared = 1.0 - ss_res / n_effective
 
     # Ensure R² is in valid range [0, 1]
@@ -1345,8 +1345,8 @@ def cw_test(
 
     # Compute loss differential (unadjusted)
     if loss == "squared":
-        loss_unrestricted = errors_unrestricted**2
-        loss_restricted = errors_restricted**2
+        loss_unrestricted: np.ndarray = errors_unrestricted**2
+        loss_restricted: np.ndarray = errors_restricted**2
     elif loss == "absolute":
         loss_unrestricted = np.abs(errors_unrestricted)
         loss_restricted = np.abs(errors_restricted)
@@ -2749,8 +2749,8 @@ class RealityCheckResult:
     statistic: float
     pvalue: float
     best_model: str
-    individual_statistics: dict
-    mean_losses: dict
+    individual_statistics: dict[str, float]
+    mean_losses: dict[str, float]
     n_bootstrap: int
     block_size: int
     n: int
@@ -2806,8 +2806,8 @@ class SPATestResult:
     pvalue_consistent: float
     pvalue_lower: float
     best_model: str
-    individual_statistics: dict
-    mean_losses: dict
+    individual_statistics: dict[str, float]
+    mean_losses: dict[str, float]
     n_bootstrap: int
     block_size: int
     n: int
@@ -2854,12 +2854,12 @@ def _stationary_bootstrap_indices(
                 # Continue block (with wrap-around)
                 idx = (idx + 1) % n
 
-    return indices
+    return cast(np.ndarray, indices)
 
 
 def reality_check_test(
     benchmark_errors: np.ndarray,
-    model_errors_dict: dict,
+    model_errors_dict: dict[str, np.ndarray],
     h: int = 1,
     loss: Literal["squared", "absolute"] = "squared",
     n_bootstrap: int = 1000,
@@ -2935,8 +2935,8 @@ def reality_check_test(
 
     # Compute losses
     if loss == "squared":
-        benchmark_loss = benchmark_errors**2
-        model_losses = {
+        benchmark_loss: np.ndarray = benchmark_errors**2
+        model_losses: dict[str, np.ndarray] = {
             name: np.asarray(errors) ** 2 for name, errors in model_errors_dict.items()
         }
     else:  # absolute
@@ -3012,7 +3012,7 @@ def reality_check_test(
 
 def spa_test(
     benchmark_errors: np.ndarray,
-    model_errors_dict: dict,
+    model_errors_dict: dict[str, np.ndarray],
     h: int = 1,
     loss: Literal["squared", "absolute"] = "squared",
     n_bootstrap: int = 1000,
@@ -3085,8 +3085,8 @@ def spa_test(
 
     # Compute losses
     if loss == "squared":
-        benchmark_loss = benchmark_errors**2
-        model_losses = {
+        benchmark_loss: np.ndarray = benchmark_errors**2
+        model_losses: dict[str, np.ndarray] = {
             name: np.asarray(errors) ** 2 for name, errors in model_errors_dict.items()
         }
     else:

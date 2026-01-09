@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or Discussion
+    url: https://github.com/bbehring/temporalcv/discussions
+    about: For questions about usage, please use GitHub Discussions instead of issues.
+  - name: Security Vulnerability
+    url: https://github.com/bbehring/temporalcv/security/advisories/new
+    about: For security vulnerabilities, please use private security reporting.

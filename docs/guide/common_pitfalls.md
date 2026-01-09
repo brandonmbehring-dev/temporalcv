@@ -41,9 +41,9 @@ scores = cross_val_score(model, X, y, cv=cv)
 ### Gate Detection
 
 ```python
-from temporalcv.gates import gate_shuffled_target
+from temporalcv.gates import gate_signal_verification
 
-result = gate_shuffled_target(y_train, y_test)
+result = gate_signal_verification(y_train, y_test)
 # Returns HALT if target appears randomly shuffled (r² with shuffle > 0.1)
 ```
 
@@ -76,10 +76,10 @@ df['rolling_std'] = df['price'].shift(1).rolling(5).std()
 ### Gate Detection
 
 ```python
-from temporalcv.gates import gate_shuffled_target
+from temporalcv.gates import gate_signal_verification
 
 # If features contain target information, shuffled correlation will be high
-result = gate_shuffled_target(y_train, y_test, features=X_train)
+result = gate_signal_verification(y_train, y_test, features=X_train)
 ```
 
 ---
@@ -339,13 +339,13 @@ df['sector_mean'] = (
 
 | Pitfall | Gate | Status When Violated |
 |---------|------|---------------------|
-| #1 KFold on time series | `gate_shuffled_target` | HALT |
-| #2 Rolling without shift | `gate_shuffled_target` | HALT |
+| #1 KFold on time series | `gate_signal_verification` | HALT |
+| #2 Rolling without shift | `gate_signal_verification` | HALT |
 | #3 Normalizing on full data | `gate_feature_correlation` | WARN |
 | #4 Thresholds on all data | `gate_regime_leakage` | HALT |
 | #5 Insufficient gap | `gate_temporal_boundary` | HALT |
 | #6 Trusting raw MAE | (use `compare_to_naive`) | — |
-| #7 center=True rolling | `gate_shuffled_target` | HALT |
+| #7 center=True rolling | `gate_signal_verification` | HALT |
 | #8 GroupBy with test data | `gate_feature_correlation` | WARN |
 
 ## Running All Gates

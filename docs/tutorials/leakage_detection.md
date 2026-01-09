@@ -28,12 +28,12 @@ train, test = y[:100], y[100:]  # y[99] leaks into test via features!
 The shuffled target test is the **definitive** leakage detector:
 
 ```python
-from temporalcv.gates import gate_shuffled_target
+from temporalcv.gates import gate_signal_verification
 from sklearn.linear_model import Ridge
 
 model = Ridge()
 
-result = gate_shuffled_target(
+result = gate_signal_verification(
     model=model,
     X=X,
     y=y,
@@ -175,14 +175,14 @@ Run multiple gates and aggregate results:
 ```python
 from temporalcv import run_gates
 from temporalcv.gates import (
-    gate_shuffled_target,
+    gate_signal_verification,
     gate_suspicious_improvement,
     gate_temporal_boundary,
 )
 
 # Collect gate results
 gates = [
-    gate_shuffled_target(model, X, y, random_state=42),
+    gate_signal_verification(model, X, y, random_state=42),
     gate_suspicious_improvement(model_mae, baseline_mae),
     gate_temporal_boundary(train_end, test_start, horizon=2),
 ]
@@ -212,7 +212,7 @@ else:
 ```python
 import numpy as np
 from sklearn.linear_model import Ridge
-from temporalcv.gates import gate_shuffled_target
+from temporalcv.gates import gate_signal_verification
 
 # Generate high-persistence series
 np.random.seed(42)
@@ -227,7 +227,7 @@ y_leaky = y[3:]
 
 # Test for leakage
 model = Ridge(alpha=1.0)
-result = gate_shuffled_target(model, X_leaky, y_leaky, random_state=42)
+result = gate_signal_verification(model, X_leaky, y_leaky, random_state=42)
 
 print(f"Status: {result.status.name}")
 print(f"Real MAE: {result.details['mae_real']:.4f}")
@@ -265,7 +265,7 @@ for train_idx, test_idx in cv.split(y):
 
 ## API Reference
 
-- [`gate_shuffled_target`](../api/gates.md#gate_shuffled_target)
+- [`gate_signal_verification`](../api/gates.md#gate_signal_verification)
 - [`gate_synthetic_ar1`](../api/gates.md#gate_synthetic_ar1)
 - [`gate_suspicious_improvement`](../api/gates.md#gate_suspicious_improvement)
 - [`gate_temporal_boundary`](../api/gates.md#gate_temporal_boundary)

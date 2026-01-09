@@ -315,7 +315,7 @@ print("""
    - pct_embargo: 0.5-2% of data is typical
 
 5. COMBINE WITH VALIDATION GATES
-   - gate_shuffled_target catches many feature leakage issues
+   - gate_signal_verification catches many feature leakage issues
    - PurgedKFold handles label overlap specifically
 """)
 

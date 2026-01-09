@@ -512,7 +512,7 @@ class VolatilityStratifiedResult:
     n_low: int
     n_med: int
     n_high: int
-    vol_thresholds: tuple
+    vol_thresholds: tuple[float, float]
 
     def summary(self) -> str:
         """Generate human-readable summary."""

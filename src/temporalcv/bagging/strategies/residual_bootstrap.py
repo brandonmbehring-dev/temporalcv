@@ -38,7 +38,7 @@ try:
     HAS_STATSMODELS = True
 except ImportError:
     HAS_STATSMODELS = False
-    STL = None  # type: ignore[misc, assignment]
+    STL = None
 
 
 class ResidualBootstrap(BootstrapStrategy):

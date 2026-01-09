@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.abspath("../src"))
 project = "temporalcv"
 copyright = "2025, Brandon Behring"
 author = "Brandon Behring"
-release = "1.0.0-rc1"
+release = "1.0.0"
 
 # -- General configuration ---------------------------------------------------
 

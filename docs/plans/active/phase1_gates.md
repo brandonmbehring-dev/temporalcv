@@ -67,7 +67,7 @@ class ValidationReport:
 ### 1. Shuffled Target Gate (Priority: Critical)
 
 ```python
-def gate_shuffled_target(
+def gate_signal_verification(
     model,
     X: np.ndarray,
     y: np.ndarray,
@@ -164,7 +164,7 @@ def pt_test(
 
 ## Exit Criteria
 
-- [x] `gate_shuffled_target()` implemented with tests
+- [x] `gate_signal_verification()` implemented with tests
 - [x] `gate_synthetic_ar1()` implemented with tests
 - [x] `gate_suspicious_improvement()` implemented with tests
 - [x] `gate_temporal_boundary()` implemented with tests (bonus)

@@ -559,10 +559,11 @@ def gate_signal_verification(
 
         # Use DRY helper (model cloning happens inside)
         shuffle_model = _clone_model(model)
-        mae_shuffled = _compute_cv_mae(
-            shuffle_model, X, y_shuffled, n_cv_splits=n_cv_splits
+        mae_shuffled = cast(
+            float,
+            _compute_cv_mae(shuffle_model, X, y_shuffled, n_cv_splits=n_cv_splits),
         )
-        shuffled_maes.append(float(mae_shuffled))
+        shuffled_maes.append(mae_shuffled)
 
     mae_shuffled_avg = float(np.mean(shuffled_maes))
 

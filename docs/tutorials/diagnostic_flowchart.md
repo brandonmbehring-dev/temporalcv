@@ -46,10 +46,10 @@
 This is the definitive leakage detector.
 
 ```python
-from temporalcv import gate_shuffled_target
+from temporalcv import gate_signal_verification
 from sklearn.linear_model import Ridge
 
-result = gate_shuffled_target(
+result = gate_signal_verification(
     model=your_model,
     X=X_train, y=y_train,
     n_shuffles=100,
@@ -84,7 +84,7 @@ else:
 # Check each feature individually
 for i in range(X.shape[1]):
     single_feature = X[:, [i]]
-    result = gate_shuffled_target(
+    result = gate_signal_verification(
         model=Ridge(alpha=1.0),
         X=single_feature, y=y,
         method="effect_size",  # Fast check per feature
@@ -335,7 +335,7 @@ def full_validation_check(model, X, y, horizon=1, verbose=True):
     Returns: (is_valid, report_dict)
     """
     from temporalcv import (
-        gate_shuffled_target,
+        gate_signal_verification,
         gate_temporal_boundary,
         gate_suspicious_improvement,
         WalkForwardCV,
@@ -347,7 +347,7 @@ def full_validation_check(model, X, y, horizon=1, verbose=True):
     report = {"checks": [], "status": "PASS"}
 
     # 1. Shuffled target test
-    shuffle_result = gate_shuffled_target(
+    shuffle_result = gate_signal_verification(
         model=model, X=X, y=y,
         n_shuffles=100, method="permutation", random_state=42
     )

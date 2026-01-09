@@ -193,7 +193,7 @@ This checklist documents the completion of a comprehensive documentation quality
   - Assumptions, performance characteristics, examples
   - Limitations, statistical properties, references
   - Version history, see also links
-- **Evidence**: Template follows structure of existing cards (gate_shuffled_target.md, walk_forward_cv.md)
+- **Evidence**: Template follows structure of existing cards (gate_signal_verification.md, walk_forward_cv.md)
 - **Verification**: File exists at docs/model_cards/TEMPLATE.md (155 lines)
 
 ### 4.4 Comprehensive Verification Pass ✅
@@ -342,7 +342,7 @@ python -c "import temporalcv; print(temporalcv.__version__)"  # Should print: 1.
 cd docs && sphinx-build -W --keep-going -b html . _build/html
 
 # Verify package imports
-python -c "from temporalcv import WalkForwardCV, gate_shuffled_target, dm_test"
+python -c "from temporalcv import WalkForwardCV, gate_signal_verification, dm_test"
 
 # Check git status
 git status --short  # Should show 10 new/modified files in Session 3-4

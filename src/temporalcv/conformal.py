@@ -51,7 +51,7 @@ from __future__ import annotations
 import logging
 import warnings
 from dataclasses import dataclass
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union, cast
 
 import numpy as np
 
@@ -704,11 +704,11 @@ class BellmanConformalPredictor:
         self._residual_distribution = np.sort(residuals)
 
         # Build quantile grid from residuals
-        q_min = np.percentile(residuals, 5)
-        q_max = np.percentile(residuals, 99)
+        q_min = float(np.percentile(residuals, 5))
+        q_max = float(np.percentile(residuals, 99))
         # Ensure non-negative and reasonable range
         q_min = max(0.0, q_min * 0.5)
-        q_max = max(q_max * 2.0, np.std(residuals) * 5)
+        q_max = max(q_max * 2.0, float(np.std(residuals)) * 5)
 
         self._quantile_grid = np.linspace(q_min, q_max, self.n_grid)
 
@@ -784,7 +784,7 @@ class BellmanConformalPredictor:
 
                 # If no feasible action, use highest coverage quantile
                 if best_value == float("inf"):
-                    best_value = width_cost(self._quantile_grid[-1]) + V[h + 1, -1]
+                    best_value = width_cost(float(self._quantile_grid[-1])) + V[h + 1, -1]
 
                 V[h, i] = best_value
 
@@ -831,7 +831,7 @@ class BellmanConformalPredictor:
 
             # Use value function from horizon 1
             if self.horizon >= 1:
-                future = self.value_function[1, j]
+                future = float(self.value_function[1, j])
             else:
                 future = 0.0
 
@@ -984,7 +984,7 @@ class BellmanConformalPredictor:
             q = self._get_optimal_quantile(q)
             quantiles[t] = q
 
-        return quantiles
+        return cast(np.ndarray, quantiles)
 
     def predict_intervals_batch(
         self,

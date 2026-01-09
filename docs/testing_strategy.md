@@ -121,7 +121,7 @@ def test_lag_leakage_detected():
     X_leaky = np.column_stack([X_full, np.roll(X_full[:, 0], 1)])
 
     # Shuffled target gate should catch this
-    result = gate_shuffled_target(DummyModel(), X_leaky, y, n_shuffles=100)
+    result = gate_signal_verification(DummyModel(), X_leaky, y, n_shuffles=100)
     assert result.status == GateStatus.HALT
 ```
 
@@ -192,7 +192,7 @@ def test_full_validation_workflow():
     """End-to-end: gates → CV → metrics → DM test."""
     # 1. Run gates
     gates = [
-        gate_shuffled_target(model, X, y, n_shuffles=100),
+        gate_signal_verification(model, X, y, n_shuffles=100),
         gate_suspicious_improvement(model_mae=0.10, baseline_mae=0.15),
     ]
     report = run_gates(gates)
@@ -480,7 +480,7 @@ def test_with_random_data():
 Functions that use randomness accept `random_state` parameter:
 
 ```python
-def gate_shuffled_target(model, X, y, n_shuffles=100, random_state=None):
+def gate_signal_verification(model, X, y, n_shuffles=100, random_state=None):
     """
     Parameters
     ----------

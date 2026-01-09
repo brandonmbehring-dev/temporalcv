@@ -10,7 +10,7 @@ Three-stage validation framework with HALT/PASS/WARN/SKIP decisions for leakage 
 graph TD
     A[New Pipeline] --> B{Which leakage type?}
 
-    B -->|Features encode target| C[gate_shuffled_target]
+    B -->|Features encode target| C[gate_signal_verification]
     B -->|Train/test overlap| D[gate_temporal_boundary]
     B -->|Too-good results| E[gate_suspicious_improvement]
     B -->|Model beats theory| F[gate_synthetic_ar1]
@@ -102,12 +102,12 @@ class ValidationReport:
 
 ## Gate Functions
 
-### `gate_shuffled_target`
+### `gate_signal_verification`
 
 **Definitive leakage detection.** If a model beats a shuffled target, features contain temporal information that shouldn't exist.
 
 ```python
-def gate_shuffled_target(
+def gate_signal_verification(
     model: FitPredictModel,
     X: ArrayLike,
     y: ArrayLike,
@@ -309,12 +309,12 @@ def run_gates(gates: List[GateResult]) -> ValidationReport
 ```python
 from temporalcv.gates import (
     run_gates,
-    gate_shuffled_target,
+    gate_signal_verification,
     gate_suspicious_improvement,
 )
 
 results = [
-    gate_shuffled_target(model, X, y, random_state=42),
+    gate_signal_verification(model, X, y, random_state=42),
     gate_suspicious_improvement(model_mae, persistence_mae),
 ]
 
@@ -335,9 +335,9 @@ Gates that support `bootstrap_ci=True` provide uncertainty quantification for th
 ### Usage Example
 
 ```python
-from temporalcv.gates import gate_shuffled_target
+from temporalcv.gates import gate_signal_verification
 
-result = gate_shuffled_target(
+result = gate_signal_verification(
     model=my_model,
     X=X_train,
     y=y_train,

@@ -31,10 +31,10 @@ Suspiciously good results triggered investigation:
 - Improvement held across all horizons (unusual)
 - Model beat shuffled target at p < 0.001
 
-Running `gate_shuffled_target()` revealed the bug:
+Running `gate_signal_verification()` revealed the bug:
 
 ```python
-result = gate_shuffled_target(model, X, y, n_shuffles=100)
+result = gate_signal_verification(model, X, y, n_shuffles=100)
 print(result.status)  # HALT
 print(result.message)  # "Model beats shuffled by 32% (max: 5%)"
 ```
@@ -66,7 +66,7 @@ for train_idx, test_idx in cv.split(X, y):
 
 ---
 
-## Why gate_shuffled_target Catches This
+## Why gate_signal_verification Catches This
 
 When targets are shuffled randomly:
 - The temporal alignment between features and targets is broken
@@ -81,7 +81,7 @@ If the model beats shuffled targets, it means the features encode the target's *
 
 - [ ] Compute all rolling/lagged features WITHIN walk-forward splits
 - [ ] Verify features don't use information from test indices
-- [ ] Run `gate_shuffled_target()` on every model before deployment
+- [ ] Run `gate_signal_verification()` on every model before deployment
 - [ ] Document all feature computation in the pipeline
 
 ---
@@ -104,7 +104,7 @@ def test_lag_leakage_detection():
     cv = WalkForwardCV(window_size=100)
 
     # Gate should HALT
-    result = gate_shuffled_target(model, X_leaky, y)
+    result = gate_signal_verification(model, X_leaky, y)
     assert result.status == GateStatus.HALT
 ```
 

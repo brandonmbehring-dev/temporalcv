@@ -80,7 +80,7 @@ results = run_validation_suite(
     model=my_model,
     data=data,
     gates=[
-        gate_shuffled_target(),
+        gate_signal_verification(),
         gate_horizon_gap(h=2),
         gate_exogenous_alignment(),
     ],

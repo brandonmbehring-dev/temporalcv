@@ -158,7 +158,7 @@ def _create_block_indices(
     block_starts = rng.integers(0, n_blocks, size=n_blocks_needed)
 
     # Create indices by concatenating blocks
-    indices = []
+    indices: list[int] = []
     for start in block_starts:
         indices.extend(range(start, start + block_length))
 

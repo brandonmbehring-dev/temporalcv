@@ -20,11 +20,11 @@ These five examples demonstrate the most common ways time-series ML pipelines fa
 
 | # | Failure | Root Cause | Gate That Catches It |
 |---|---------|------------|---------------------|
-| 16 | Rolling Stats | `.rolling()` without `.shift()` | `gate_shuffled_target` |
+| 16 | Rolling Stats | `.rolling()` without `.shift()` | `gate_signal_verification` |
 | 17 | Threshold Leak | Quantile on full series | Regime validation |
 | 18 | Nested DM Test | DM bias for nested models | Statistical knowledge |
 | 19 | Missing Gap | No gap for h-step | `gate_temporal_boundary` |
-| 20 | KFold Trap | Random CV on time series | `gate_shuffled_target` |
+| 20 | KFold Trap | Random CV on time series | `gate_signal_verification` |
 
 ---
 
@@ -63,9 +63,9 @@ df['volatility_20'] = df['price'].shift(1).rolling(20).std()
 ### Detection
 
 ```python
-from temporalcv.gates import gate_shuffled_target
+from temporalcv.gates import gate_signal_verification
 
-result = gate_shuffled_target(model, X, y, n_shuffles=100)
+result = gate_signal_verification(model, X, y, n_shuffles=100)
 if result.status == "HALT":
     print("LEAKAGE DETECTED: Features encode target position")
 ```
@@ -244,9 +244,9 @@ score = cross_val_score(model, X, y, cv=cv)  # Realistic estimate
 ### Detection
 
 ```python
-from temporalcv.gates import gate_shuffled_target
+from temporalcv.gates import gate_signal_verification
 
-result = gate_shuffled_target(model, X, y, n_shuffles=100)
+result = gate_signal_verification(model, X, y, n_shuffles=100)
 # If the model beats shuffled targets, something is leaking
 ```
 
@@ -256,7 +256,7 @@ result = gate_shuffled_target(model, X, y, n_shuffles=100)
 
 | Gate | What It Catches | When to Use |
 |------|-----------------|-------------|
-| `gate_shuffled_target` | Feature leakage, KFold trap | Always (first check) |
+| `gate_signal_verification` | Feature leakage, KFold trap | Always (first check) |
 | `gate_temporal_boundary` | Insufficient gap | h-step forecasting |
 | `gate_suspicious_improvement` | Unrealistic performance | Any time results seem too good |
 
