@@ -20,8 +20,6 @@ References
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
-
 import numpy as np
 
 from temporalcv.bagging.base import BootstrapStrategy
@@ -113,7 +111,7 @@ class StationaryBootstrap(BootstrapStrategy):
     Politis & Romano (1994), JASA 89(428): Geometric block lengths
     """
 
-    def __init__(self, expected_block_length: Optional[float] = None):
+    def __init__(self, expected_block_length: float | None = None):
         self.expected_block_length = expected_block_length
 
     def generate_samples(
@@ -122,7 +120,7 @@ class StationaryBootstrap(BootstrapStrategy):
         y: np.ndarray,
         n_samples: int,
         rng: np.random.Generator,
-    ) -> List[Tuple[np.ndarray, np.ndarray]]:
+    ) -> list[tuple[np.ndarray, np.ndarray]]:
         """
         Generate bootstrap samples using Stationary Bootstrap.
 
@@ -155,7 +153,7 @@ class StationaryBootstrap(BootstrapStrategy):
         # Geometric parameter: probability of jumping
         p = 1.0 / exp_len
 
-        samples: List[Tuple[np.ndarray, np.ndarray]] = []
+        samples: list[tuple[np.ndarray, np.ndarray]] = []
 
         for _ in range(n_samples):
             # PER-SAMPLE random generation (avoids shared index exhaustion)

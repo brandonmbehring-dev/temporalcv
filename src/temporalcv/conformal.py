@@ -51,7 +51,7 @@ from __future__ import annotations
 import logging
 import warnings
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, cast
+from typing import cast
 
 import numpy as np
 
@@ -192,7 +192,7 @@ class SplitConformalPredictor:
             raise ValueError(f"alpha must be in (0, 1), got {alpha}")
 
         self.alpha = alpha
-        self.quantile_: Optional[float] = None
+        self.quantile_: float | None = None
 
     def calibrate(
         self,
@@ -414,8 +414,8 @@ class AdaptiveConformalPredictor:
 
         self.alpha = alpha
         self.gamma = gamma
-        self.quantile_history: List[float] = []
-        self._current_quantile: Optional[float] = None
+        self.quantile_history: list[float] = []
+        self._current_quantile: float | None = None
 
     def initialize(
         self,
@@ -503,7 +503,7 @@ class AdaptiveConformalPredictor:
     def predict_interval(
         self,
         prediction: float,
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """
         Construct prediction interval for single prediction.
 
@@ -531,7 +531,7 @@ class AdaptiveConformalPredictor:
         return lower, upper
 
     @property
-    def current_quantile(self) -> Optional[float]:
+    def current_quantile(self) -> float | None:
         """Return current adaptive quantile."""
         return self._current_quantile
 
@@ -660,11 +660,11 @@ class BellmanConformalPredictor:
         self.lambda_reg = lambda_reg
 
         # State
-        self._current_quantile: Optional[float] = None
-        self.quantile_history: List[float] = []
-        self.value_function: Optional[np.ndarray] = None
-        self._residual_distribution: Optional[np.ndarray] = None
-        self._quantile_grid: Optional[np.ndarray] = None
+        self._current_quantile: float | None = None
+        self.quantile_history: list[float] = []
+        self.value_function: np.ndarray | None = None
+        self._residual_distribution: np.ndarray | None = None
+        self._quantile_grid: np.ndarray | None = None
 
     def initialize(
         self,
@@ -907,7 +907,7 @@ class BellmanConformalPredictor:
     def predict_interval(
         self,
         prediction: float,
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """
         Construct prediction interval using current optimal quantile.
 
@@ -937,7 +937,7 @@ class BellmanConformalPredictor:
     def solve_optimal_sequence(
         self,
         predictions: np.ndarray,
-        n_steps: Optional[int] = None,
+        n_steps: int | None = None,
     ) -> np.ndarray:
         """
         Solve for optimal quantile sequence for given predictions.
@@ -1021,7 +1021,7 @@ class BellmanConformalPredictor:
         )
 
     @property
-    def current_quantile(self) -> Optional[float]:
+    def current_quantile(self) -> float | None:
         """Return current adaptive quantile."""
         return self._current_quantile
 
@@ -1084,7 +1084,7 @@ class BootstrapUncertainty:
         self.n_bootstrap = n_bootstrap
         self.alpha = alpha
         self.random_state = random_state
-        self.residuals_: Optional[np.ndarray] = None
+        self.residuals_: np.ndarray | None = None
 
     def fit(
         self,
@@ -1271,7 +1271,7 @@ def walk_forward_conformal(
     actuals: np.ndarray,
     calibration_fraction: float = 0.3,
     alpha: float = 0.05,
-) -> Tuple[PredictionInterval, dict[str, object]]:
+) -> tuple[PredictionInterval, dict[str, object]]:
     """
     Apply conformal prediction to walk-forward results.
 
@@ -1397,8 +1397,8 @@ class CoverageDiagnostics:
     target_coverage: float
     coverage_gap: float
     undercoverage_warning: bool
-    coverage_by_window: Dict[str, float]
-    coverage_by_regime: Optional[Dict[str, float]]
+    coverage_by_window: dict[str, float]
+    coverage_by_regime: dict[str, float] | None
     n_observations: int
 
 
@@ -1406,9 +1406,9 @@ def compute_coverage_diagnostics(
     intervals: PredictionInterval,
     actuals: np.ndarray,
     *,
-    target_coverage: Optional[float] = None,
+    target_coverage: float | None = None,
     window_size: int = 50,
-    regimes: Optional[np.ndarray] = None,
+    regimes: np.ndarray | None = None,
     undercoverage_threshold: float = 0.05,
 ) -> CoverageDiagnostics:
     """
@@ -1484,7 +1484,7 @@ def compute_coverage_diagnostics(
     overall_coverage = float(np.mean(covered))
 
     # Coverage by time window
-    coverage_by_window: Dict[str, float] = {}
+    coverage_by_window: dict[str, float] = {}
     n_windows = max(1, n // window_size)
 
     for i in range(n_windows):
@@ -1502,7 +1502,7 @@ def compute_coverage_diagnostics(
         coverage_by_window[window_name] = float(np.mean(window_covered))
 
     # Coverage by regime (if provided)
-    coverage_by_regime: Optional[Dict[str, float]] = None
+    coverage_by_regime: dict[str, float] | None = None
     if regimes is not None:
         regimes = np.asarray(regimes)
         if len(regimes) != n:

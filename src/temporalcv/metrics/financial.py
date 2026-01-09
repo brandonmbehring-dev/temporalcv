@@ -44,8 +44,6 @@ References
 
 from __future__ import annotations
 
-from typing import Optional
-
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -133,8 +131,8 @@ def compute_sharpe_ratio(
 
 
 def compute_max_drawdown(
-    cumulative_returns: Optional[ArrayLike] = None,
-    returns: Optional[ArrayLike] = None,
+    cumulative_returns: ArrayLike | None = None,
+    returns: ArrayLike | None = None,
 ) -> float:
     """
     Compute maximum drawdown from peak to trough.
@@ -432,7 +430,7 @@ def compute_hit_rate(
 def compute_profit_factor(
     predicted_changes: ArrayLike,
     actual_changes: ArrayLike,
-    returns: Optional[ArrayLike] = None,
+    returns: ArrayLike | None = None,
 ) -> float:
     """
     Compute profit factor (gross profit / gross loss ratio).

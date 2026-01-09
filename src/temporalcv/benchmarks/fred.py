@@ -20,7 +20,7 @@ Get API key from: https://fred.stlouisfed.org/docs/api/api_key.html
 from __future__ import annotations
 
 import os
-from typing import Dict, List, Literal, Optional, Union
+from typing import Literal
 
 import numpy as np
 
@@ -32,7 +32,7 @@ from temporalcv.benchmarks.base import (
 )
 
 # Standard FRED series for rate forecasting
-FRED_RATE_SERIES: Dict[str, str] = {
+FRED_RATE_SERIES: dict[str, str] = {
     "DGS10": "10-Year Treasury Constant Maturity Rate",
     "DGS2": "2-Year Treasury Constant Maturity Rate",
     "DGS5": "5-Year Treasury Constant Maturity Rate",
@@ -56,10 +56,10 @@ def _check_fredapi() -> None:
 
 
 def load_fred_rates(
-    series: Union[str, List[str]] = "DGS10",
+    series: str | list[str] = "DGS10",
     start: str = "2000-01-01",
-    end: Optional[str] = None,
-    api_key: Optional[str] = None,
+    end: str | None = None,
+    api_key: str | None = None,
     frequency: Literal["D", "W", "M"] = "W",
     train_fraction: float = 0.8,
 ) -> TimeSeriesDataset:
@@ -145,7 +145,7 @@ def load_fred_rates(
         series_list = list(series)
 
     # Load data
-    all_data: List[np.ndarray] = []
+    all_data: list[np.ndarray] = []
     for s in series_list:
         data = fred.get_series(s, observation_start=start, observation_end=end)
         # Resample if needed
@@ -209,7 +209,7 @@ def load_fred_rates(
     return dataset
 
 
-def list_available_series() -> Dict[str, str]:
+def list_available_series() -> dict[str, str]:
     """
     Return dictionary of commonly-used FRED rate series.
 

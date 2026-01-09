@@ -16,7 +16,7 @@ References
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -37,7 +37,7 @@ __all__ = [
 # Color Palette
 # =============================================================================
 
-TUFTE_PALETTE: Dict[str, str] = {
+TUFTE_PALETTE: dict[str, str] = {
     # Primary data colors (muted, not saturated)
     "primary": "#4a4a4a",  # Dark gray for main data
     "secondary": "#8a8a8a",  # Medium gray for secondary
@@ -243,7 +243,7 @@ def direct_label(
     x: float,
     y: float,
     text: str,
-    offset: Tuple[float, float] = (5, 5),
+    offset: tuple[float, float] = (5, 5),
     **kwargs: Any,
 ) -> None:
     """
@@ -345,9 +345,9 @@ def direct_label_line(
 def create_tufte_figure(
     nrows: int = 1,
     ncols: int = 1,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     **kwargs: Any,
-) -> Tuple[Figure, Union[Axes, np.ndarray]]:
+) -> tuple[Figure, Axes | np.ndarray]:
     """
     Create a figure with Tufte styling applied.
 
@@ -454,8 +454,8 @@ def set_tufte_title(ax: Axes, title: str, **kwargs: Any) -> None:
 
 def set_tufte_labels(
     ax: Axes,
-    xlabel: Optional[str] = None,
-    ylabel: Optional[str] = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
     **kwargs: Any,
 ) -> None:
     """

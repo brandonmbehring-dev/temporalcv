@@ -16,7 +16,7 @@ Examples
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -77,7 +77,7 @@ class GateResultDisplay(BaseDisplay):
         status: str,
         message: str,
         *,
-        metrics: Optional[Dict[str, Any]] = None,
+        metrics: dict[str, Any] | None = None,
     ):
         self.name = name
         self.status = status.upper()
@@ -124,7 +124,7 @@ class GateResultDisplay(BaseDisplay):
     def plot(
         self,
         *,
-        ax: Optional[Axes] = None,
+        ax: Axes | None = None,
         tufte: bool = True,
         show_message: bool = True,
     ) -> GateResultDisplay:
@@ -247,9 +247,9 @@ class GateComparisonDisplay(BaseDisplay):
 
     def __init__(
         self,
-        names: List[str],
-        statuses: List[str],
-        messages: Optional[List[str]] = None,
+        names: list[str],
+        statuses: list[str],
+        messages: list[str] | None = None,
     ):
         self.names = names
         self.statuses = [s.upper() for s in statuses]
@@ -257,7 +257,7 @@ class GateComparisonDisplay(BaseDisplay):
         self.n_gates = len(names)
 
     @classmethod
-    def from_gates(cls, gate_results: List[Any]) -> GateComparisonDisplay:
+    def from_gates(cls, gate_results: list[Any]) -> GateComparisonDisplay:
         """
         Create display from a list of GateResult objects.
 
@@ -305,11 +305,11 @@ class GateComparisonDisplay(BaseDisplay):
     def plot(
         self,
         *,
-        ax: Optional[Axes] = None,
+        ax: Axes | None = None,
         tufte: bool = True,
         orientation: str = "horizontal",
         show_messages: bool = False,
-        title: Optional[str] = None,
+        title: str | None = None,
     ) -> GateComparisonDisplay:
         """
         Plot the gate comparison.

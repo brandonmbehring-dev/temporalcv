@@ -37,7 +37,7 @@ Example
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Optional, cast
+from typing import Literal, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -141,7 +141,7 @@ def wild_cluster_bootstrap(
     n_bootstrap: int = 999,
     weight_type: Literal["auto", "rademacher", "webb"] = "auto",
     alpha: float = 0.05,
-    random_state: Optional[int] = None,
+    random_state: int | None = None,
 ) -> WildBootstrapResult:
     """
     Wild cluster bootstrap for CV fold-level inference.

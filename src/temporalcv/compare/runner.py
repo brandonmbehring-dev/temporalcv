@@ -20,8 +20,9 @@ from __future__ import annotations
 import logging
 import time
 import warnings
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Literal, Optional, Protocol, Tuple
+from typing import Any, Literal, Protocol
 
 import numpy as np
 
@@ -53,7 +54,7 @@ class Dataset(Protocol):
         """Return dataset values."""
         ...
 
-    def get_train_test_split(self) -> Tuple[np.ndarray, np.ndarray]:
+    def get_train_test_split(self) -> tuple[np.ndarray, np.ndarray]:
         """Return train/test split."""
         ...
 
@@ -65,7 +66,7 @@ class Dataset(Protocol):
 
 def run_comparison(
     dataset: Dataset,
-    adapters: List[ForecastAdapter],
+    adapters: list[ForecastAdapter],
     primary_metric: str = "mae",
     include_dm_test: bool = True,
     aggregation_mode: Literal["flatten", "per_series_mean", "per_series_median"] = "flatten",
@@ -117,7 +118,7 @@ def run_comparison(
     horizon = dataset.metadata.horizon
 
     # Run each adapter
-    model_results: List[ModelResult] = []
+    model_results: list[ModelResult] = []
 
     for adapter in adapters:
         start_time = time.perf_counter()
@@ -168,7 +169,7 @@ def run_comparison(
                     )
 
                 # Compute metrics for each series
-                series_metrics: List[Dict[str, float]] = []
+                series_metrics: list[dict[str, float]] = []
                 for i in range(n_series):
                     series_metrics.append(
                         compute_comparison_metrics(predictions[i], test[i])
@@ -212,11 +213,11 @@ def run_comparison(
 
 
 def _run_dm_tests(
-    model_results: List[ModelResult],
+    model_results: list[ModelResult],
     test: np.ndarray,
     best_model: str,
     horizon: int = 1,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Run Diebold-Mariano tests comparing best model to others.
 
@@ -255,7 +256,7 @@ def _run_dm_tests(
     test_flat = test.flatten() if test.ndim > 1 else test
     best_flat = best_preds.flatten() if best_preds.ndim > 1 else best_preds
 
-    dm_results: Dict[str, Any] = {}
+    dm_results: dict[str, Any] = {}
 
     for result in model_results:
         if result.model_name == best_model:
@@ -297,13 +298,13 @@ def _run_dm_tests(
 
 
 def run_benchmark_suite(
-    datasets: List[Dataset],
-    adapters: List[ForecastAdapter],
+    datasets: list[Dataset],
+    adapters: list[ForecastAdapter],
     primary_metric: str = "mae",
     include_dm_test: bool = True,
     aggregation_mode: Literal["flatten", "per_series_mean", "per_series_median"] = "flatten",
-    progress_callback: Optional[Callable[[int, int, str], None]] = None,
-    checkpoint_dir: Optional[Path] = None,
+    progress_callback: Callable[[int, int, str], None] | None = None,
+    checkpoint_dir: Path | None = None,
 ) -> ComparisonReport:
     """
     Run model comparison across multiple datasets.
@@ -365,7 +366,7 @@ def run_benchmark_suite(
 
         checkpoint_dir = Path(checkpoint_dir)
 
-    results: List[ComparisonResult] = []
+    results: list[ComparisonResult] = []
     total = len(datasets)
 
     for idx, dataset in enumerate(datasets):
@@ -415,9 +416,9 @@ def run_benchmark_suite(
 def compare_to_baseline(
     dataset: Dataset,
     adapter: ForecastAdapter,
-    baseline_adapter: Optional[ForecastAdapter] = None,
+    baseline_adapter: ForecastAdapter | None = None,
     primary_metric: str = "mae",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Compare a single model to a baseline.
 

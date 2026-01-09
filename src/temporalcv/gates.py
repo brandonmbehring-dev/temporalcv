@@ -55,9 +55,10 @@ References
 from __future__ import annotations
 
 import warnings
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, List, Literal, Optional, Protocol, Union, cast
+from typing import Any, Literal, Protocol, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -100,8 +101,8 @@ class GateResult:
     name: str
     status: GateStatus
     message: str
-    metric_value: Optional[float] = None
-    threshold: Optional[float] = None
+    metric_value: float | None = None
+    threshold: float | None = None
     details: dict[str, Any] = field(default_factory=dict)
     recommendation: str = ""
 
@@ -121,7 +122,7 @@ class ValidationReport:
         Results from all gates run
     """
 
-    gates: List[GateResult] = field(default_factory=list)
+    gates: list[GateResult] = field(default_factory=list)
 
     @property
     def status(self) -> str:
@@ -140,12 +141,12 @@ class ValidationReport:
         return "PASS"
 
     @property
-    def failures(self) -> List[GateResult]:
+    def failures(self) -> list[GateResult]:
         """Return gates that HALTed."""
         return [g for g in self.gates if g.status == GateStatus.HALT]
 
     @property
-    def warnings(self) -> List[GateResult]:
+    def warnings(self) -> list[GateResult]:
         """Return gates that WARNed."""
         return [g for g in self.gates if g.status == GateStatus.WARN]
 
@@ -221,7 +222,7 @@ def _compute_cv_mae(
     n_cv_splits: int = 3,
     extra_gap: int = 0,
     return_errors: bool = False,
-) -> Union[float, tuple[float, np.ndarray]]:
+) -> float | tuple[float, np.ndarray]:
     """Compute out-of-sample MAE using walk-forward CV.
 
     Centralized CV computation to avoid duplication across gate functions.
@@ -259,7 +260,7 @@ def _compute_cv_mae(
         test_size=max(1, n // (n_cv_splits + 1)),
     )
 
-    all_errors: List[float] = []
+    all_errors: list[float] = []
     for train_idx, test_idx in cv.split(X, y):
         fold_model = _clone_model(model)
         fold_model.fit(X[train_idx], y[train_idx])
@@ -284,12 +285,12 @@ def gate_signal_verification(
     model: FitPredictModel,
     X: ArrayLike,
     y: ArrayLike,
-    n_shuffles: Optional[int] = None,
+    n_shuffles: int | None = None,
     threshold: float = 0.05,
     n_cv_splits: int = 3,
     permutation: Literal["iid", "block"] = "block",
-    block_size: Union[int, Literal["auto"]] = "auto",
-    random_state: Optional[int] = None,
+    block_size: int | Literal["auto"] = "auto",
+    random_state: int | None = None,
     *,
     method: Literal["effect_size", "permutation"] = "permutation",
     alpha: float = 0.05,
@@ -297,7 +298,7 @@ def gate_signal_verification(
     bootstrap_ci: bool = False,
     n_bootstrap: int = 100,
     bootstrap_alpha: float = 0.05,
-    bootstrap_block_length: Union[int, Literal["auto"]] = "auto",
+    bootstrap_block_length: int | Literal["auto"] = "auto",
 ) -> GateResult:
     """
     Signal verification test: confirm model has predictive power.
@@ -548,7 +549,7 @@ def gate_signal_verification(
     mae_real, errors_real = result  # type: ignore[misc]
 
     # Compute out-of-sample MAE on shuffled targets
-    shuffled_maes: List[float] = []
+    shuffled_maes: list[float] = []
     for _ in range(effective_n_shuffles):
         # Apply permutation strategy
         if permutation == "block":
@@ -687,12 +688,12 @@ def gate_synthetic_ar1(
     n_lags: int = 5,
     tolerance: float = 1.5,
     n_cv_splits: int = 3,
-    random_state: Optional[int] = None,
+    random_state: int | None = None,
     *,
     bootstrap_ci: bool = False,
     n_bootstrap: int = 100,
     bootstrap_alpha: float = 0.05,
-    bootstrap_block_length: Union[int, Literal["auto"]] = "auto",
+    bootstrap_block_length: int | Literal["auto"] = "auto",
 ) -> GateResult:
     """
     Synthetic AR(1) test: theoretical bound verification.
@@ -1469,7 +1470,7 @@ GateFunction = Callable[..., GateResult]
 
 
 def run_gates(
-    gates: List[GateResult],
+    gates: list[GateResult],
 ) -> ValidationReport:
     """
     Aggregate gate results into a validation report.
@@ -1533,7 +1534,7 @@ class StratifiedValidationReport:
     overall: ValidationReport
     by_regime: dict[str, ValidationReport]
     regime_counts: dict[str, int]
-    masked_regimes: List[str]
+    masked_regimes: list[str]
 
     @property
     def status(self) -> str:
@@ -1599,10 +1600,10 @@ class StratifiedValidationReport:
 
 
 def run_gates_stratified(
-    overall_gates: List[GateResult],
+    overall_gates: list[GateResult],
     actuals: ArrayLike,
     predictions: ArrayLike,
-    regimes: Optional[Union[np.ndarray, Literal["auto"]]] = None,
+    regimes: np.ndarray | Literal["auto"] | None = None,
     min_n_per_regime: int = 10,
     volatility_window: int = 13,
     improvement_threshold: float = 0.20,
@@ -1715,7 +1716,7 @@ def run_gates_stratified(
         regime_persistence_mae = float(np.mean(np.abs(np.diff(regime_actuals))))
 
         # Run numeric gates
-        regime_gates: List[GateResult] = []
+        regime_gates: list[GateResult] = []
 
         # gate_suspicious_improvement
         if regime_persistence_mae > 0:

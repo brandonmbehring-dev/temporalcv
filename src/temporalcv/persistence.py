@@ -53,7 +53,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from enum import Enum
-from typing import Literal, Optional, Tuple
+from typing import Literal
 
 import numpy as np
 
@@ -310,7 +310,7 @@ def _get_scale_aware_epsilon(values: np.ndarray) -> float:
 def compute_move_conditional_metrics(
     predictions: np.ndarray,
     actuals: np.ndarray,
-    threshold: Optional[float] = None,
+    threshold: float | None = None,
     threshold_percentile: float = 70.0,
     target_mode: TargetMode = "change",
 ) -> MoveConditionalResult:
@@ -520,7 +520,7 @@ def compute_move_conditional_metrics(
 def compute_direction_accuracy(
     predictions: np.ndarray,
     actuals: np.ndarray,
-    move_threshold: Optional[float] = None,
+    move_threshold: float | None = None,
 ) -> float:
     """
     Compute directional accuracy.
@@ -610,7 +610,7 @@ def compute_move_only_mae(
     predictions: np.ndarray,
     actuals: np.ndarray,
     threshold: float,
-) -> Tuple[float, int]:
+) -> tuple[float, int]:
     """
     Compute MAE only on moves (excluding FLAT).
 
@@ -664,7 +664,7 @@ def compute_move_only_mae(
 
 def compute_persistence_mae(
     actuals: np.ndarray,
-    threshold: Optional[float] = None,
+    threshold: float | None = None,
 ) -> float:
     """
     Compute MAE of persistence baseline.

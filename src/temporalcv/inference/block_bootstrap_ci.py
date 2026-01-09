@@ -40,8 +40,8 @@ Example
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional, Union
 
 import numpy as np
 from numpy.typing import NDArray
@@ -170,9 +170,9 @@ def moving_block_bootstrap(
     data: NDArray[np.floating],
     statistic_fn: Callable[[NDArray[np.floating]], float],
     n_bootstrap: int = 100,
-    block_length: Union[int, str] = "auto",
+    block_length: int | str = "auto",
     alpha: float = 0.05,
-    random_state: Optional[int] = None,
+    random_state: int | None = None,
 ) -> BlockBootstrapResult:
     """
     Compute block bootstrap confidence interval for a statistic.
@@ -382,9 +382,9 @@ def moving_block_bootstrap(
 def bootstrap_ci_mean(
     data: NDArray[np.floating],
     n_bootstrap: int = 100,
-    block_length: Union[int, str] = "auto",
+    block_length: int | str = "auto",
     alpha: float = 0.05,
-    random_state: Optional[int] = None,
+    random_state: int | None = None,
 ) -> BlockBootstrapResult:
     """
     Compute block bootstrap CI for the mean.
@@ -422,9 +422,9 @@ def bootstrap_ci_mean(
 def bootstrap_ci_mae(
     errors: NDArray[np.floating],
     n_bootstrap: int = 100,
-    block_length: Union[int, str] = "auto",
+    block_length: int | str = "auto",
     alpha: float = 0.05,
-    random_state: Optional[int] = None,
+    random_state: int | None = None,
 ) -> BlockBootstrapResult:
     """
     Compute block bootstrap CI for Mean Absolute Error.

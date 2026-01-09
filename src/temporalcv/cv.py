@@ -45,7 +45,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Any, List, Literal, Optional, Tuple, Union, cast
+from typing import Any, Literal, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -100,10 +100,10 @@ class SplitInfo:
     test_start: int
     test_end: int
     # Optional datetime fields (populated when data has DatetimeIndex)
-    train_start_date: Optional[Any] = None  # datetime
-    train_end_date: Optional[Any] = None
-    test_start_date: Optional[Any] = None
-    test_end_date: Optional[Any] = None
+    train_start_date: Any | None = None  # datetime
+    train_end_date: Any | None = None
+    test_start_date: Any | None = None
+    test_end_date: Any | None = None
 
     @property
     def train_size(self) -> int:
@@ -187,10 +187,10 @@ class SplitResult:
     predictions: np.ndarray
     actuals: np.ndarray
     # Optional datetime fields (populated when X has DatetimeIndex)
-    train_start_date: Optional[Any] = None  # datetime
-    train_end_date: Optional[Any] = None
-    test_start_date: Optional[Any] = None
-    test_end_date: Optional[Any] = None
+    train_start_date: Any | None = None  # datetime
+    train_end_date: Any | None = None
+    test_start_date: Any | None = None
+    test_end_date: Any | None = None
 
     @property
     def train_size(self) -> int:
@@ -291,8 +291,8 @@ class WalkForwardResults:
     ...     print(f"  Split {split.split_idx}: MAE={split.mae:.4f}")
     """
 
-    splits: List[SplitResult]
-    cv_config: Optional[dict[str, Any]] = None
+    splits: list[SplitResult]
+    cv_config: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         """Validate splits list."""
@@ -349,7 +349,7 @@ class WalkForwardResults:
         """Total number of test samples across all splits."""
         return sum(s.test_size for s in self.splits)
 
-    def per_split_metrics(self) -> List[dict[str, float]]:
+    def per_split_metrics(self) -> list[dict[str, float]]:
         """Return metrics for each split as list of dicts."""
         return [
             {
@@ -483,11 +483,11 @@ class NestedCVResult:
     outer_scores: np.ndarray
     mean_outer_score: float
     std_outer_score: float
-    inner_cv_results: List[dict[str, Any]]
+    inner_cv_results: list[dict[str, Any]]
     n_outer_splits: int
     n_inner_splits: int
     scoring: str
-    best_params_per_fold: List[dict[str, Any]]
+    best_params_per_fold: list[dict[str, Any]]
     params_stability: float
 
 
@@ -565,9 +565,9 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
     def __init__(
         self,
         n_splits: int = 5,
-        horizon: Optional[int] = None,
+        horizon: int | None = None,
         window_type: Literal["expanding", "sliding"] = "expanding",
-        window_size: Optional[int] = None,
+        window_size: int | None = None,
         extra_gap: int = 0,
         test_size: int = 1,
     ) -> None:
@@ -617,7 +617,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
 
     def _calculate_splits(
         self, n_samples: int
-    ) -> List[Tuple[np.ndarray, np.ndarray]]:
+    ) -> list[tuple[np.ndarray, np.ndarray]]:
         """
         Calculate all train/test splits.
 
@@ -630,7 +630,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
         -------
         list of (train_indices, test_indices) tuples
         """
-        splits: List[Tuple[np.ndarray, np.ndarray]] = []
+        splits: list[tuple[np.ndarray, np.ndarray]] = []
 
         # Calculate minimum training size for first split
         if self.window_type == "sliding":
@@ -707,9 +707,9 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
     def split(
         self,
         X: ArrayLike,
-        y: Optional[ArrayLike] = None,
-        groups: Optional[ArrayLike] = None,
-    ) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+        y: ArrayLike | None = None,
+        groups: ArrayLike | None = None,
+    ) -> Generator[tuple[np.ndarray, np.ndarray], None, None]:
         """
         Generate indices to split data into training and test sets.
 
@@ -744,9 +744,9 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
 
     def get_n_splits(
         self,
-        X: Optional[ArrayLike] = None,
-        y: Optional[ArrayLike] = None,
-        groups: Optional[ArrayLike] = None,
+        X: ArrayLike | None = None,
+        y: ArrayLike | None = None,
+        groups: ArrayLike | None = None,
         *,
         strict: bool = True,
     ) -> int:
@@ -795,7 +795,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
                 return 0
         return self.n_splits
 
-    def get_split_info(self, X: ArrayLike) -> List[SplitInfo]:
+    def get_split_info(self, X: ArrayLike) -> list[SplitInfo]:
         """
         Return detailed metadata for all splits.
 
@@ -821,7 +821,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
         n_samples = self._get_n_samples(X)
         splits = self._calculate_splits(n_samples)
 
-        infos: List[SplitInfo] = []
+        infos: list[SplitInfo] = []
         for idx, (train, test) in enumerate(splits):
             info = SplitInfo(
                 split_idx=idx,
@@ -922,7 +922,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
         self,
         n_splits: int = 5,
         extra_gap: int = 0,
-        test_size: Optional[int] = None,
+        test_size: int | None = None,
     ) -> None:
         """Initialize CrossFitCV."""
         if n_splits < 2:
@@ -940,7 +940,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
     def _calculate_fold_indices(
         self, n_samples: int
-    ) -> List[Tuple[int, int]]:
+    ) -> list[tuple[int, int]]:
         """
         Calculate (start, end) indices for each fold.
 
@@ -956,7 +956,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
                 f"Not enough samples ({n_samples}) for {self.n_splits} splits"
             )
 
-        folds: List[Tuple[int, int]] = []
+        folds: list[tuple[int, int]] = []
         for k in range(self.n_splits):
             start = k * fold_size
             if k == self.n_splits - 1:
@@ -973,9 +973,9 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
     def split(
         self,
         X: ArrayLike,
-        y: Optional[ArrayLike] = None,
-        groups: Optional[ArrayLike] = None,
-    ) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+        y: ArrayLike | None = None,
+        groups: ArrayLike | None = None,
+    ) -> Generator[tuple[np.ndarray, np.ndarray], None, None]:
         """
         Generate indices to split data into training and test sets.
 
@@ -1022,9 +1022,9 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
     def get_n_splits(
         self,
-        X: Optional[ArrayLike] = None,
-        y: Optional[ArrayLike] = None,
-        groups: Optional[ArrayLike] = None,
+        X: ArrayLike | None = None,
+        y: ArrayLike | None = None,
+        groups: ArrayLike | None = None,
         *,
         strict: bool = True,
     ) -> int:
@@ -1132,7 +1132,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
         predictions = self.fit_predict(model, X, y)
         return cast(np.ndarray, np.asarray(y) - predictions)
 
-    def get_fold_indices(self, X: ArrayLike) -> List[Tuple[int, int]]:
+    def get_fold_indices(self, X: ArrayLike) -> list[tuple[int, int]]:
         """
         Return (start, end) indices for each fold.
 
@@ -1167,11 +1167,11 @@ def walk_forward_evaluate(
     model: Any,
     X: ArrayLike,
     y: ArrayLike,
-    cv: Optional[WalkForwardCV] = None,
+    cv: WalkForwardCV | None = None,
     n_splits: int = 5,
-    horizon: Optional[int] = None,
+    horizon: int | None = None,
     window_type: Literal["expanding", "sliding"] = "expanding",
-    window_size: Optional[int] = None,
+    window_size: int | None = None,
     extra_gap: int = 0,
     test_size: int = 1,
     verbose: bool = False,
@@ -1273,7 +1273,7 @@ def walk_forward_evaluate(
         pass  # pandas not available
 
     # Collect split results
-    split_results: List[SplitResult] = []
+    split_results: list[SplitResult] = []
 
     for split_idx, (train_idx, test_idx) in enumerate(cv.split(X_arr)):
         if verbose:
@@ -1465,19 +1465,19 @@ class NestedWalkForwardCV:
     def __init__(
         self,
         estimator: Any,
-        param_grid: Optional[dict[str, List[Any]]] = None,
-        param_distributions: Optional[dict[str, Any]] = None,
+        param_grid: dict[str, list[Any]] | None = None,
+        param_distributions: dict[str, Any] | None = None,
         *,
-        n_iter: Optional[int] = None,
+        n_iter: int | None = None,
         n_outer_splits: int = 3,
         n_inner_splits: int = 5,
         horizon: int = 1,
-        extra_gap: Optional[int] = None,
+        extra_gap: int | None = None,
         window_type: Literal["expanding", "sliding"] = "expanding",
-        window_size: Optional[int] = None,
-        scoring: Union[str, Any] = "neg_mean_squared_error",
+        window_size: int | None = None,
+        scoring: str | Any = "neg_mean_squared_error",
         refit: bool = True,
-        random_state: Optional[int] = None,
+        random_state: int | None = None,
         n_jobs: int = 1,
         verbose: int = 0,
     ) -> None:
@@ -1537,16 +1537,16 @@ class NestedWalkForwardCV:
         self.verbose = verbose
 
         # Results (populated by fit)
-        self._best_params: Optional[dict[str, Any]] = None
-        self._best_estimator: Optional[Any] = None
-        self._cv_results: Optional[dict[str, Any]] = None
-        self._outer_scores: Optional[np.ndarray] = None
-        self._best_params_per_fold: Optional[List[dict[str, Any]]] = None
-        self._inner_cv_results: Optional[List[dict[str, Any]]] = None
+        self._best_params: dict[str, Any] | None = None
+        self._best_estimator: Any | None = None
+        self._cv_results: dict[str, Any] | None = None
+        self._outer_scores: np.ndarray | None = None
+        self._best_params_per_fold: list[dict[str, Any]] | None = None
+        self._inner_cv_results: list[dict[str, Any]] | None = None
 
     def _get_param_combinations(
-        self, rng: Optional[np.random.Generator] = None
-    ) -> List[dict[str, Any]]:
+        self, rng: np.random.Generator | None = None
+    ) -> list[dict[str, Any]]:
         """
         Generate parameter combinations to evaluate.
 
@@ -1613,8 +1613,8 @@ class NestedWalkForwardCV:
         self,
         X: np.ndarray,
         y: np.ndarray,
-        param_combinations: List[dict[str, Any]],
-    ) -> Tuple[dict[str, Any], dict[str, Any]]:
+        param_combinations: list[dict[str, Any]],
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         """
         Run inner CV to find best parameters.
 
@@ -1632,7 +1632,7 @@ class NestedWalkForwardCV:
         )
 
         scorer = self._get_scorer()
-        results: List[dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
 
         # Check if enough data for inner CV
         try:
@@ -1729,9 +1729,9 @@ class NestedWalkForwardCV:
         )
 
         scorer = self._get_scorer()
-        outer_scores: List[float] = []
-        best_params_per_fold: List[dict[str, Any]] = []
-        inner_cv_results: List[dict[str, Any]] = []
+        outer_scores: list[float] = []
+        best_params_per_fold: list[dict[str, Any]] = []
+        inner_cv_results: list[dict[str, Any]] = []
 
         for fold_idx, (train_outer, test_outer) in enumerate(outer_cv.split(X_arr)):
             if self.verbose:
@@ -1887,7 +1887,7 @@ class NestedWalkForwardCV:
         return float(np.std(self.outer_scores_))
 
     @property
-    def best_params_per_fold_(self) -> List[dict[str, Any]]:
+    def best_params_per_fold_(self) -> list[dict[str, Any]]:
         """Best parameters selected in each outer fold."""
         if self._best_params_per_fold is None:
             raise RuntimeError("Call fit() first.")

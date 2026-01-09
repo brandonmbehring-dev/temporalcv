@@ -15,7 +15,7 @@ Example
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from temporalcv.compare.base import ComparisonReport, ComparisonResult
 
@@ -26,7 +26,7 @@ from temporalcv.compare.base import ComparisonReport, ComparisonResult
 
 def generate_benchmark_docs(
     report: ComparisonReport,
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: dict[str, Any] | None = None,
     include_methodology: bool = True,
 ) -> str:
     """
@@ -46,7 +46,7 @@ def generate_benchmark_docs(
     str
         Markdown-formatted documentation
     """
-    sections: List[str] = []
+    sections: list[str] = []
 
     # Header
     sections.append("# temporalcv Benchmark Results\n")
@@ -76,7 +76,7 @@ def generate_benchmark_docs(
 # =============================================================================
 
 
-def _generate_metadata_section(metadata: Dict[str, Any]) -> str:
+def _generate_metadata_section(metadata: dict[str, Any]) -> str:
     """Generate metadata section."""
     lines = [
         "## Run Information\n",

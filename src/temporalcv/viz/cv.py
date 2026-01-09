@@ -17,7 +17,7 @@ Examples
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -87,11 +87,11 @@ class CVFoldsDisplay(BaseDisplay):
 
     def __init__(
         self,
-        train_indices: List[np.ndarray],
-        test_indices: List[np.ndarray],
+        train_indices: list[np.ndarray],
+        test_indices: list[np.ndarray],
         *,
-        gap_indices: Optional[List[np.ndarray]] = None,
-        n_samples: Optional[int] = None,
+        gap_indices: list[np.ndarray] | None = None,
+        n_samples: int | None = None,
     ):
         self.train_indices = [np.asarray(t) for t in train_indices]
         self.test_indices = [np.asarray(t) for t in test_indices]
@@ -115,9 +115,9 @@ class CVFoldsDisplay(BaseDisplay):
         cls,
         cv: Any,
         X: np.ndarray,
-        y: Optional[np.ndarray] = None,
+        y: np.ndarray | None = None,
         *,
-        groups: Optional[np.ndarray] = None,
+        groups: np.ndarray | None = None,
     ) -> CVFoldsDisplay:
         """
         Create display from a cross-validator object.
@@ -176,9 +176,9 @@ class CVFoldsDisplay(BaseDisplay):
     @classmethod
     def from_splits(
         cls,
-        splits: List[Tuple[np.ndarray, np.ndarray]],
+        splits: list[tuple[np.ndarray, np.ndarray]],
         *,
-        n_samples: Optional[int] = None,
+        n_samples: int | None = None,
     ) -> CVFoldsDisplay:
         """
         Create display from pre-computed splits.
@@ -227,11 +227,11 @@ class CVFoldsDisplay(BaseDisplay):
     def plot(
         self,
         *,
-        ax: Optional[Axes] = None,
+        ax: Axes | None = None,
         tufte: bool = True,
         bar_height: float = 0.6,
         show_labels: bool = True,
-        title: Optional[str] = None,
+        title: str | None = None,
     ) -> CVFoldsDisplay:
         """
         Plot the cross-validation fold structure.

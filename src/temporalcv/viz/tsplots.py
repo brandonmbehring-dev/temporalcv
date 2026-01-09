@@ -21,7 +21,7 @@ Examples
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -41,12 +41,12 @@ __all__ = [
 def plot_cv_folds(
     cv: Any,
     X: np.ndarray,
-    y: Optional[np.ndarray] = None,
+    y: np.ndarray | None = None,
     *,
-    groups: Optional[np.ndarray] = None,
-    ax: Optional[Axes] = None,
+    groups: np.ndarray | None = None,
+    ax: Axes | None = None,
     tufte: bool = True,
-    title: Optional[str] = None,
+    title: str | None = None,
 ) -> Axes:
     """
     Plot cross-validation fold structure.
@@ -95,13 +95,13 @@ def plot_cv_folds(
 
 def plot_prediction_intervals(
     intervals: Any,
-    actuals: Optional[np.ndarray] = None,
+    actuals: np.ndarray | None = None,
     *,
-    x: Optional[np.ndarray] = None,
-    ax: Optional[Axes] = None,
+    x: np.ndarray | None = None,
+    ax: Axes | None = None,
     tufte: bool = True,
     show_coverage: bool = True,
-    title: Optional[str] = None,
+    title: str | None = None,
 ) -> Axes:
     """
     Plot prediction intervals with actuals.
@@ -154,10 +154,10 @@ def plot_prediction_intervals(
 def plot_interval_width(
     intervals: Any,
     *,
-    x: Optional[np.ndarray] = None,
-    ax: Optional[Axes] = None,
+    x: np.ndarray | None = None,
+    ax: Axes | None = None,
     tufte: bool = True,
-    title: Optional[str] = None,
+    title: str | None = None,
 ) -> Axes:
     """
     Plot prediction interval widths over time.
@@ -204,11 +204,11 @@ def plot_interval_width(
 def plot_metric_comparison(
     results: dict[str, dict[str, float]],
     *,
-    ax: Optional[Axes] = None,
+    ax: Axes | None = None,
     tufte: bool = True,
-    baseline: Optional[str] = None,
+    baseline: str | None = None,
     show_values: bool = True,
-    title: Optional[str] = None,
+    title: str | None = None,
 ) -> Axes:
     """
     Plot metric comparison across models.

@@ -14,7 +14,7 @@ Example
 
 from __future__ import annotations
 
-from typing import Dict, Literal, Optional
+from typing import Literal
 
 import numpy as np
 
@@ -26,14 +26,14 @@ from temporalcv.benchmarks.base import (
 
 MONASH_URL = "https://forecastingdata.org/"
 
-M3_HORIZONS: Dict[str, int] = {
+M3_HORIZONS: dict[str, int] = {
     "yearly": 6,
     "quarterly": 8,
     "monthly": 18,
     "other": 8,
 }
 
-M4_HORIZONS: Dict[str, int] = {
+M4_HORIZONS: dict[str, int] = {
     "yearly": 6,
     "quarterly": 8,
     "monthly": 18,
@@ -43,14 +43,14 @@ M4_HORIZONS: Dict[str, int] = {
 }
 
 # Frequency codes for metadata
-M3_FREQUENCY: Dict[str, str] = {
+M3_FREQUENCY: dict[str, str] = {
     "yearly": "Y",
     "quarterly": "Q",
     "monthly": "M",
     "other": "D",
 }
 
-M4_FREQUENCY: Dict[str, str] = {
+M4_FREQUENCY: dict[str, str] = {
     "yearly": "Y",
     "quarterly": "Q",
     "monthly": "M",
@@ -74,7 +74,7 @@ def _check_datasetsforecast() -> None:
 
 def load_m3(
     subset: Literal["yearly", "quarterly", "monthly", "other"] = "monthly",
-    sample_size: Optional[int] = None,
+    sample_size: int | None = None,
 ) -> TimeSeriesDataset:
     """
     Load M3 Competition dataset from Monash repository.
@@ -165,7 +165,7 @@ def load_m4(
     subset: Literal[
         "yearly", "quarterly", "monthly", "weekly", "daily", "hourly"
     ] = "monthly",
-    sample_size: Optional[int] = 100,
+    sample_size: int | None = 100,
 ) -> TimeSeriesDataset:
     """
     Load M4 Competition dataset from Monash repository.

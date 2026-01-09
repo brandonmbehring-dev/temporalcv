@@ -13,7 +13,6 @@ Example
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 
@@ -41,8 +40,8 @@ Required files:
 
 
 def load_m5(
-    path: Optional[str] = None,
-    sample_size: Optional[int] = 100,
+    path: str | None = None,
+    sample_size: int | None = 100,
     aggregate: bool = True,
 ) -> TimeSeriesDataset:
     """

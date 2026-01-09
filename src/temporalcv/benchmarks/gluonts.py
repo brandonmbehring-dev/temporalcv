@@ -14,8 +14,6 @@ Example
 
 from __future__ import annotations
 
-from typing import Optional
-
 import numpy as np
 
 from temporalcv.benchmarks.base import (
@@ -38,7 +36,7 @@ def _check_gluonts() -> None:
 
 
 def load_electricity(
-    subset: Optional[int] = None,
+    subset: int | None = None,
 ) -> TimeSeriesDataset:
     """
     Load UCI Electricity dataset via GluonTS.
@@ -121,7 +119,7 @@ def load_electricity(
 
 
 def load_traffic(
-    subset: Optional[int] = None,
+    subset: int | None = None,
 ) -> TimeSeriesDataset:
     """
     Load California Traffic dataset via GluonTS.

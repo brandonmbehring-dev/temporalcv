@@ -8,7 +8,6 @@ Provides:
 - Shared test fixtures
 """
 
-from typing import Tuple
 
 import numpy as np
 import pytest
@@ -108,7 +107,7 @@ def validate_mc_results(
     ci_upper: np.ndarray,
     true_value: float,
     bias_threshold: float = 0.05,
-    coverage_range: Tuple[float, float] = (0.93, 0.97),
+    coverage_range: tuple[float, float] = (0.93, 0.97),
     se_accuracy_threshold: float = 0.10,
 ) -> dict:
     """

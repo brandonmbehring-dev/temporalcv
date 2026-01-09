@@ -18,8 +18,6 @@ Examples
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-
 import numpy as np
 from matplotlib.axes import Axes
 
@@ -85,12 +83,12 @@ class MetricComparisonDisplay(BaseDisplay):
 
     def __init__(
         self,
-        model_names: List[str],
-        metric_names: List[str],
+        model_names: list[str],
+        metric_names: list[str],
         values: np.ndarray,
         *,
-        lower_is_better: Optional[Dict[str, bool]] = None,
-        baseline_idx: Optional[int] = None,
+        lower_is_better: dict[str, bool] | None = None,
+        baseline_idx: int | None = None,
     ):
         self.model_names = list(model_names)
         self.metric_names = list(metric_names)
@@ -104,10 +102,10 @@ class MetricComparisonDisplay(BaseDisplay):
     @classmethod
     def from_dict(
         cls,
-        results: Dict[str, Dict[str, float]],
+        results: dict[str, dict[str, float]],
         *,
-        lower_is_better: Optional[Dict[str, bool]] = None,
-        baseline: Optional[str] = None,
+        lower_is_better: dict[str, bool] | None = None,
+        baseline: str | None = None,
     ) -> MetricComparisonDisplay:
         """
         Create display from a nested dictionary.
@@ -156,12 +154,12 @@ class MetricComparisonDisplay(BaseDisplay):
     @classmethod
     def from_arrays(
         cls,
-        model_names: List[str],
-        metric_names: List[str],
+        model_names: list[str],
+        metric_names: list[str],
         values: np.ndarray,
         *,
-        lower_is_better: Optional[Dict[str, bool]] = None,
-        baseline_idx: Optional[int] = None,
+        lower_is_better: dict[str, bool] | None = None,
+        baseline_idx: int | None = None,
     ) -> MetricComparisonDisplay:
         """
         Create display from arrays.
@@ -195,13 +193,13 @@ class MetricComparisonDisplay(BaseDisplay):
     def plot(
         self,
         *,
-        ax: Optional[Axes] = None,
+        ax: Axes | None = None,
         tufte: bool = True,
         orientation: str = "vertical",
         show_values: bool = True,
         show_best: bool = True,
-        title: Optional[str] = None,
-        metric_idx: Optional[int] = None,
+        title: str | None = None,
+        metric_idx: int | None = None,
     ) -> MetricComparisonDisplay:
         """
         Plot the metric comparison.
@@ -261,12 +259,12 @@ class MetricComparisonDisplay(BaseDisplay):
     def _plot_single_metric(
         self,
         *,
-        ax: Optional[Axes],
+        ax: Axes | None,
         tufte: bool,
         orientation: str,
         show_values: bool,
         show_best: bool,
-        title: Optional[str],
+        title: str | None,
         metric_idx: int,
     ) -> MetricComparisonDisplay:
         """Plot comparison for a single metric."""
@@ -363,11 +361,11 @@ class MetricComparisonDisplay(BaseDisplay):
     def _plot_grouped(
         self,
         *,
-        ax: Optional[Axes],
+        ax: Axes | None,
         tufte: bool,
         show_values: bool,
         show_best: bool,
-        title: Optional[str],
+        title: str | None,
     ) -> MetricComparisonDisplay:
         """Plot grouped bar chart for multiple metrics."""
         figsize = (max(8, self.n_models * 2), 5)
@@ -438,9 +436,9 @@ class MetricComparisonDisplay(BaseDisplay):
     def plot_relative(
         self,
         *,
-        ax: Optional[Axes] = None,
+        ax: Axes | None = None,
         tufte: bool = True,
-        title: Optional[str] = None,
+        title: str | None = None,
     ) -> MetricComparisonDisplay:
         """
         Plot metrics relative to baseline (percent improvement).

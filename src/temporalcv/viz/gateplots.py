@@ -15,7 +15,7 @@ Examples
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Union
+from typing import Any
 
 from matplotlib.axes import Axes
 
@@ -30,7 +30,7 @@ __all__ = [
 def plot_gate_result(
     gate_result: Any,
     *,
-    ax: Optional[Axes] = None,
+    ax: Axes | None = None,
     tufte: bool = True,
     show_message: bool = True,
 ) -> Axes:
@@ -75,12 +75,12 @@ def plot_gate_result(
 
 
 def plot_gate_comparison(
-    gate_results: Union[List[Any], Any],
+    gate_results: list[Any] | Any,
     *,
-    ax: Optional[Axes] = None,
+    ax: Axes | None = None,
     tufte: bool = True,
     orientation: str = "horizontal",
-    title: Optional[str] = None,
+    title: str | None = None,
 ) -> Axes:
     """
     Plot comparison of multiple gate results.

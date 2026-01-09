@@ -36,7 +36,7 @@ References
 
 from __future__ import annotations
 
-from typing import Optional, cast
+from typing import cast
 
 import numpy as np
 
@@ -357,7 +357,7 @@ def generate_ar1_series(
     phi: float,
     sigma: float,
     n: int,
-    random_state: Optional[int] = None,
+    random_state: int | None = None,
 ) -> np.ndarray:
     """
     Generate a synthetic AR(1) time series.
@@ -423,7 +423,7 @@ def generate_ar2_series(
     phi2: float,
     sigma: float,
     n: int,
-    random_state: Optional[int] = None,
+    random_state: int | None = None,
 ) -> np.ndarray:
     """
     Generate a synthetic AR(2) time series.

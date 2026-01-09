@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -62,7 +62,7 @@ class GapSensitivityResult:
     gap_values: np.ndarray
     metrics: np.ndarray
     metric_name: str
-    break_even_gap: Optional[int]
+    break_even_gap: int | None
     sensitivity_score: float
     degradation_threshold: float
     baseline_metric: float
@@ -77,7 +77,7 @@ def gap_sensitivity_analysis(
     n_splits: int = 5,
     metric: Literal["mae", "rmse", "mse"] = "mae",
     window_type: Literal["expanding", "sliding"] = "expanding",
-    window_size: Optional[int] = None,
+    window_size: int | None = None,
     degradation_threshold: float = 0.10,
 ) -> GapSensitivityResult:
     """
@@ -222,7 +222,7 @@ def gap_sensitivity_analysis(
     baseline_metric = float(metrics[first_valid_idx])
 
     # Find break-even gap
-    break_even_gap: Optional[int] = None
+    break_even_gap: int | None = None
     threshold_metric = baseline_metric * (1 + degradation_threshold)
 
     for i, (gap, m) in enumerate(zip(gap_values, metrics)):

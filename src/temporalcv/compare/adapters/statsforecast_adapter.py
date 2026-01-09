@@ -14,7 +14,7 @@ Example
 
 from __future__ import annotations
 
-from typing import Any, Dict, Literal, Optional, cast
+from typing import Any, Literal, cast
 
 import numpy as np
 
@@ -103,7 +103,7 @@ class StatsforecastAdapter(ForecastAdapter):
         self._season_length = season_length
         self._frequency = frequency
         self._model_kwargs = model_kwargs
-        self._fitted_model: Optional[Any] = None
+        self._fitted_model: Any | None = None
 
     @property
     def model_name(self) -> str:
@@ -199,7 +199,7 @@ class StatsforecastAdapter(ForecastAdapter):
 
         return cast(np.ndarray, np.asarray(predictions, dtype=np.float64))
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Return model parameters."""
         return {
             "model": self._model_name,

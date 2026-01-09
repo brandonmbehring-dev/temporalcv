@@ -22,7 +22,7 @@ Example
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Protocol, Tuple, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
 
@@ -114,13 +114,13 @@ class DatasetMetadata:
     horizon: int
     n_series: int
     total_observations: int
-    train_end_idx: Optional[int] = None
-    characteristics: Dict[str, Any] = field(default_factory=dict)
+    train_end_idx: int | None = None
+    characteristics: dict[str, Any] = field(default_factory=dict)
     license: str = "unknown"
     source_url: str = ""
     official_split: bool = False
     truncated: bool = False
-    original_series_lengths: Optional[list[int]] = None
+    original_series_lengths: list[int] | None = None
     split_source: str = ""
 
     def __post_init__(self) -> None:
@@ -136,7 +136,7 @@ class DatasetMetadata:
         if self.train_end_idx is not None and self.train_end_idx < 1:
             raise ValueError(f"train_end_idx must be >= 1, got {self.train_end_idx}")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "name": self.name,
@@ -174,11 +174,11 @@ class Dataset(Protocol):
         ...
 
     @property
-    def timestamps(self) -> Optional[np.ndarray]:
+    def timestamps(self) -> np.ndarray | None:
         """Timestamps if available."""
         ...
 
-    def get_train_test_split(self) -> Tuple[np.ndarray, np.ndarray]:
+    def get_train_test_split(self) -> tuple[np.ndarray, np.ndarray]:
         """
         Return standard train/test split.
 
@@ -227,8 +227,8 @@ class TimeSeriesDataset:
 
     metadata: DatasetMetadata
     values: np.ndarray
-    timestamps: Optional[np.ndarray] = None
-    exogenous: Optional[np.ndarray] = None
+    timestamps: np.ndarray | None = None
+    exogenous: np.ndarray | None = None
 
     def __post_init__(self) -> None:
         """Validate dataset."""
@@ -253,7 +253,7 @@ class TimeSeriesDataset:
                     f"but need at least {horizon} for horizon-step forecasting"
                 )
 
-    def get_train_test_split(self) -> Tuple[np.ndarray, np.ndarray]:
+    def get_train_test_split(self) -> tuple[np.ndarray, np.ndarray]:
         """
         Return standard train/test split.
 

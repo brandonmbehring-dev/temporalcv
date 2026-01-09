@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, cast
 
 import numpy as np
 
@@ -51,10 +51,10 @@ class ModelResult:
 
     model_name: str
     package: str
-    metrics: Dict[str, float]
+    metrics: dict[str, float]
     predictions: np.ndarray
     runtime_seconds: float
-    model_params: Optional[Dict[str, Any]] = None
+    model_params: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         """Validate result."""
@@ -94,7 +94,7 @@ class ModelResult:
                 return value
         raise KeyError(f"Metric '{name}' not found. Available: {list(self.metrics.keys())}")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "model_name": self.model_name,
@@ -125,10 +125,10 @@ class ComparisonResult:
     """
 
     dataset_name: str
-    models: List[ModelResult]
+    models: list[ModelResult]
     primary_metric: str
     best_model: str = field(init=False)
-    statistical_tests: Optional[Dict[str, Any]] = None
+    statistical_tests: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         """Validate and compute best model."""
@@ -156,14 +156,14 @@ class ComparisonResult:
             )
         self.best_model = best_name
 
-    def _get_all_metrics(self) -> List[str]:
+    def _get_all_metrics(self) -> list[str]:
         """Get all unique metric names across models."""
         metrics: set[str] = set()
         for model in self.models:
             metrics.update(model.metrics.keys())
         return sorted(metrics)
 
-    def get_ranking(self, metric: Optional[str] = None) -> List[Tuple[str, float]]:
+    def get_ranking(self, metric: str | None = None) -> list[tuple[str, float]]:
         """
         Get models ranked by metric (ascending).
 
@@ -178,7 +178,7 @@ class ComparisonResult:
             List of (model_name, metric_value) sorted ascending
         """
         metric = metric or self.primary_metric
-        results: List[Tuple[str, float]] = []
+        results: list[tuple[str, float]] = []
         for model in self.models:
             try:
                 value = model.get_metric(metric)
@@ -187,7 +187,7 @@ class ComparisonResult:
                 continue
         return sorted(results, key=lambda x: x[1])
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "dataset_name": self.dataset_name,
@@ -211,23 +211,23 @@ class ComparisonReport:
         Aggregate summary statistics
     """
 
-    results: List[ComparisonResult]
-    summary: Dict[str, Any] = field(default_factory=dict)
+    results: list[ComparisonResult]
+    summary: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Compute summary if not provided."""
         if not self.summary and self.results:
             self.summary = self._compute_summary()
 
-    def _compute_summary(self) -> Dict[str, Any]:
+    def _compute_summary(self) -> dict[str, Any]:
         """Compute aggregate summary."""
         # Count wins per model
-        wins: Dict[str, int] = {}
+        wins: dict[str, int] = {}
         for result in self.results:
             wins[result.best_model] = wins.get(result.best_model, 0) + 1
 
         # Average metrics per model
-        avg_metrics: Dict[str, Dict[str, List[float]]] = {}
+        avg_metrics: dict[str, dict[str, list[float]]] = {}
         for result in self.results:
             for model in result.models:
                 if model.model_name not in avg_metrics:
@@ -238,7 +238,7 @@ class ComparisonReport:
                     avg_metrics[model.model_name][metric_name].append(value)
 
         # Convert to means
-        mean_metrics: Dict[str, Dict[str, float]] = {}
+        mean_metrics: dict[str, dict[str, float]] = {}
         for model_name, metrics in avg_metrics.items():
             mean_metrics[model_name] = {
                 metric: float(np.mean(values)) for metric, values in metrics.items()
@@ -259,7 +259,7 @@ class ComparisonReport:
         str
             Markdown-formatted report
         """
-        lines: List[str] = []
+        lines: list[str] = []
         lines.append("# Model Comparison Report\n")
 
         # Summary
@@ -351,7 +351,7 @@ class ForecastAdapter(ABC):
         """
         ...
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """
         Get model parameters.
 
@@ -488,7 +488,7 @@ class SeasonalNaiveAdapter(ForecastAdapter):
 
         return cast(np.ndarray, predictions)
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Return model parameters."""
         return {"season_length": self.season_length}
 
@@ -501,7 +501,7 @@ class SeasonalNaiveAdapter(ForecastAdapter):
 def compute_comparison_metrics(
     predictions: np.ndarray,
     actuals: np.ndarray,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Compute standard comparison metrics.
 
@@ -525,7 +525,7 @@ def compute_comparison_metrics(
     errors = predictions - actuals
     abs_errors = np.abs(errors)
 
-    metrics: Dict[str, float] = {}
+    metrics: dict[str, float] = {}
 
     # MAE
     metrics["mae"] = float(np.mean(abs_errors))

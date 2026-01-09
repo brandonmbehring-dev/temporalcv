@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import copy
 from abc import ABC, abstractmethod
-from typing import List, Literal, Optional, Protocol, Tuple, runtime_checkable
+from typing import Literal, Protocol, runtime_checkable
 
 import numpy as np
 
@@ -61,7 +61,7 @@ class BootstrapStrategy(ABC):
         y: np.ndarray,
         n_samples: int,
         rng: np.random.Generator,
-    ) -> List[Tuple[np.ndarray, np.ndarray]]:
+    ) -> list[tuple[np.ndarray, np.ndarray]]:
         """
         Generate bootstrap samples preserving time series properties.
 
@@ -199,7 +199,7 @@ class TimeSeriesBagger:
         strategy: BootstrapStrategy,
         n_estimators: int = 20,
         aggregation: Literal["mean", "median"] = "mean",
-        random_state: Optional[int] = None,
+        random_state: int | None = None,
     ):
         if n_estimators < 1:
             raise ValueError(f"n_estimators must be >= 1, got {n_estimators}")
@@ -211,7 +211,7 @@ class TimeSeriesBagger:
         self.n_estimators = n_estimators
         self.aggregation = aggregation
         self.random_state = random_state
-        self.estimators_: List[SupportsPredict] = []
+        self.estimators_: list[SupportsPredict] = []
         self._fitted = False
 
     @property
@@ -331,7 +331,7 @@ class TimeSeriesBagger:
 
     def predict_with_uncertainty(
         self, X: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Return (mean, std) across estimators for uncertainty quantification.
 
@@ -350,7 +350,7 @@ class TimeSeriesBagger:
 
     def predict_interval(
         self, X: np.ndarray, alpha: float = 0.05
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Return (mean, lower, upper) prediction interval.
 

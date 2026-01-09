@@ -63,7 +63,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
-from typing import Literal, Optional, cast
+from typing import Literal, cast
 
 import numpy as np
 from scipy import stats
@@ -374,7 +374,7 @@ def _bartlett_kernel(j: int, bandwidth: int) -> float:
 
 def compute_hac_variance(
     d: np.ndarray,
-    bandwidth: Optional[int] = None,
+    bandwidth: int | None = None,
 ) -> float:
     """
     Compute HAC (Heteroskedasticity and Autocorrelation Consistent) variance.
@@ -1454,7 +1454,7 @@ def cw_test(
 def pt_test(
     actual: np.ndarray,
     predicted: np.ndarray,
-    move_threshold: Optional[float] = None,
+    move_threshold: float | None = None,
 ) -> PTTestResult:
     """
     Pesaran-Timmermann test for directional accuracy.
@@ -1672,7 +1672,6 @@ def pt_test(
 # =============================================================================
 
 
-from typing import Dict, List, Tuple
 
 
 @dataclass
@@ -1704,12 +1703,12 @@ class MultiModelComparisonResult:
     ...     print(f"{pair[0]} significantly better than {pair[1]}")
     """
 
-    pairwise_results: Dict[Tuple[str, str], DMTestResult]
+    pairwise_results: dict[tuple[str, str], DMTestResult]
     best_model: str
     bonferroni_alpha: float
     original_alpha: float
-    model_rankings: List[Tuple[str, float]]
-    significant_pairs: List[Tuple[str, str]]
+    model_rankings: list[tuple[str, float]]
+    significant_pairs: list[tuple[str, str]]
 
     @property
     def n_comparisons(self) -> int:
@@ -1746,7 +1745,7 @@ class MultiModelComparisonResult:
 
         return "\n".join(lines)
 
-    def get_pairwise(self, model_a: str, model_b: str) -> Optional[DMTestResult]:
+    def get_pairwise(self, model_a: str, model_b: str) -> DMTestResult | None:
         """Get DM test result for specific pair (order-independent lookup)."""
         if (model_a, model_b) in self.pairwise_results:
             return self.pairwise_results[(model_a, model_b)]
@@ -1756,7 +1755,7 @@ class MultiModelComparisonResult:
 
 
 def compare_multiple_models(
-    errors_dict: Dict[str, np.ndarray],
+    errors_dict: dict[str, np.ndarray],
     h: int = 1,
     alpha: float = 0.05,
     loss: Literal["squared", "absolute"] = "squared",
@@ -1846,7 +1845,7 @@ def compare_multiple_models(
         raise ValueError(f"All error arrays must have same length. Got: {length_info}")
 
     # Compute mean loss for each model
-    mean_losses: Dict[str, float] = {}
+    mean_losses: dict[str, float] = {}
     for name, errors in errors_dict.items():
         if loss == "squared":
             mean_losses[name] = float(np.mean(errors**2))
@@ -1862,8 +1861,8 @@ def compare_multiple_models(
     bonferroni_alpha = alpha / n_comparisons
 
     # Run all pairwise DM tests
-    pairwise_results: Dict[Tuple[str, str], DMTestResult] = {}
-    significant_pairs: List[Tuple[str, str]] = []
+    pairwise_results: dict[tuple[str, str], DMTestResult] = {}
+    significant_pairs: list[tuple[str, str]] = []
 
     for i, name_a in enumerate(model_names):
         for name_b in model_names[i + 1 :]:
@@ -1958,22 +1957,22 @@ class MultiHorizonResult:
     dm_test : Underlying test for each horizon.
     """
 
-    horizons: Tuple[int, ...]
-    dm_results: Dict[int, DMTestResult]
+    horizons: tuple[int, ...]
+    dm_results: dict[int, DMTestResult]
     model_1_name: str
     model_2_name: str
-    n_per_horizon: Dict[int, int]
+    n_per_horizon: dict[int, int]
     loss: str
     alternative: str
     alpha: float
 
     @property
-    def significant_horizons(self) -> List[int]:
+    def significant_horizons(self) -> list[int]:
         """List of horizons where p-value < alpha (model 1 significantly better)."""
         return [h for h in self.horizons if self.dm_results[h].pvalue < self.alpha]
 
     @property
-    def first_insignificant_horizon(self) -> Optional[int]:
+    def first_insignificant_horizon(self) -> int | None:
         """
         First horizon where significance is lost.
 
@@ -2036,11 +2035,11 @@ class MultiHorizonResult:
         else:
             return "irregular"
 
-    def get_pvalues(self) -> Dict[int, float]:
+    def get_pvalues(self) -> dict[int, float]:
         """Get p-values for each horizon."""
         return {h: self.dm_results[h].pvalue for h in self.horizons}
 
-    def get_statistics(self) -> Dict[int, float]:
+    def get_statistics(self) -> dict[int, float]:
         """Get DM statistics for each horizon."""
         return {h: self.dm_results[h].statistic for h in self.horizons}
 
@@ -2144,18 +2143,18 @@ class MultiModelHorizonResult:
     compare_multiple_models : Underlying multi-model comparison.
     """
 
-    horizons: Tuple[int, ...]
-    model_names: Tuple[str, ...]
-    pairwise_by_horizon: Dict[int, MultiModelComparisonResult]
+    horizons: tuple[int, ...]
+    model_names: tuple[str, ...]
+    pairwise_by_horizon: dict[int, MultiModelComparisonResult]
     alpha: float
 
     @property
-    def best_model_by_horizon(self) -> Dict[int, str]:
+    def best_model_by_horizon(self) -> dict[int, str]:
         """Best model at each horizon (by lowest mean loss)."""
         return {h: self.pairwise_by_horizon[h].best_model for h in self.horizons}
 
     @property
-    def consistent_best(self) -> Optional[str]:
+    def consistent_best(self) -> str | None:
         """
         Model that is best at all horizons.
 
@@ -2288,8 +2287,8 @@ def compare_horizons(
         raise ValueError(f"All horizons must be >= 1. Got: {horizons_tuple}")
 
     # Run DM test for each horizon
-    dm_results: Dict[int, DMTestResult] = {}
-    n_per_horizon: Dict[int, int] = {}
+    dm_results: dict[int, DMTestResult] = {}
+    n_per_horizon: dict[int, int] = {}
 
     for h in horizons_tuple:
         result = dm_test(
@@ -2317,7 +2316,7 @@ def compare_horizons(
 
 
 def compare_models_horizons(
-    errors_dict: Dict[str, np.ndarray],
+    errors_dict: dict[str, np.ndarray],
     horizons: Sequence[int] = (1, 2, 3, 4),
     *,
     loss: Literal["squared", "absolute"] = "squared",
@@ -2394,7 +2393,7 @@ def compare_models_horizons(
         raise ValueError(f"All horizons must be >= 1. Got: {horizons_tuple}")
 
     # Run multi-model comparison at each horizon
-    pairwise_by_horizon: Dict[int, MultiModelComparisonResult] = {}
+    pairwise_by_horizon: dict[int, MultiModelComparisonResult] = {}
 
     for h in horizons_tuple:
         result = compare_multiple_models(
@@ -2484,7 +2483,7 @@ class BidirectionalEncompassingResult:
     a_encompasses_b: EncompassingTestResult
     b_encompasses_a: EncompassingTestResult
     recommendation: str
-    combined_weight_b: Optional[float]
+    combined_weight_b: float | None
 
 
 def forecast_encompassing_test(
@@ -2755,7 +2754,7 @@ class RealityCheckResult:
     n: int
 
     @property
-    def significant_models(self) -> List[str]:
+    def significant_models(self) -> list[str]:
         """Return models that beat the benchmark (positive test statistics)."""
         return [
             model
@@ -2862,8 +2861,8 @@ def reality_check_test(
     h: int = 1,
     loss: Literal["squared", "absolute"] = "squared",
     n_bootstrap: int = 1000,
-    block_size: Optional[int] = None,
-    random_state: Optional[int] = None,
+    block_size: int | None = None,
+    random_state: int | None = None,
 ) -> RealityCheckResult:
     """
     White's Reality Check for data snooping.
@@ -3015,8 +3014,8 @@ def spa_test(
     h: int = 1,
     loss: Literal["squared", "absolute"] = "squared",
     n_bootstrap: int = 1000,
-    block_size: Optional[int] = None,
-    random_state: Optional[int] = None,
+    block_size: int | None = None,
+    random_state: int | None = None,
 ) -> SPATestResult:
     """
     Hansen's Superior Predictive Ability (SPA) test.

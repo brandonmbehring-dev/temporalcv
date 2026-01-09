@@ -19,8 +19,6 @@ References
 
 from __future__ import annotations
 
-from typing import List, Tuple
-
 import numpy as np
 
 from temporalcv.bagging.base import BootstrapStrategy
@@ -71,7 +69,7 @@ class FeatureBagging(BootstrapStrategy):
         if not 0.0 < max_features <= 1.0:
             raise ValueError(f"max_features must be in (0.0, 1.0], got {max_features}")
         self.max_features = max_features
-        self.feature_indices_: List[np.ndarray] = []
+        self.feature_indices_: list[np.ndarray] = []
 
     def generate_samples(
         self,
@@ -79,7 +77,7 @@ class FeatureBagging(BootstrapStrategy):
         y: np.ndarray,
         n_samples: int,
         rng: np.random.Generator,
-    ) -> List[Tuple[np.ndarray, np.ndarray]]:
+    ) -> list[tuple[np.ndarray, np.ndarray]]:
         """
         Generate bootstrap samples using Feature Bagging.
 
@@ -108,7 +106,7 @@ class FeatureBagging(BootstrapStrategy):
         n_features = X.shape[1]
         n_select = max(1, int(self.max_features * n_features))
 
-        samples: List[Tuple[np.ndarray, np.ndarray]] = []
+        samples: list[tuple[np.ndarray, np.ndarray]] = []
         self.feature_indices_ = []
 
         for _ in range(n_samples):

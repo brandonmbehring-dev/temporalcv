@@ -18,7 +18,7 @@ Examples
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -82,8 +82,8 @@ class PredictionIntervalDisplay(BaseDisplay):
     >>> display.plot()
     """
 
-    coverage_: Optional[float]
-    _covered: Optional[np.ndarray]
+    coverage_: float | None
+    _covered: np.ndarray | None
 
     def __init__(
         self,
@@ -91,9 +91,9 @@ class PredictionIntervalDisplay(BaseDisplay):
         lower: np.ndarray,
         upper: np.ndarray,
         *,
-        actuals: Optional[np.ndarray] = None,
+        actuals: np.ndarray | None = None,
         confidence: float = 0.90,
-        x: Optional[np.ndarray] = None,
+        x: np.ndarray | None = None,
     ):
         self.predictions = np.asarray(predictions)
         self.lower = np.asarray(lower)
@@ -115,9 +115,9 @@ class PredictionIntervalDisplay(BaseDisplay):
     def from_conformal(
         cls,
         intervals: Any,
-        actuals: Optional[np.ndarray] = None,
+        actuals: np.ndarray | None = None,
         *,
-        x: Optional[np.ndarray] = None,
+        x: np.ndarray | None = None,
     ) -> PredictionIntervalDisplay:
         """
         Create display from a PredictionInterval object.
@@ -157,9 +157,9 @@ class PredictionIntervalDisplay(BaseDisplay):
         lower: np.ndarray,
         upper: np.ndarray,
         *,
-        actuals: Optional[np.ndarray] = None,
+        actuals: np.ndarray | None = None,
         confidence: float = 0.90,
-        x: Optional[np.ndarray] = None,
+        x: np.ndarray | None = None,
     ) -> PredictionIntervalDisplay:
         """
         Create display from arrays.
@@ -196,12 +196,12 @@ class PredictionIntervalDisplay(BaseDisplay):
     def plot(
         self,
         *,
-        ax: Optional[Axes] = None,
+        ax: Axes | None = None,
         tufte: bool = True,
         show_predictions: bool = True,
         show_actuals: bool = True,
         show_coverage: bool = True,
-        title: Optional[str] = None,
+        title: str | None = None,
     ) -> PredictionIntervalDisplay:
         """
         Plot the prediction intervals.
@@ -310,9 +310,9 @@ class PredictionIntervalDisplay(BaseDisplay):
     def plot_width(
         self,
         *,
-        ax: Optional[Axes] = None,
+        ax: Axes | None = None,
         tufte: bool = True,
-        title: Optional[str] = None,
+        title: str | None = None,
     ) -> PredictionIntervalDisplay:
         """
         Plot the interval widths over time.

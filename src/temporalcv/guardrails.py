@@ -37,7 +37,7 @@ See temporalcv.gates for underlying gate implementations and academic references
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
@@ -64,11 +64,11 @@ class GuardrailResult:
     """
 
     passed: bool
-    warnings: List[str] = field(default_factory=list)
-    errors: List[str] = field(default_factory=list)
-    details: Dict[str, Any] = field(default_factory=dict)
-    skipped: List[str] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+    details: dict[str, Any] = field(default_factory=dict)
+    skipped: list[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
 
     def __bool__(self) -> bool:
         """Allow using result in boolean context."""
@@ -335,8 +335,8 @@ def check_stratified_sample_size(
 
 
 def check_forecast_horizon_consistency(
-    horizons: List[float],
-    horizon_labels: Optional[List[str]] = None,
+    horizons: list[float],
+    horizon_labels: list[str] | None = None,
     max_ratio: float = 2.0,
 ) -> GuardrailResult:
     """
@@ -495,10 +495,10 @@ def run_all_guardrails(
     model_metric: float,
     baseline_metric: float,
     n_samples: int,
-    n_up: Optional[int] = None,
-    n_down: Optional[int] = None,
-    horizon_metrics: Optional[List[float]] = None,
-    residuals: Optional[np.ndarray] = None,
+    n_up: int | None = None,
+    n_down: int | None = None,
+    horizon_metrics: list[float] | None = None,
+    residuals: np.ndarray | None = None,
     improvement_threshold: float = 0.20,
     min_sample_size: int = 50,
     min_stratum_size: int = 10,
@@ -550,11 +550,11 @@ def run_all_guardrails(
     ...     print(result.summary())
     """
     # Collect all results
-    all_warnings: List[str] = []
-    all_errors: List[str] = []
-    all_skipped: List[str] = []
-    all_recommendations: List[str] = []
-    all_details: Dict[str, Any] = {}
+    all_warnings: list[str] = []
+    all_errors: list[str] = []
+    all_skipped: list[str] = []
+    all_recommendations: list[str] = []
+    all_details: dict[str, Any] = {}
 
     # 1. Check suspicious improvement
     improvement_result = check_suspicious_improvement(

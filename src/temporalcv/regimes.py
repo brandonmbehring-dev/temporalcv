@@ -46,7 +46,7 @@ References
 from __future__ import annotations
 
 import warnings
-from typing import Dict, List, Literal
+from typing import Literal
 
 import numpy as np
 
@@ -155,7 +155,7 @@ def classify_volatility_regime(
     vol_high = np.percentile(valid_vol, high_percentile)
 
     # Classify each point
-    regimes: List[str] = []
+    regimes: list[str] = []
     for vol in rolling_vol:
         if np.isnan(vol):
             regimes.append("MED")  # Default for insufficient history
@@ -219,7 +219,7 @@ def classify_direction_regime(
     if threshold < 0:
         raise ValueError(f"threshold must be non-negative, got {threshold}")
 
-    directions: List[str] = []
+    directions: list[str] = []
     for v in values:
         if abs(v) <= threshold:
             directions.append("FLAT")
@@ -281,7 +281,7 @@ def get_combined_regimes(
     return result
 
 
-def get_regime_counts(regimes: np.ndarray) -> Dict[str, int]:
+def get_regime_counts(regimes: np.ndarray) -> dict[str, int]:
     """
     Get sample counts per regime.
 
@@ -402,8 +402,8 @@ class StratifiedMetricsResult:
     overall_mae: float
     overall_rmse: float
     n_total: int
-    by_regime: Dict[str, Dict[str, float]] = field(default_factory=dict)
-    masked_regimes: List[str] = field(default_factory=list)
+    by_regime: dict[str, dict[str, float]] = field(default_factory=dict)
+    masked_regimes: list[str] = field(default_factory=list)
 
     def summary(self) -> str:
         """Generate human-readable summary of stratified metrics."""
@@ -528,7 +528,7 @@ def compute_stratified_metrics(
     masked_regimes = [r for r, c in regime_counts.items() if c < min_n]
 
     # Compute per-regime metrics
-    by_regime: Dict[str, Dict[str, float]] = {}
+    by_regime: dict[str, dict[str, float]] = {}
 
     for regime in unique_regimes:
         regime_str = str(regime)

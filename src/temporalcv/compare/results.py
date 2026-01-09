@@ -22,7 +22,7 @@ import platform
 import sys
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
@@ -34,9 +34,9 @@ from temporalcv.compare.base import (
 
 
 def create_run_metadata(
-    models: Optional[List[str]] = None,
-    datasets: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    models: list[str] | None = None,
+    datasets: list[str] | None = None,
+) -> dict[str, Any]:
     """
     Create metadata for a benchmark run.
 
@@ -64,7 +64,7 @@ def create_run_metadata(
     """
     import temporalcv
 
-    metadata: Dict[str, Any] = {
+    metadata: dict[str, Any] = {
         "run_id": str(uuid.uuid4())[:8],
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "temporalcv_version": getattr(temporalcv, "__version__", "unknown"),
@@ -81,7 +81,7 @@ def create_run_metadata(
     return metadata
 
 
-def _serialize_report(report: ComparisonReport) -> Dict[str, Any]:
+def _serialize_report(report: ComparisonReport) -> dict[str, Any]:
     """
     Serialize ComparisonReport to JSON-compatible dictionary.
 
@@ -119,7 +119,7 @@ def _serialize_report(report: ComparisonReport) -> Dict[str, Any]:
     }
 
 
-def _deserialize_report(data: Dict[str, Any]) -> ComparisonReport:
+def _deserialize_report(data: dict[str, Any]) -> ComparisonReport:
     """
     Deserialize dictionary to ComparisonReport.
 
@@ -166,7 +166,7 @@ def _deserialize_report(data: Dict[str, Any]) -> ComparisonReport:
 def save_benchmark_results(
     report: ComparisonReport,
     path: Path,
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: dict[str, Any] | None = None,
 ) -> None:
     """
     Save benchmark results to JSON file.
@@ -201,7 +201,7 @@ def save_benchmark_results(
         json.dump(output, f, indent=2, default=_json_default)
 
 
-def load_benchmark_results(path: Path) -> tuple[ComparisonReport, Dict[str, Any]]:
+def load_benchmark_results(path: Path) -> tuple[ComparisonReport, dict[str, Any]]:
     """
     Load benchmark results from JSON file.
 
@@ -306,7 +306,7 @@ def save_checkpoint(
     return checkpoint_path
 
 
-def load_checkpoint(checkpoint_path: Path) -> Optional[ComparisonResult]:
+def load_checkpoint(checkpoint_path: Path) -> ComparisonResult | None:
     """
     Load a single dataset result from checkpoint.
 
@@ -329,7 +329,7 @@ def load_checkpoint(checkpoint_path: Path) -> Optional[ComparisonResult]:
     return None
 
 
-def list_checkpoints(checkpoint_dir: Path) -> List[str]:
+def list_checkpoints(checkpoint_dir: Path) -> list[str]:
     """
     List available checkpoints in a directory.
 

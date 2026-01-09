@@ -16,7 +16,8 @@ Example
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Dict, Optional, cast
+from collections.abc import Callable
+from typing import Any, cast
 
 import numpy as np
 
@@ -197,7 +198,7 @@ class MultiSeriesAdapter(ForecastAdapter):
 
         return cast(np.ndarray, np.array(results))
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """
         Get model parameters.
 
@@ -236,7 +237,7 @@ class ProgressAdapter(ForecastAdapter):
     def __init__(
         self,
         base_adapter: ForecastAdapter,
-        progress_callback: Optional[Callable[[int, int], None]] = None,
+        progress_callback: Callable[[int, int], None] | None = None,
     ):
         """Initialize progress wrapper."""
         self._base = base_adapter
@@ -291,7 +292,7 @@ class ProgressAdapter(ForecastAdapter):
 
         return cast(np.ndarray, predictions)
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Get parameters from base adapter."""
         return self._base.get_params()
 

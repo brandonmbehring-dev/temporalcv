@@ -18,7 +18,7 @@ References
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Literal, Tuple
+from typing import Literal
 
 import numpy as np
 
@@ -66,7 +66,7 @@ class InfluenceDiagnostic:
     observation_high_mask: np.ndarray
     block_influence: np.ndarray
     block_high_mask: np.ndarray
-    block_indices: List[Tuple[int, int]]
+    block_indices: list[tuple[int, int]]
     n_high_influence_obs: int
     n_high_influence_blocks: int
     influence_threshold: float
@@ -193,8 +193,8 @@ def compute_dm_influence(
         block_size = 1
         n_blocks = n
 
-    block_indices: List[Tuple[int, int]] = []
-    block_influence_list: List[float] = []
+    block_indices: list[tuple[int, int]] = []
+    block_influence_list: list[float] = []
 
     # Compute full DM statistic (mean of d)
     full_dm = d_mean

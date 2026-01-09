@@ -35,7 +35,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
-from typing import Literal, Tuple
+from typing import Literal
 
 import numpy as np
 
@@ -184,7 +184,7 @@ def _compute_brier_decomposition(
     pred_probs: np.ndarray,
     actual_binary: np.ndarray,
     n_bins: int = 10,
-) -> Tuple[float, float, float]:
+) -> tuple[float, float, float]:
     """
     Compute Brier score decomposition (Murphy 1973).
 
@@ -554,7 +554,7 @@ def compute_calibrated_direction_brier(
     pred_probs: np.ndarray,
     actual_directions: np.ndarray,
     n_bins: int = 10,
-) -> Tuple[float, np.ndarray, np.ndarray]:
+) -> tuple[float, np.ndarray, np.ndarray]:
     """
     Compute Brier score with reliability diagram data.
 

@@ -21,7 +21,6 @@ References
 from __future__ import annotations
 
 import warnings
-from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -72,7 +71,7 @@ class MovingBlockBootstrap(BootstrapStrategy):
     Kunsch (1989), Ann. Stat. 17(3): Block length O(n^{1/3}) optimal
     """
 
-    def __init__(self, block_length: Optional[int] = None):
+    def __init__(self, block_length: int | None = None):
         self.block_length = block_length
 
     def generate_samples(
@@ -81,7 +80,7 @@ class MovingBlockBootstrap(BootstrapStrategy):
         y: np.ndarray,
         n_samples: int,
         rng: np.random.Generator,
-    ) -> List[Tuple[np.ndarray, np.ndarray]]:
+    ) -> list[tuple[np.ndarray, np.ndarray]]:
         """
         Generate bootstrap samples using Moving Block Bootstrap.
 
@@ -126,7 +125,7 @@ class MovingBlockBootstrap(BootstrapStrategy):
         # VECTORIZED: Create block offset array once
         block_offsets = np.arange(block_len)
 
-        samples: List[Tuple[np.ndarray, np.ndarray]] = []
+        samples: list[tuple[np.ndarray, np.ndarray]] = []
         for i in range(n_samples):
             # VECTORIZED: Compute all indices using broadcasting
             # block_starts[:, np.newaxis] + block_offsets -> (n_blocks, block_len)

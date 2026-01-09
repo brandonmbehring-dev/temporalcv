@@ -54,9 +54,9 @@ from temporalcv.bagging.strategies import (
 def create_block_bagger(
     base_model: SupportsPredict,
     n_estimators: int = 20,
-    block_length: Optional[int] = None,
+    block_length: int | None = None,
     aggregation: str = "mean",
-    random_state: Optional[int] = None,
+    random_state: int | None = None,
 ) -> TimeSeriesBagger:
     """
     Create bagged model with Moving Block Bootstrap.
@@ -104,9 +104,9 @@ def create_block_bagger(
 def create_stationary_bagger(
     base_model: SupportsPredict,
     n_estimators: int = 20,
-    expected_block_length: Optional[float] = None,
+    expected_block_length: float | None = None,
     aggregation: str = "mean",
-    random_state: Optional[int] = None,
+    random_state: int | None = None,
 ) -> TimeSeriesBagger:
     """
     Create bagged model with Stationary Bootstrap.
@@ -154,7 +154,7 @@ def create_feature_bagger(
     n_estimators: int = 20,
     max_features: float = 0.7,
     aggregation: str = "mean",
-    random_state: Optional[int] = None,
+    random_state: int | None = None,
 ) -> TimeSeriesBagger:
     """
     Create bagged model with Feature Bagging (Random Subspace).

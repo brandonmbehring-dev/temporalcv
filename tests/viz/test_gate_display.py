@@ -6,7 +6,7 @@ Validates GateResultDisplay and GateComparisonDisplay classes.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 import matplotlib.pyplot as plt
 import pytest
@@ -33,7 +33,7 @@ class MockGateResult:
     gate_name: str
     status: MockGateStatus
     message: str
-    details: Optional[Dict[str, Any]] = None
+    details: dict[str, Any] | None = None
 
 
 @dataclass
