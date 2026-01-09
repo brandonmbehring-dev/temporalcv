@@ -474,7 +474,7 @@ def classify_regimes_from_changepoints(
             high_thresh = float(np.percentile(segment_values, 67))
         else:
             # Not enough segments - use overall statistics
-            overall_val = np.mean(segment_values)
+            overall_val = float(np.mean(segment_values))
             low_thresh = overall_val * 0.5
             high_thresh = overall_val * 1.5
 

@@ -468,7 +468,7 @@ class SeasonalNaiveAdapter(ForecastAdapter):
             predictions = np.zeros((n_series, test_size))
             for s in range(n_series):
                 predictions[s] = self._predict_single(train_values[s], test_size)
-            return cast(np.ndarray, predictions)
+            return predictions
 
         return self._predict_single(train_values, test_size)
 

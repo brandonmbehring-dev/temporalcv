@@ -142,7 +142,7 @@ class MultiSeriesAdapter(ForecastAdapter):
                 )
                 predictions[i] = np.nan
 
-        return cast(np.ndarray, predictions)
+        return predictions
 
     def _fit_predict_parallel(
         self,
@@ -282,7 +282,7 @@ class ProgressAdapter(ForecastAdapter):
             if self._callback is not None:
                 self._callback(i + 1, n_series)
 
-        return cast(np.ndarray, predictions)
+        return predictions
 
     def get_params(self) -> dict[str, Any]:
         """Get parameters from base adapter."""

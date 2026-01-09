@@ -360,6 +360,7 @@ def create_synthetic_dataset(
     """
     rng = np.random.default_rng(seed)
 
+    values: np.ndarray
     if n_series == 1:
         # Single series: shape (n_obs,)
         values = np.zeros(n_obs)

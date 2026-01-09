@@ -453,7 +453,7 @@ def difference_until_stationary(
     >>> d
     1
     """
-    arr = np.asarray(series).ravel()
+    arr: np.ndarray = np.asarray(series).ravel()
 
     for d in range(max_diff + 1):
         if d > 0:

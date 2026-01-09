@@ -8,6 +8,11 @@ Provides:
 - Shared test fixtures
 """
 
+import matplotlib
+
+# Use non-interactive backend for CI (avoids Tcl/Tk issues on Windows)
+matplotlib.use("Agg")
+
 import numpy as np
 import pytest
 
