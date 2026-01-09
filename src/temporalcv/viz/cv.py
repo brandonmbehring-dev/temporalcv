@@ -95,17 +95,13 @@ class CVFoldsDisplay(BaseDisplay):
     ):
         self.train_indices = [np.asarray(t) for t in train_indices]
         self.test_indices = [np.asarray(t) for t in test_indices]
-        self.gap_indices = (
-            [np.asarray(g) for g in gap_indices] if gap_indices else None
-        )
+        self.gap_indices = [np.asarray(g) for g in gap_indices] if gap_indices else None
 
         # Infer n_samples
         if n_samples is not None:
             self.n_samples = n_samples
         else:
-            all_indices = np.concatenate(
-                self.train_indices + self.test_indices
-            )
+            all_indices = np.concatenate(self.train_indices + self.test_indices)
             self.n_samples = int(np.max(all_indices)) + 1
 
         self.n_splits = len(self.train_indices)

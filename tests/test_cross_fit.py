@@ -116,9 +116,7 @@ class TestFitPredict:
 
         # Out-of-sample predictions should differ from in-sample
         valid_mask = ~np.isnan(oos_predictions)
-        assert not np.allclose(
-            oos_predictions[valid_mask], in_sample_predictions[valid_mask]
-        )
+        assert not np.allclose(oos_predictions[valid_mask], in_sample_predictions[valid_mask])
 
 
 class TestFitPredictResiduals:
@@ -136,9 +134,7 @@ class TestFitPredictResiduals:
         residuals = cv.fit_predict_residuals(Ridge(), X, y)
 
         valid_mask = ~np.isnan(predictions)
-        np.testing.assert_allclose(
-            residuals[valid_mask], y[valid_mask] - predictions[valid_mask]
-        )
+        np.testing.assert_allclose(residuals[valid_mask], y[valid_mask] - predictions[valid_mask])
 
 
 class TestGapEnforcement:

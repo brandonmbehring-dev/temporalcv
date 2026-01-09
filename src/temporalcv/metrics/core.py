@@ -516,6 +516,7 @@ def compute_forecast_correlation(
     elif method == "spearman":
         # Spearman rank correlation
         from scipy.stats import spearmanr
+
         corr, _ = spearmanr(preds, acts)
         return float(corr)
     else:

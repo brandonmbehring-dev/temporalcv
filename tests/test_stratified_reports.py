@@ -48,10 +48,12 @@ class TestRunGatesStratifiedBasic:
         rng = np.random.default_rng(42)
         # Create data with clear volatility regimes
         n = 100
-        actuals = np.concatenate([
-            rng.standard_normal(50) * 0.1,  # Low volatility
-            rng.standard_normal(50) * 2.0,  # High volatility
-        ])
+        actuals = np.concatenate(
+            [
+                rng.standard_normal(50) * 0.1,  # Low volatility
+                rng.standard_normal(50) * 2.0,  # High volatility
+            ]
+        )
         predictions = actuals + rng.standard_normal(n) * 0.1
 
         overall_gates = [
@@ -63,9 +65,7 @@ class TestRunGatesStratifiedBasic:
             )
         ]
 
-        report = run_gates_stratified(
-            overall_gates, actuals, predictions, regimes="auto"
-        )
+        report = run_gates_stratified(overall_gates, actuals, predictions, regimes="auto")
 
         # Should have regime stratification
         assert len(report.by_regime) > 0 or len(report.masked_regimes) > 0
@@ -85,9 +85,7 @@ class TestRunGatesStratifiedBasic:
             )
         ]
 
-        report = run_gates_stratified(
-            overall_gates, actuals, predictions, regimes=regimes
-        )
+        report = run_gates_stratified(overall_gates, actuals, predictions, regimes=regimes)
 
         assert "A" in report.by_regime or "A" in report.masked_regimes
         assert "B" in report.by_regime or "B" in report.masked_regimes
@@ -111,9 +109,7 @@ class TestRegimeCounts:
             )
         ]
 
-        report = run_gates_stratified(
-            overall_gates, actuals, predictions, regimes=regimes
-        )
+        report = run_gates_stratified(overall_gates, actuals, predictions, regimes=regimes)
 
         # A has 30, B has 20
         if "A" in report.regime_counts:
@@ -249,9 +245,7 @@ class TestPerRegimeGates:
         persistence_mae = np.mean(np.abs(np.diff(actuals)))
         model_mae = np.mean(np.abs(actuals - predictions))
 
-        overall_gates = [
-            gate_suspicious_improvement(model_mae, persistence_mae)
-        ]
+        overall_gates = [gate_suspicious_improvement(model_mae, persistence_mae)]
 
         report = run_gates_stratified(
             overall_gates,
@@ -300,9 +294,7 @@ class TestSummaryMethod:
             )
         ]
 
-        report = run_gates_stratified(
-            overall_gates, actuals, predictions, regimes=regimes
-        )
+        report = run_gates_stratified(overall_gates, actuals, predictions, regimes=regimes)
         summary = report.summary()
 
         # Should mention regimes or stratification
@@ -327,9 +319,7 @@ class TestEdgeCases:
             )
         ]
 
-        report = run_gates_stratified(
-            overall_gates, actuals, predictions, regimes=regimes
-        )
+        report = run_gates_stratified(overall_gates, actuals, predictions, regimes=regimes)
 
         # Should have only one regime
         assert len(report.by_regime) + len(report.masked_regimes) == 1

@@ -87,9 +87,7 @@ class TestInfluenceDiagnosticsBasic:
 
         # With threshold=2σ, expect ~5% flagged at most
         flag_rate = result.n_high_influence_obs / n
-        assert flag_rate < 0.15, (
-            f"Too many flags ({flag_rate:.1%}) for random normal errors"
-        )
+        assert flag_rate < 0.15, f"Too many flags ({flag_rate:.1%}) for random normal errors"
 
 
 class TestInfluenceHorizonParameter:
@@ -162,10 +160,7 @@ class TestInfluenceLossFunction:
 
         # Results should differ (not exactly equal)
         # This is a weak test - just checks they're computed differently
-        assert not np.allclose(
-            result_sq.observation_influence,
-            result_abs.observation_influence
-        )
+        assert not np.allclose(result_sq.observation_influence, result_abs.observation_influence)
 
 
 class TestInfluenceThreshold:
@@ -254,6 +249,7 @@ class TestInfluenceDataclassProperties:
 
         # Should raise FrozenInstanceError on attribute assignment
         from dataclasses import FrozenInstanceError
+
         with pytest.raises(FrozenInstanceError):
             result.influence_threshold = 5.0
 

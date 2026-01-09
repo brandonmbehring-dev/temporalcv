@@ -162,12 +162,14 @@ class ValidationReport:
         for gate in self.gates:
             lines.append(f"  {gate}")
 
-        lines.extend([
-            "",
-            "=" * 60,
-            f"OVERALL STATUS: {self.status}",
-            "=" * 60,
-        ])
+        lines.extend(
+            [
+                "",
+                "=" * 60,
+                f"OVERALL STATUS: {self.status}",
+                "=" * 60,
+            ]
+        )
 
         if self.failures:
             lines.append("")
@@ -493,7 +495,7 @@ def gate_signal_verification(
         # With n=19, min p-value is 1/20 = 0.05 (just at 5% level)
         warnings.warn(
             f"n_shuffles={n_shuffles} provides limited statistical power for permutation test. "
-            f"Minimum achievable p-value is 1/{n_shuffles+1} ≈ {1/(n_shuffles+1):.3f}. "
+            f"Minimum achievable p-value is 1/{n_shuffles + 1} ≈ {1 / (n_shuffles + 1):.3f}. "
             f"Use n_shuffles >= 19 for p < 0.05, or n_shuffles >= 99 for p < 0.01. "
             f"See Phipson & Smyth (2010) for permutation test power analysis.",
             UserWarning,
@@ -614,14 +616,16 @@ def gate_signal_verification(
             alpha=bootstrap_alpha,
             random_state=random_state,
         )
-        details.update({
-            "ci_lower": ci_result.ci_lower,
-            "ci_upper": ci_result.ci_upper,
-            "ci_alpha": ci_result.alpha,
-            "bootstrap_std": ci_result.std_error,
-            "n_bootstrap": ci_result.n_bootstrap,
-            "bootstrap_block_length": ci_result.block_length,
-        })
+        details.update(
+            {
+                "ci_lower": ci_result.ci_lower,
+                "ci_upper": ci_result.ci_upper,
+                "ci_alpha": ci_result.alpha,
+                "bootstrap_std": ci_result.std_error,
+                "n_bootstrap": ci_result.n_bootstrap,
+                "bootstrap_block_length": ci_result.block_length,
+            }
+        )
 
     # Decision logic depends on method
     if method == "permutation":
@@ -819,14 +823,16 @@ def gate_synthetic_ar1(
             alpha=bootstrap_alpha,
             random_state=random_state,
         )
-        details.update({
-            "ci_lower": ci_result.ci_lower,
-            "ci_upper": ci_result.ci_upper,
-            "ci_alpha": ci_result.alpha,
-            "bootstrap_std": ci_result.std_error,
-            "n_bootstrap": ci_result.n_bootstrap,
-            "bootstrap_block_length": ci_result.block_length,
-        })
+        details.update(
+            {
+                "ci_lower": ci_result.ci_lower,
+                "ci_upper": ci_result.ci_upper,
+                "ci_alpha": ci_result.alpha,
+                "bootstrap_std": ci_result.std_error,
+                "n_bootstrap": ci_result.n_bootstrap,
+                "bootstrap_block_length": ci_result.block_length,
+            }
+        )
 
     if ratio < 1 / tolerance:
         return GateResult(
@@ -1275,9 +1281,17 @@ def gate_residual_diagnostics(
             details=details,
             recommendation=(
                 "Investigate model specification. "
-                + ("Autocorrelation suggests missing temporal structure. " if "autocorrelation" in halt_reasons else "")
+                + (
+                    "Autocorrelation suggests missing temporal structure. "
+                    if "autocorrelation" in halt_reasons
+                    else ""
+                )
                 + ("Bias suggests systematic prediction error. " if "bias" in halt_reasons else "")
-                + ("Non-normality may affect confidence intervals." if "non-normality" in halt_reasons else "")
+                + (
+                    "Non-normality may affect confidence intervals."
+                    if "non-normality" in halt_reasons
+                    else ""
+                )
             ),
         )
 
@@ -1586,12 +1600,14 @@ class StratifiedValidationReport:
             lines.append("")
             lines.append(f"MASKED REGIMES (insufficient data): {self.masked_regimes}")
 
-        lines.extend([
-            "",
-            "=" * 60,
-            f"OVERALL STATUS: {self.status}",
-            "=" * 60,
-        ])
+        lines.extend(
+            [
+                "",
+                "=" * 60,
+                f"OVERALL STATUS: {self.status}",
+                "=" * 60,
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -1692,9 +1708,7 @@ def run_gates_stratified(
 
     # Get counts and mask low-n regimes
     regime_counts = get_regime_counts(regime_labels)
-    masked_labels = mask_low_n_regimes(
-        regime_labels, min_n=min_n_per_regime, mask_value="MASKED"
-    )
+    masked_labels = mask_low_n_regimes(regime_labels, min_n=min_n_per_regime, mask_value="MASKED")
 
     # Identify masked regimes
     masked_regimes = [r for r, c in regime_counts.items() if c < min_n_per_regime]

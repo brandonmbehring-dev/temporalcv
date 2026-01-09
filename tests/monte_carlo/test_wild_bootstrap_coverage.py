@@ -53,9 +53,7 @@ class TestWildBootstrapCoverage:
 
         # Type I error should be near 5%, but bootstrap can be conservative
         # Accept 2-10% range given few clusters
-        assert 0.01 <= type_i_rate <= 0.15, (
-            f"5-fold Type I error = {type_i_rate:.1%}, expected ~5%"
-        )
+        assert 0.01 <= type_i_rate <= 0.15, f"5-fold Type I error = {type_i_rate:.1%}, expected ~5%"
 
     def test_type_i_error_10_folds(self):
         """
@@ -155,9 +153,7 @@ class TestWeightTypeComparison:
             )
 
             webb_widths.append(result_webb.ci_upper - result_webb.ci_lower)
-            rademacher_widths.append(
-                result_rademacher.ci_upper - result_rademacher.ci_lower
-            )
+            rademacher_widths.append(result_rademacher.ci_upper - result_rademacher.ci_lower)
 
         # Webb typically gives wider CIs with few clusters
         webb_mean = np.mean(webb_widths)
@@ -205,9 +201,7 @@ class TestWildBootstrapEdgeCases:
         power = rejections / N_SIMS
 
         # With strong signal, should have high power (>70%)
-        assert power > 0.70, (
-            f"Power = {power:.1%}, expected > 70%"
-        )
+        assert power > 0.70, f"Power = {power:.1%}, expected > 70%"
 
     def test_minimum_3_folds(self):
         """

@@ -351,9 +351,7 @@ class TestTimeSeriesBagger:
     def test_validates_n_estimators(self) -> None:
         """Should validate n_estimators."""
         with pytest.raises(ValueError, match="n_estimators"):
-            TimeSeriesBagger(
-                SimpleModel(), MovingBlockBootstrap(), n_estimators=0
-            )
+            TimeSeriesBagger(SimpleModel(), MovingBlockBootstrap(), n_estimators=0)
 
     def test_validates_aggregation(self) -> None:
         """Should validate aggregation method."""
@@ -384,9 +382,7 @@ class TestTimeSeriesBagger:
     def test_fit_creates_estimators(self, linear_data) -> None:
         """fit should create n_estimators fitted models."""
         X, y = linear_data
-        bagger = TimeSeriesBagger(
-            SimpleModel(), MovingBlockBootstrap(), n_estimators=10
-        )
+        bagger = TimeSeriesBagger(SimpleModel(), MovingBlockBootstrap(), n_estimators=10)
 
         bagger.fit(X, y)
 
@@ -396,9 +392,7 @@ class TestTimeSeriesBagger:
     def test_predict_returns_correct_shape(self, linear_data) -> None:
         """predict should return correct shape."""
         X, y = linear_data
-        bagger = TimeSeriesBagger(
-            SimpleModel(), MovingBlockBootstrap(), n_estimators=5
-        )
+        bagger = TimeSeriesBagger(SimpleModel(), MovingBlockBootstrap(), n_estimators=5)
 
         bagger.fit(X, y)
         predictions = bagger.predict(X)
@@ -444,9 +438,7 @@ class TestTimeSeriesBagger:
     def test_predict_with_uncertainty(self, linear_data) -> None:
         """predict_with_uncertainty should return mean and std."""
         X, y = linear_data
-        bagger = TimeSeriesBagger(
-            SimpleModel(), MovingBlockBootstrap(), n_estimators=10
-        )
+        bagger = TimeSeriesBagger(SimpleModel(), MovingBlockBootstrap(), n_estimators=10)
 
         bagger.fit(X, y)
         mean, std = bagger.predict_with_uncertainty(X)
@@ -458,9 +450,7 @@ class TestTimeSeriesBagger:
     def test_predict_interval(self, linear_data) -> None:
         """predict_interval should return mean, lower, upper."""
         X, y = linear_data
-        bagger = TimeSeriesBagger(
-            SimpleModel(), MovingBlockBootstrap(), n_estimators=20
-        )
+        bagger = TimeSeriesBagger(SimpleModel(), MovingBlockBootstrap(), n_estimators=20)
 
         bagger.fit(X, y)
         mean, lower, upper = bagger.predict_interval(X, alpha=0.10)
@@ -502,9 +492,7 @@ class TestTimeSeriesBagger:
 
     def test_repr(self) -> None:
         """Should have informative repr."""
-        bagger = TimeSeriesBagger(
-            SimpleModel(), MovingBlockBootstrap(), n_estimators=10
-        )
+        bagger = TimeSeriesBagger(SimpleModel(), MovingBlockBootstrap(), n_estimators=10)
         r = repr(bagger)
         assert "TimeSeriesBagger" in r
         assert "MovingBlockBootstrap" in r

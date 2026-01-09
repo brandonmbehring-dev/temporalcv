@@ -73,9 +73,7 @@ class TestE2EBenchmarkPipeline:
             SeasonalNaiveAdapter(season_length=4),
         ]
 
-    def test_full_pipeline_synthetic(
-        self, bundled_datasets, test_adapters
-    ) -> None:
+    def test_full_pipeline_synthetic(self, bundled_datasets, test_adapters) -> None:
         """
         Full pipeline: datasets -> comparison -> report -> markdown.
 
@@ -344,12 +342,12 @@ class TestE2EWithM4Data:
         from temporalcv.benchmarks import load_m4
 
         m4_configs = [
-            ("yearly", 1),      # no seasonality for yearly data
-            ("quarterly", 4),   # quarterly seasonality
-            ("monthly", 12),    # monthly seasonality
-            ("weekly", 52),     # weekly → yearly seasonality
-            ("daily", 7),       # daily → weekly seasonality
-            ("hourly", 24),     # hourly → daily seasonality
+            ("yearly", 1),  # no seasonality for yearly data
+            ("quarterly", 4),  # quarterly seasonality
+            ("monthly", 12),  # monthly seasonality
+            ("weekly", 52),  # weekly → yearly seasonality
+            ("daily", 7),  # daily → weekly seasonality
+            ("hourly", 24),  # hourly → daily seasonality
         ]
 
         results_summary = []
@@ -370,12 +368,14 @@ class TestE2EWithM4Data:
             assert len(result.models) >= 1
             assert result.dataset_name == f"m4_{freq}"
 
-            results_summary.append({
-                "frequency": freq,
-                "n_series": dataset.metadata.n_series,
-                "horizon": dataset.metadata.horizon,
-                "best_model": result.best_model,
-            })
+            results_summary.append(
+                {
+                    "frequency": freq,
+                    "n_series": dataset.metadata.n_series,
+                    "horizon": dataset.metadata.horizon,
+                    "best_model": result.best_model,
+                }
+            )
 
         # All 6 frequencies should have completed
         assert len(results_summary) == 6
@@ -444,9 +444,7 @@ class TestE2EWithStatsforecast:
         assert len(result.models) == 2
 
         # Find AutoARIMA results
-        autoarima_model = next(
-            (m for m in result.models if "AutoARIMA" in m.model_name), None
-        )
+        autoarima_model = next((m for m in result.models if "AutoARIMA" in m.model_name), None)
         assert autoarima_model is not None
         assert "mae" in autoarima_model.metrics
         assert np.isfinite(autoarima_model.metrics["mae"])
@@ -468,9 +466,7 @@ class TestE2EWithStatsforecast:
 
         assert len(result.models) == 2
 
-        autoets_model = next(
-            (m for m in result.models if "AutoETS" in m.model_name), None
-        )
+        autoets_model = next((m for m in result.models if "AutoETS" in m.model_name), None)
         assert autoets_model is not None
         assert "mae" in autoets_model.metrics
 
@@ -491,9 +487,7 @@ class TestE2EWithStatsforecast:
 
         assert len(result.models) == 2
 
-        autotheta_model = next(
-            (m for m in result.models if "AutoTheta" in m.model_name), None
-        )
+        autotheta_model = next((m for m in result.models if "AutoTheta" in m.model_name), None)
         assert autotheta_model is not None
         assert "mae" in autotheta_model.metrics
 

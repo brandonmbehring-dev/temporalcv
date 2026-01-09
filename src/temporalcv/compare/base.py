@@ -270,9 +270,7 @@ class ComparisonReport:
             lines.append("\n### Model Wins\n")
             lines.append("| Model | Wins |")
             lines.append("|-------|------|")
-            for model, wins in sorted(
-                self.summary["wins_by_model"].items(), key=lambda x: -x[1]
-            ):
+            for model, wins in sorted(self.summary["wins_by_model"].items(), key=lambda x: -x[1]):
                 lines.append(f"| {model} | {wins} |")
 
         # Per-dataset results
@@ -518,9 +516,7 @@ def compute_comparison_metrics(
         Dictionary with mae, rmse, mape, direction_accuracy
     """
     if len(predictions) != len(actuals):
-        raise ValueError(
-            f"Length mismatch: predictions={len(predictions)}, actuals={len(actuals)}"
-        )
+        raise ValueError(f"Length mismatch: predictions={len(predictions)}, actuals={len(actuals)}")
 
     errors = predictions - actuals
     abs_errors = np.abs(errors)
@@ -546,9 +542,7 @@ def compute_comparison_metrics(
     if len(predictions) > 1:
         pred_direction = np.sign(np.diff(predictions))
         actual_direction = np.sign(np.diff(actuals))
-        metrics["direction_accuracy"] = float(
-            np.mean(pred_direction == actual_direction)
-        )
+        metrics["direction_accuracy"] = float(np.mean(pred_direction == actual_direction))
     else:
         metrics["direction_accuracy"] = float("nan")
 

@@ -8,7 +8,6 @@ Provides:
 - Shared test fixtures
 """
 
-
 import numpy as np
 import pytest
 
@@ -22,9 +21,7 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
     )
-    config.addinivalue_line(
-        "markers", "monte_carlo: Monte Carlo calibration tests (run nightly)"
-    )
+    config.addinivalue_line("markers", "monte_carlo: Monte Carlo calibration tests (run nightly)")
 
 
 # =============================================================================
@@ -51,9 +48,7 @@ def compute_mc_bias(estimates: np.ndarray, true_value: float) -> float:
     return abs(np.mean(estimates) - true_value)
 
 
-def compute_mc_coverage(
-    ci_lower: np.ndarray, ci_upper: np.ndarray, true_value: float
-) -> float:
+def compute_mc_coverage(ci_lower: np.ndarray, ci_upper: np.ndarray, true_value: float) -> float:
     """
     Compute coverage rate from Monte Carlo confidence intervals.
 
@@ -161,9 +156,7 @@ def validate_mc_results(
 # =============================================================================
 
 
-def dgp_ar1(
-    n: int, phi: float, sigma: float = 1.0, random_state: int | None = None
-) -> np.ndarray:
+def dgp_ar1(n: int, phi: float, sigma: float = 1.0, random_state: int | None = None) -> np.ndarray:
     """
     Generate AR(1) process with known parameters.
 
@@ -246,9 +239,7 @@ def dgp_ar2(
     return y
 
 
-def dgp_white_noise(
-    n: int, sigma: float = 1.0, random_state: int | None = None
-) -> np.ndarray:
+def dgp_white_noise(n: int, sigma: float = 1.0, random_state: int | None = None) -> np.ndarray:
     """
     Generate white noise (IID Gaussian).
 
@@ -270,9 +261,7 @@ def dgp_white_noise(
     return rng.normal(0, sigma, n)
 
 
-def dgp_heavy_tailed(
-    n: int, df: float = 3.0, random_state: int | None = None
-) -> np.ndarray:
+def dgp_heavy_tailed(n: int, df: float = 3.0, random_state: int | None = None) -> np.ndarray:
     """
     Generate heavy-tailed noise (Student-t distribution).
 

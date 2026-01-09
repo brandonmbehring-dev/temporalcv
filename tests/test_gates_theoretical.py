@@ -37,7 +37,9 @@ def dgp_ar1(n: int, phi: float, sigma: float = 1.0, random_state: int | None = N
     return y
 
 
-def dgp_ar2(n: int, phi1: float, phi2: float, sigma: float = 1.0, random_state: int | None = None) -> np.ndarray:
+def dgp_ar2(
+    n: int, phi1: float, phi2: float, sigma: float = 1.0, random_state: int | None = None
+) -> np.ndarray:
     """Generate AR(2) process with known parameters."""
     rng = np.random.RandomState(random_state)
     y = np.zeros(n)
@@ -196,9 +198,7 @@ class TestTheoreticalBoundsMonteCarlo:
         # Optimal predictor may occasionally violate due to estimation noise
         # The key is that it shouldn't be systematically beating bounds
         # With tolerance=0.15, violations should be < 25%
-        assert violation_rate < 0.35, (
-            f"Violation rate = {violation_rate:.1%}, expected < 35%"
-        )
+        assert violation_rate < 0.35, f"Violation rate = {violation_rate:.1%}, expected < 35%"
 
     @pytest.mark.slow
     @pytest.mark.monte_carlo
@@ -226,9 +226,7 @@ class TestTheoreticalBoundsMonteCarlo:
         detection_rate = detections / N_SIMS
 
         # Should always detect zero-error predictions
-        assert detection_rate == 1.0, (
-            f"Detection rate = {detection_rate:.1%}, expected 100%"
-        )
+        assert detection_rate == 1.0, f"Detection rate = {detection_rate:.1%}, expected 100%"
 
 
 # =============================================================================
@@ -414,7 +412,11 @@ class TestTheoreticalBoundsResult:
 
         # Should have key estimates
         assert "estimated_phi" in result.details or len(result.details) > 0
-        assert "theoretical_mae" in result.details or "innovation_sigma" in result.details or len(result.details) > 0
+        assert (
+            "theoretical_mae" in result.details
+            or "innovation_sigma" in result.details
+            or len(result.details) > 0
+        )
 
     def test_result_is_reproducible(self):
         """Same input should give same result."""
@@ -434,4 +436,8 @@ class TestTheoreticalBoundsResult:
         assert result.status == GateStatus.HALT
         # Message should explain the issue
         assert len(result.message) > 10
-        assert "theoretical" in result.message.lower() or "bound" in result.message.lower() or "minimum" in result.message.lower()
+        assert (
+            "theoretical" in result.message.lower()
+            or "bound" in result.message.lower()
+            or "minimum" in result.message.lower()
+        )

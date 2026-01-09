@@ -103,8 +103,8 @@ def theoretical_ar1_mse_bound(
 
     # General case: geometric sum
     # MSE = σ² · Σ(φ^(2i) for i=0..h-1) = σ² · (1 - φ^(2h)) / (1 - φ²)
-    phi_sq = phi ** 2
-    mse = sigma_sq * (1.0 - phi_sq ** h) / (1.0 - phi_sq)
+    phi_sq = phi**2
+    mse = sigma_sq * (1.0 - phi_sq**h) / (1.0 - phi_sq)
     return float(mse)
 
 
@@ -141,7 +141,7 @@ def theoretical_ar1_mae_bound(
     >>> theoretical_ar1_mae_bound(sigma=1.0, phi=0.0, h=1)  # doctest: +ELLIPSIS
     0.797...
     """
-    mse = theoretical_ar1_mse_bound(phi=phi, sigma_sq=sigma ** 2, h=h)
+    mse = theoretical_ar1_mse_bound(phi=phi, sigma_sq=sigma**2, h=h)
     rmse = np.sqrt(mse)
     # E[|X|] = σ·√(2/π) for X ~ N(0, σ²)
     mae = rmse * np.sqrt(2.0 / np.pi)
@@ -213,7 +213,7 @@ def theoretical_ar2_mse_bound(
     for j in range(2, h):
         psi[j] = phi1 * psi[j - 1] + phi2 * psi[j - 2]
 
-    mse = sigma_sq * np.sum(psi ** 2)
+    mse = sigma_sq * np.sum(psi**2)
     return float(mse)
 
 
@@ -404,7 +404,7 @@ def generate_ar1_series(
 
     # Initialize from stationary distribution
     # Var(y) = σ² / (1 - φ²) for stationary AR(1)
-    y0_std = sigma / np.sqrt(1.0 - phi ** 2) if phi != 0 else sigma
+    y0_std = sigma / np.sqrt(1.0 - phi**2) if phi != 0 else sigma
     y = np.zeros(n)
     y[0] = rng.normal(0, y0_std)
 
@@ -473,8 +473,8 @@ def generate_ar2_series(
     # Compute unconditional variance for initialization
     # γ₀ = σ² / ((1 - φ₂) · ((1 + φ₂)² - φ₁²))
     try:
-        gamma0 = sigma ** 2 / ((1 - phi2) * ((1 + phi2) ** 2 - phi1 ** 2))
-        y0_std = np.sqrt(max(gamma0, sigma ** 2))
+        gamma0 = sigma**2 / ((1 - phi2) * ((1 + phi2) ** 2 - phi1**2))
+        y0_std = np.sqrt(max(gamma0, sigma**2))
     except (ZeroDivisionError, ValueError):
         y0_std = sigma
 

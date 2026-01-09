@@ -130,9 +130,7 @@ class DatasetMetadata:
         if self.n_series < 1:
             raise ValueError(f"n_series must be >= 1, got {self.n_series}")
         if self.total_observations < 1:
-            raise ValueError(
-                f"total_observations must be >= 1, got {self.total_observations}"
-            )
+            raise ValueError(f"total_observations must be >= 1, got {self.total_observations}")
         if self.train_end_idx is not None and self.train_end_idx < 1:
             raise ValueError(f"train_end_idx must be >= 1, got {self.train_end_idx}")
 
@@ -373,9 +371,7 @@ def create_synthetic_dataset(
         values = np.zeros((n_series, n_obs))
         values[:, 0] = rng.normal(0, noise_std, size=n_series)
         for t in range(1, n_obs):
-            values[:, t] = ar_coef * values[:, t - 1] + rng.normal(
-                0, noise_std, size=n_series
-            )
+            values[:, t] = ar_coef * values[:, t - 1] + rng.normal(0, noise_std, size=n_series)
 
     train_end_idx = int(n_obs * train_fraction)
 

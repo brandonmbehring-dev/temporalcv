@@ -242,9 +242,7 @@ def wild_cluster_bootstrap(
     n_folds = len(fold_statistics)
 
     if n_folds < 2:
-        raise ValueError(
-            f"fold_statistics must have at least 2 elements, got {n_folds}"
-        )
+        raise ValueError(f"fold_statistics must have at least 2 elements, got {n_folds}")
 
     if n_bootstrap < 1:
         raise ValueError(f"n_bootstrap must be >= 1, got {n_bootstrap}")
@@ -273,6 +271,7 @@ def wild_cluster_bootstrap(
     # Warn for very few clusters
     if n_folds < 6:
         import warnings
+
         warnings.warn(
             f"Only {n_folds} folds/clusters. Wild bootstrap inference may be "
             f"unreliable. Consider using more folds or reporting results with caution.",

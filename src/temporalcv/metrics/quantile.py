@@ -244,8 +244,8 @@ def compute_crps(
             sorted_samples = np.sort(samples)
             # E|X - X'| = 2 * sum_i (2*i - n - 1) * x_{(i)} / n^2
             indices = np.arange(1, n_samples + 1)
-            term2 = 2 * np.sum((2 * indices - n_samples - 1) * sorted_samples) / (
-                n_samples * n_samples
+            term2 = (
+                2 * np.sum((2 * indices - n_samples - 1) * sorted_samples) / (n_samples * n_samples)
             )
         else:
             term2 = 0.0
@@ -335,8 +335,7 @@ def compute_interval_score(
     if np.any(lower > upper):
         n_violations: int = int(np.sum(lower > upper))
         raise ValueError(
-            f"lower must be <= upper for all observations. "
-            f"Found {n_violations} violations"
+            f"lower must be <= upper for all observations. Found {n_violations} violations"
         )
 
     # Compute interval score

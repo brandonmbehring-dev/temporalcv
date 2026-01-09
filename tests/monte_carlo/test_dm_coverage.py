@@ -49,9 +49,7 @@ class TestDMTestCoverageNull:
         coverage = fail_to_reject / N_SIMS
 
         # Should fail to reject ~95% of time when null is true
-        assert 0.90 <= coverage <= 0.98, (
-            f"Fail-to-reject rate = {coverage:.1%}, expected 93-97%"
-        )
+        assert 0.90 <= coverage <= 0.98, f"Fail-to-reject rate = {coverage:.1%}, expected 93-97%"
 
     def test_dm_type_i_error_control(self):
         """
@@ -77,9 +75,7 @@ class TestDMTestCoverageNull:
         type_i_rate = rejections / N_SIMS
 
         # Type I error should be near 5% (3-8% acceptable range)
-        assert 0.02 <= type_i_rate <= 0.10, (
-            f"Type I error = {type_i_rate:.1%}, expected ~5%"
-        )
+        assert 0.02 <= type_i_rate <= 0.10, f"Type I error = {type_i_rate:.1%}, expected ~5%"
 
 
 # =============================================================================
@@ -200,8 +196,8 @@ class TestDMTestHACVariance:
             innovations2 = rng.randn(n + h - 1)
 
             # MA(h-1) errors (h-step ahead induces h-1 autocorrelation)
-            errors1 = np.array([innovations1[i:i + h].mean() for i in range(n)])
-            errors2 = np.array([innovations2[i:i + h].mean() for i in range(n)])
+            errors1 = np.array([innovations1[i : i + h].mean() for i in range(n)])
+            errors2 = np.array([innovations2[i : i + h].mean() for i in range(n)])
 
             result = dm_test(errors1, errors2, h=h, harvey_correction=True)
 

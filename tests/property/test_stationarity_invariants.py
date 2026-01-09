@@ -114,9 +114,7 @@ class TestCheckStationarityInvariants:
 
     @given(series=any_numeric_series())
     @settings(max_examples=50)
-    def test_check_stationarity_returns_valid_conclusion(
-        self, series: np.ndarray
-    ) -> None:
+    def test_check_stationarity_returns_valid_conclusion(self, series: np.ndarray) -> None:
         """check_stationarity must return a valid conclusion."""
         result = check_stationarity(series)
 
@@ -129,9 +127,7 @@ class TestCheckStationarityInvariants:
 
     @given(series=any_numeric_series())
     @settings(max_examples=50)
-    def test_check_stationarity_has_both_tests(
-        self, series: np.ndarray
-    ) -> None:
+    def test_check_stationarity_has_both_tests(self, series: np.ndarray) -> None:
         """check_stationarity must run both ADF and KPSS."""
         result = check_stationarity(series)
 

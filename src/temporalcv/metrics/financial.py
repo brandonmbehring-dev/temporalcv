@@ -413,8 +413,7 @@ def compute_hit_rate(
 
     if len(predicted) != len(actual):
         raise ValueError(
-            f"Array lengths must match. "
-            f"Got predicted={len(predicted)}, actual={len(actual)}"
+            f"Array lengths must match. Got predicted={len(predicted)}, actual={len(actual)}"
         )
 
     # Compare signs: both positive, both negative, or either is zero
@@ -497,8 +496,7 @@ def compute_profit_factor(
 
     if len(predicted) != len(returns):
         raise ValueError(
-            f"Array lengths must match. "
-            f"Got predicted={len(predicted)}, returns={len(returns)}"
+            f"Array lengths must match. Got predicted={len(predicted)}, returns={len(returns)}"
         )
 
     # Compute P&L based on predicted direction

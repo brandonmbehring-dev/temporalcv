@@ -32,7 +32,9 @@ class TestGapSensitivityBasic:
 
         model = Ridge(alpha=1.0)
         result = gap_sensitivity_analysis(
-            model, X, y,
+            model,
+            X,
+            y,
             gap_range=range(0, 5),
             n_splits=3,
         )
@@ -53,7 +55,9 @@ class TestGapSensitivityBasic:
 
         model = Ridge(alpha=1.0)
         result = gap_sensitivity_analysis(
-            model, X, y,
+            model,
+            X,
+            y,
             gap_range=range(0, 4),
             n_splits=3,
         )
@@ -73,7 +77,9 @@ class TestGapSensitivityBasic:
 
         model = Ridge(alpha=1.0)
         result = gap_sensitivity_analysis(
-            model, X, y,
+            model,
+            X,
+            y,
             gap_range=range(0, 5),
             n_splits=3,
         )
@@ -93,7 +99,9 @@ class TestGapSensitivityMetrics:
         y = rng.standard_normal(n)
 
         result = gap_sensitivity_analysis(
-            Ridge(), X, y,
+            Ridge(),
+            X,
+            y,
             gap_range=range(0, 3),
             metric="mae",
             n_splits=3,
@@ -112,7 +120,9 @@ class TestGapSensitivityMetrics:
         y = rng.standard_normal(n)
 
         result = gap_sensitivity_analysis(
-            Ridge(), X, y,
+            Ridge(),
+            X,
+            y,
             gap_range=range(0, 3),
             metric="rmse",
             n_splits=3,
@@ -128,7 +138,9 @@ class TestGapSensitivityMetrics:
         y = rng.standard_normal(n)
 
         result = gap_sensitivity_analysis(
-            Ridge(), X, y,
+            Ridge(),
+            X,
+            y,
             gap_range=range(0, 3),
             metric="mse",
             n_splits=3,
@@ -156,13 +168,17 @@ class TestBreakEvenGap:
             y[t] = 0.95 * y[t - 1] + rng.standard_normal() * 0.1
 
         # Features that include lagged target (creates leakage)
-        X = np.column_stack([
-            y,  # Lagged version would help
-            rng.standard_normal((n, 3))
-        ])
+        X = np.column_stack(
+            [
+                y,  # Lagged version would help
+                rng.standard_normal((n, 3)),
+            ]
+        )
 
         result = gap_sensitivity_analysis(
-            Ridge(alpha=0.1), X, y,
+            Ridge(alpha=0.1),
+            X,
+            y,
             gap_range=range(0, 10),
             n_splits=3,
             degradation_threshold=0.10,
@@ -186,7 +202,9 @@ class TestBreakEvenGap:
         y = X @ np.array([1.0, -1.0, 0.5, -0.5, 0.2]) + rng.standard_normal(n) * 0.1
 
         result = gap_sensitivity_analysis(
-            Ridge(alpha=1.0), X, y,
+            Ridge(alpha=1.0),
+            X,
+            y,
             gap_range=range(0, 5),
             n_splits=3,
             degradation_threshold=0.10,
@@ -215,21 +233,27 @@ class TestDegradationThreshold:
         for t in range(1, n):
             y[t] = 0.7 * y[t - 1] + rng.standard_normal()
 
-        X = np.column_stack([
-            np.roll(y, 1),  # Lagged y
-            rng.standard_normal((n, 2))
-        ])
+        X = np.column_stack(
+            [
+                np.roll(y, 1),  # Lagged y
+                rng.standard_normal((n, 2)),
+            ]
+        )
         X[0, 0] = 0  # Fix first value
 
         result_5 = gap_sensitivity_analysis(
-            Ridge(), X, y,
+            Ridge(),
+            X,
+            y,
             gap_range=range(0, 8),
             n_splits=3,
             degradation_threshold=0.05,
         )
 
         result_20 = gap_sensitivity_analysis(
-            Ridge(), X, y,
+            Ridge(),
+            X,
+            y,
             gap_range=range(0, 8),
             n_splits=3,
             degradation_threshold=0.20,
@@ -246,7 +270,9 @@ class TestDegradationThreshold:
         y = rng.standard_normal(100)
 
         result = gap_sensitivity_analysis(
-            Ridge(), X, y,
+            Ridge(),
+            X,
+            y,
             gap_range=range(0, 3),
             n_splits=3,
             degradation_threshold=0.15,
@@ -267,7 +293,9 @@ class TestSensitivityScore:
         y = rng.standard_normal(150)
 
         result = gap_sensitivity_analysis(
-            Ridge(), X, y,
+            Ridge(),
+            X,
+            y,
             gap_range=range(0, 4),
             n_splits=3,
         )
@@ -285,7 +313,9 @@ class TestSensitivityScore:
         y = rng.standard_normal(100)
 
         result = gap_sensitivity_analysis(
-            Ridge(), X, y,
+            Ridge(),
+            X,
+            y,
             gap_range=range(0, 3),
             n_splits=3,
         )
@@ -312,7 +342,9 @@ class TestGapSensitivityEdgeCases:
         y = rng.standard_normal(100)
 
         result = gap_sensitivity_analysis(
-            Ridge(), X, y,
+            Ridge(),
+            X,
+            y,
             gap_range=[0],
             n_splits=3,
         )
@@ -331,7 +363,9 @@ class TestGapSensitivityEdgeCases:
         y = rng.standard_normal(n)
 
         result = gap_sensitivity_analysis(
-            Ridge(), X, y,
+            Ridge(),
+            X,
+            y,
             gap_range=range(0, 20),  # Some gaps won't work
             n_splits=3,
         )
@@ -352,12 +386,15 @@ class TestGapSensitivityDataclassProperties:
         y = rng.standard_normal(100)
 
         result = gap_sensitivity_analysis(
-            Ridge(), X, y,
+            Ridge(),
+            X,
+            y,
             gap_range=range(0, 3),
             n_splits=3,
         )
 
         from dataclasses import FrozenInstanceError
+
         with pytest.raises(FrozenInstanceError):
             result.sensitivity_score = 999.0
 
@@ -368,7 +405,9 @@ class TestGapSensitivityDataclassProperties:
         y = rng.standard_normal(100)
 
         result = gap_sensitivity_analysis(
-            Ridge(), X, y,
+            Ridge(),
+            X,
+            y,
             gap_range=range(0, 3),
             n_splits=3,
         )

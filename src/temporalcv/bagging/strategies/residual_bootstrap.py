@@ -94,8 +94,7 @@ class ResidualBootstrap(BootstrapStrategy):
     ):
         if not HAS_STATSMODELS:
             raise ImportError(
-                "statsmodels required for ResidualBootstrap. "
-                "Install with: pip install statsmodels"
+                "statsmodels required for ResidualBootstrap. Install with: pip install statsmodels"
             )
 
         if seasonal_period is not None and seasonal_period < 2:
@@ -166,8 +165,7 @@ class ResidualBootstrap(BootstrapStrategy):
         # STL needs at least 2 full cycles ideally
         if period >= n // 2:
             warnings.warn(
-                f"seasonal_period={period} >= n//2={n // 2}, "
-                f"reducing to {max(2, n // 3)}",
+                f"seasonal_period={period} >= n//2={n // 2}, reducing to {max(2, n // 3)}",
                 UserWarning,
                 stacklevel=2,
             )

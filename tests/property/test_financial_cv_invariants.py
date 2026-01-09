@@ -121,8 +121,9 @@ class TestPurgedKFoldInvariants:
                     distances = np.abs(train_arr - t_idx)
                     min_dist = np.min(distances)
                     # Must be at least purge_gap away (or 1 if purge_gap=0)
-                    assert min_dist >= max(1, params["purge_gap"]), \
+                    assert min_dist >= max(1, params["purge_gap"]), (
                         f"Purge gap violated: min_dist={min_dist}, purge_gap={params['purge_gap']}"
+                    )
 
     @given(params=valid_purged_kfold_params())
     @settings(max_examples=100)
@@ -217,8 +218,9 @@ class TestPurgedWalkForwardInvariants:
 
         for train_idx, test_idx in cv.split(X):
             if len(train_idx) > 0 and len(test_idx) > 0:
-                assert np.max(train_idx) < np.min(test_idx), \
+                assert np.max(train_idx) < np.min(test_idx), (
                     "Train indices must precede test indices!"
+                )
 
     @given(params=valid_walk_forward_params())
     @settings(max_examples=100)
@@ -235,8 +237,9 @@ class TestPurgedWalkForwardInvariants:
         for train_idx, test_idx in cv.split(X):
             if len(train_idx) > 0 and len(test_idx) > 0:
                 gap = np.min(test_idx) - np.max(train_idx) - 1
-                assert gap >= params["purge_gap"], \
+                assert gap >= params["purge_gap"], (
                     f"Gap {gap} less than purge_gap {params['purge_gap']}"
+                )
 
     @given(params=valid_walk_forward_params())
     @settings(max_examples=100)

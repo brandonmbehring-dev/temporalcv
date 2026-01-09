@@ -69,7 +69,7 @@ class TestFullValidationPipeline:
         gate_results = [
             gate_signal_verification(model, X, y, n_shuffles=3, random_state=42),
             gate_suspicious_improvement(
-                model_metric=1.05,   # Worse than baseline
+                model_metric=1.05,  # Worse than baseline
                 baseline_metric=1.0,
             ),
             gate_temporal_boundary(
@@ -81,9 +81,7 @@ class TestFullValidationPipeline:
 
         report = run_gates(gate_results)
 
-        assert report.status == "PASS", (
-            f"Clean model should pass. Failures: {report.failures}"
-        )
+        assert report.status == "PASS", f"Clean model should pass. Failures: {report.failures}"
 
     def test_full_pipeline_with_leaky_model(self) -> None:
         """
@@ -102,9 +100,13 @@ class TestFullValidationPipeline:
         # Run shuffled target gate (should catch leakage)
         gate_results = [
             gate_signal_verification(
-                model, X, y, n_shuffles=3, threshold=0.05,
+                model,
+                X,
+                y,
+                n_shuffles=3,
+                threshold=0.05,
                 method="effect_size",  # Use effect_size mode for this test
-                random_state=42
+                random_state=42,
             ),
         ]
 
@@ -276,11 +278,13 @@ class TestSyntheticDataValidation:
             y[t] = phi * y[t - 1] + rng.standard_normal()
 
         # Construct proper lagged features
-        X = np.column_stack([
-            np.roll(y, 1),  # Lag 1
-            np.roll(y, 2),  # Lag 2
-            np.roll(y, 3),  # Lag 3
-        ])
+        X = np.column_stack(
+            [
+                np.roll(y, 1),  # Lag 1
+                np.roll(y, 2),  # Lag 2
+                np.roll(y, 3),  # Lag 3
+            ]
+        )
         # Clean up edge effects
         X[:3, :] = 0
 

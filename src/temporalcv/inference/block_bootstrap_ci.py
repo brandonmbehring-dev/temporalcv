@@ -348,8 +348,7 @@ def moving_block_bootstrap(
 
     if len(valid_samples) < 2:
         raise ValueError(
-            "Fewer than 2 valid bootstrap samples. "
-            "Check that statistic_fn works on resampled data."
+            "Fewer than 2 valid bootstrap samples. Check that statistic_fn works on resampled data."
         )
 
     # Compute standard error

@@ -74,9 +74,7 @@ class TestTheoreticalBoundsBasic:
 
         result = gate_theoretical_bounds(model_mae, y)
 
-        assert result.status == GateStatus.HALT, (
-            f"Impossible MAE should HALT, got {result.status}"
-        )
+        assert result.status == GateStatus.HALT, f"Impossible MAE should HALT, got {result.status}"
         assert "beats theoretical minimum" in result.message
         assert result.recommendation is not None
         assert "leakage" in result.recommendation.lower()
@@ -139,8 +137,7 @@ class TestTheoreticalBoundsTheory:
 
         # Allow 10% relative error
         assert abs(estimated_phi - true_phi) / true_phi < 0.10, (
-            f"Estimated phi ({estimated_phi:.3f}) should be close to "
-            f"true phi ({true_phi})"
+            f"Estimated phi ({estimated_phi:.3f}) should be close to true phi ({true_phi})"
         )
 
     def test_innovation_sigma_estimation(self) -> None:
@@ -173,8 +170,7 @@ class TestTheoreticalBoundsTheory:
 
         # Should be close to true innovation sigma
         assert abs(estimated_sigma - true_sigma) / true_sigma < 0.15, (
-            f"Estimated sigma ({estimated_sigma:.3f}) should be close to "
-            f"true sigma ({true_sigma})"
+            f"Estimated sigma ({estimated_sigma:.3f}) should be close to true sigma ({true_sigma})"
         )
 
     def test_theoretical_mae_formula(self) -> None:
@@ -194,8 +190,7 @@ class TestTheoreticalBoundsTheory:
         expected = sigma * np.sqrt(2 / np.pi)
 
         assert abs(theoretical - expected) < 1e-10, (
-            f"Theoretical MAE ({theoretical}) should equal "
-            f"sigma * sqrt(2/pi) ({expected})"
+            f"Theoretical MAE ({theoretical}) should equal sigma * sqrt(2/pi) ({expected})"
         )
 
 

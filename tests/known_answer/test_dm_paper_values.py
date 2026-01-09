@@ -58,30 +58,24 @@ class TestHarveyAdjustmentFactor:
             # Note: We compute exact values from the formula
             #
             # For h=1: adjustment = sqrt((n + 1 - 2 + 0) / n) = sqrt((n-1)/n)
-            (50, 1, np.sqrt(49 / 50)),    # ≈ 0.9899
+            (50, 1, np.sqrt(49 / 50)),  # ≈ 0.9899
             (100, 1, np.sqrt(99 / 100)),  # ≈ 0.9950
-            (200, 1, np.sqrt(199 / 200)), # ≈ 0.9975
-
+            (200, 1, np.sqrt(199 / 200)),  # ≈ 0.9975
             # For h=2: adjustment = sqrt((n + 1 - 4 + 2/n) / n) = sqrt((n-3+2/n)/n)
-            (50, 2, np.sqrt((50 + 1 - 4 + 2 / 50) / 50)),   # ≈ 0.9697
-            (100, 2, np.sqrt((100 + 1 - 4 + 2 / 100) / 100)), # ≈ 0.9849
-
+            (50, 2, np.sqrt((50 + 1 - 4 + 2 / 50) / 50)),  # ≈ 0.9697
+            (100, 2, np.sqrt((100 + 1 - 4 + 2 / 100) / 100)),  # ≈ 0.9849
             # For h=4: adjustment = sqrt((n + 1 - 8 + 12/n) / n)
-            (50, 4, np.sqrt((50 + 1 - 8 + 12 / 50) / 50)),   # ≈ 0.9288
-            (100, 4, np.sqrt((100 + 1 - 8 + 12 / 100) / 100)), # ≈ 0.9648
-
+            (50, 4, np.sqrt((50 + 1 - 8 + 12 / 50) / 50)),  # ≈ 0.9288
+            (100, 4, np.sqrt((100 + 1 - 8 + 12 / 100) / 100)),  # ≈ 0.9648
             # For h=8: larger horizons have bigger corrections
-            (100, 8, np.sqrt((100 + 1 - 16 + 56 / 100) / 100)), # ≈ 0.9235
-            (200, 8, np.sqrt((200 + 1 - 16 + 56 / 200) / 200)), # ≈ 0.9619
-
+            (100, 8, np.sqrt((100 + 1 - 16 + 56 / 100) / 100)),  # ≈ 0.9235
+            (200, 8, np.sqrt((200 + 1 - 16 + 56 / 200) / 200)),  # ≈ 0.9619
             # For h=12: even larger corrections needed
-            (100, 12, np.sqrt((100 + 1 - 24 + 132 / 100) / 100)), # ≈ 0.8854
-            (200, 12, np.sqrt((200 + 1 - 24 + 132 / 200) / 200)), # ≈ 0.9417
+            (100, 12, np.sqrt((100 + 1 - 24 + 132 / 100) / 100)),  # ≈ 0.8854
+            (200, 12, np.sqrt((200 + 1 - 24 + 132 / 200) / 200)),  # ≈ 0.9417
         ],
     )
-    def test_adjustment_factor_values(
-        self, n: int, h: int, expected_adjustment: float
-    ) -> None:
+    def test_adjustment_factor_values(self, n: int, h: int, expected_adjustment: float) -> None:
         """Verify adjustment factor matches Harvey et al. (1997) formula."""
         computed = _compute_harvey_adjustment(n, h)
         assert_allclose(
@@ -121,9 +115,7 @@ class TestHarveyAdjustmentFactor:
         adj_h4 = _compute_harvey_adjustment(n, 4)
         adj_h8 = _compute_harvey_adjustment(n, 8)
 
-        assert adj_h1 > adj_h2 > adj_h4 > adj_h8, (
-            "Adjustment factor should decrease with horizon"
-        )
+        assert adj_h1 > adj_h2 > adj_h4 > adj_h8, "Adjustment factor should decrease with horizon"
 
     def test_adjustment_bounded(self) -> None:
         """
@@ -250,9 +242,7 @@ class TestHarveyDistribution:
         pvalue_normal = 2 * (1 - stats.norm.cdf(abs(statistic)))
 
         # t-distribution should give LARGER p-value (more conservative)
-        assert pvalue_t > pvalue_normal, (
-            f"t({n-1}) p-value should be larger than normal p-value"
-        )
+        assert pvalue_t > pvalue_normal, f"t({n - 1}) p-value should be larger than normal p-value"
 
     def test_t_converges_to_normal_for_large_n(self) -> None:
         """

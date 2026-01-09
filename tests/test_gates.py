@@ -185,18 +185,14 @@ class TestValidationReport:
     def test_single_pass(self) -> None:
         """Report with single PASS should be PASS."""
         report = ValidationReport(
-            gates=[
-                GateResult(name="g1", status=GateStatus.PASS, message="ok")
-            ]
+            gates=[GateResult(name="g1", status=GateStatus.PASS, message="ok")]
         )
         assert report.status == "PASS"
 
     def test_single_halt(self) -> None:
         """Report with single HALT should be HALT."""
         report = ValidationReport(
-            gates=[
-                GateResult(name="g1", status=GateStatus.HALT, message="fail")
-            ]
+            gates=[GateResult(name="g1", status=GateStatus.HALT, message="fail")]
         )
         assert report.status == "HALT"
         assert len(report.failures) == 1
@@ -727,12 +723,8 @@ class TestIntegration:
         # Run multiple gates
         gate_results = [
             gate_signal_verification(model, X, y, n_shuffles=2, random_state=42),
-            gate_suspicious_improvement(
-                model_metric=0.95, baseline_metric=1.0
-            ),
-            gate_temporal_boundary(
-                train_end_idx=79, test_start_idx=82, horizon=2
-            ),
+            gate_suspicious_improvement(model_metric=0.95, baseline_metric=1.0),
+            gate_temporal_boundary(train_end_idx=79, test_start_idx=82, horizon=2),
         ]
 
         report = run_gates(gate_results)
@@ -757,9 +749,13 @@ class TestIntegration:
         model = MockModel("leaky")
 
         result = gate_signal_verification(
-            model, X, y, n_shuffles=3, threshold=0.05,
+            model,
+            X,
+            y,
+            n_shuffles=3,
+            threshold=0.05,
             method="effect_size",  # Use effect_size mode for this test
-            random_state=42
+            random_state=42,
         )
 
         # Leakage should be caught
@@ -788,15 +784,15 @@ class TestBootstrapCIIntegration:
         assert "ci_lower" not in result.details
         assert "ci_upper" not in result.details
 
-    def test_shuffled_target_ci_enabled(
-        self, simple_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_shuffled_target_ci_enabled(self, simple_data: tuple[np.ndarray, np.ndarray]) -> None:
         """CI should be computed when bootstrap_ci=True."""
         X, y = simple_data
         model = MockModel("mean")
 
         result = gate_signal_verification(
-            model, X, y,
+            model,
+            X,
+            y,
             n_shuffles=3,
             method="effect_size",
             random_state=42,
@@ -821,9 +817,7 @@ class TestBootstrapCIIntegration:
         """CI should not be computed by default for synthetic AR1."""
         model = MockModel("lag1")
 
-        result = gate_synthetic_ar1(
-            model, phi=0.9, sigma=1.0, n_samples=100, random_state=42
-        )
+        result = gate_synthetic_ar1(model, phi=0.9, sigma=1.0, n_samples=100, random_state=42)
 
         assert "ci_lower" not in result.details
         assert "ci_upper" not in result.details
@@ -851,15 +845,15 @@ class TestBootstrapCIIntegration:
         # CI should be reasonable
         assert result.details["ci_lower"] < result.details["ci_upper"]
 
-    def test_ci_contains_point_estimate(
-        self, simple_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_ci_contains_point_estimate(self, simple_data: tuple[np.ndarray, np.ndarray]) -> None:
         """Point estimate should be within CI for well-behaved data."""
         X, y = simple_data
         model = MockModel("mean")
 
         result = gate_signal_verification(
-            model, X, y,
+            model,
+            X,
+            y,
             n_shuffles=3,
             method="effect_size",
             random_state=42,
@@ -874,15 +868,15 @@ class TestBootstrapCIIntegration:
         # Point estimate should be in CI (or very close)
         assert ci_lower <= mae_real <= ci_upper
 
-    def test_ci_reproducibility(
-        self, simple_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_ci_reproducibility(self, simple_data: tuple[np.ndarray, np.ndarray]) -> None:
         """Same seed should produce same CI."""
         X, y = simple_data
         model = MockModel("mean")
 
         result1 = gate_signal_verification(
-            model, X, y,
+            model,
+            X,
+            y,
             n_shuffles=3,
             method="effect_size",
             random_state=42,
@@ -891,7 +885,9 @@ class TestBootstrapCIIntegration:
         )
 
         result2 = gate_signal_verification(
-            model, X, y,
+            model,
+            X,
+            y,
             n_shuffles=3,
             method="effect_size",
             random_state=42,

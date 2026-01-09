@@ -269,9 +269,7 @@ class TimeSeriesBagger:
     def _check_fitted(self) -> None:
         """Raise RuntimeError if not fitted."""
         if not self._fitted:
-            raise RuntimeError(
-                "TimeSeriesBagger must be fitted before predict. Call fit() first."
-            )
+            raise RuntimeError("TimeSeriesBagger must be fitted before predict. Call fit() first.")
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -329,9 +327,7 @@ class TimeSeriesBagger:
         )
         return all_preds
 
-    def predict_with_uncertainty(
-        self, X: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def predict_with_uncertainty(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
         Return (mean, std) across estimators for uncertainty quantification.
 

@@ -95,9 +95,7 @@ class StatsforecastAdapter(ForecastAdapter):
         _check_statsforecast()
 
         if model not in MODEL_MAP:
-            raise ValueError(
-                f"Unknown model '{model}'. Available: {list(MODEL_MAP.keys())}"
-            )
+            raise ValueError(f"Unknown model '{model}'. Available: {list(MODEL_MAP.keys())}")
 
         self._model_name = model
         self._season_length = season_length
@@ -163,9 +161,7 @@ class StatsforecastAdapter(ForecastAdapter):
         seasonal_models = {"AutoARIMA", "AutoETS", "SeasonalNaive", "AutoTheta"}
 
         if self._model_name in seasonal_models:
-            model_instance = model_class(
-                season_length=self._season_length, **self._model_kwargs
-            )
+            model_instance = model_class(season_length=self._season_length, **self._model_kwargs)
         else:
             model_instance = model_class(**self._model_kwargs)
 

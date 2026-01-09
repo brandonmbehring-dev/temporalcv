@@ -129,8 +129,7 @@ class SplitInfo:
         """Validate temporal ordering."""
         if self.train_end >= self.test_start:
             raise ValueError(
-                f"Temporal leakage: train_end ({self.train_end}) >= "
-                f"test_start ({self.test_start})"
+                f"Temporal leakage: train_end ({self.train_end}) >= test_start ({self.test_start})"
             )
 
 
@@ -383,15 +382,11 @@ class WalkForwardResults:
         try:
             import pandas as pd
         except ImportError as e:
-            raise ImportError(
-                "pandas required for to_dataframe(): pip install pandas"
-            ) from e
+            raise ImportError("pandas required for to_dataframe(): pip install pandas") from e
 
         rows = []
         for split in self.splits:
-            for i, (pred, actual) in enumerate(
-                zip(split.predictions, split.actuals)
-            ):
+            for i, (pred, actual) in enumerate(zip(split.predictions, split.actuals)):
                 row = {
                     "split_idx": split.split_idx,
                     "prediction": pred,
@@ -580,9 +575,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
             raise ValueError(f"horizon must be >= 1, got {horizon}")
 
         if window_type not in ("expanding", "sliding"):
-            raise ValueError(
-                f"window_type must be 'expanding' or 'sliding', got {window_type!r}"
-            )
+            raise ValueError(f"window_type must be 'expanding' or 'sliding', got {window_type!r}")
 
         if window_type == "sliding" and window_size is None:
             raise ValueError("window_size is required for sliding window")
@@ -615,9 +608,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
             return int(X.shape[0])
         return len(X)
 
-    def _calculate_splits(
-        self, n_samples: int
-    ) -> list[tuple[np.ndarray, np.ndarray]]:
+    def _calculate_splits(self, n_samples: int) -> list[tuple[np.ndarray, np.ndarray]]:
         """
         Calculate all train/test splits.
 
@@ -700,7 +691,7 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
 
         # Trim to n_splits if we generated more
         if len(splits) > self.n_splits:
-            splits = splits[-self.n_splits:]
+            splits = splits[-self.n_splits :]
 
         return splits
 
@@ -937,9 +928,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
         self.extra_gap = extra_gap
         self.test_size = test_size
 
-    def _calculate_fold_indices(
-        self, n_samples: int
-    ) -> list[tuple[int, int]]:
+    def _calculate_fold_indices(self, n_samples: int) -> list[tuple[int, int]]:
         """
         Calculate (start, end) indices for each fold.
 
@@ -948,9 +937,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
         fold_size = self.test_size if self.test_size is not None else n_samples // self.n_splits
 
         if fold_size < 1:
-            raise ValueError(
-                f"Not enough samples ({n_samples}) for {self.n_splits} splits"
-            )
+            raise ValueError(f"Not enough samples ({n_samples}) for {self.n_splits} splits")
 
         folds: list[tuple[int, int]] = []
         for k in range(self.n_splits):
@@ -1275,7 +1262,11 @@ def walk_forward_evaluate(
         if verbose:
             logger.info(
                 "Split %d: train[%d:%d], test[%d:%d]",
-                split_idx, train_idx[0], train_idx[-1], test_idx[0], test_idx[-1]
+                split_idx,
+                train_idx[0],
+                train_idx[-1],
+                test_idx[0],
+                test_idx[-1],
             )
 
         # Clone model for this split
@@ -1482,9 +1473,7 @@ class NestedWalkForwardCV:
 
         # Validate search type
         if param_grid is None and param_distributions is None:
-            raise ValueError(
-                "Either param_grid or param_distributions must be provided"
-            )
+            raise ValueError("Either param_grid or param_distributions must be provided")
         if param_grid is not None and param_distributions is not None:
             raise ValueError(
                 "Cannot specify both param_grid and param_distributions. "
@@ -1492,9 +1481,7 @@ class NestedWalkForwardCV:
                 "param_distributions + n_iter for randomized search."
             )
         if param_distributions is not None and n_iter is None:
-            raise ValueError(
-                "n_iter is required when using param_distributions"
-            )
+            raise ValueError("n_iter is required when using param_distributions")
 
         # Validate CV parameters
         if n_outer_splits < 2:
@@ -1663,12 +1650,14 @@ class NestedWalkForwardCV:
                 score = scorer(y[test_idx], preds)
                 scores.append(score)
 
-            results.append({
-                "params": params,
-                "mean_score": np.mean(scores),
-                "std_score": np.std(scores),
-                "scores": scores,
-            })
+            results.append(
+                {
+                    "params": params,
+                    "mean_score": np.mean(scores),
+                    "std_score": np.std(scores),
+                    "scores": scores,
+                }
+            )
 
         # Find best (highest score)
         best_idx = np.argmax([r["mean_score"] for r in results])
@@ -1711,7 +1700,9 @@ class NestedWalkForwardCV:
         if self.verbose:
             logger.info(
                 "NestedWalkForwardCV: %d param combinations, Outer: %d splits, Inner: %d splits",
-                len(param_combinations), self.n_outer_splits, self.n_inner_splits
+                len(param_combinations),
+                self.n_outer_splits,
+                self.n_inner_splits,
             )
 
         # Outer CV
@@ -1810,7 +1801,10 @@ class NestedWalkForwardCV:
         if self.verbose:
             logger.info(
                 "Best params: %s, Outer score: %.4f ± %.4f, Params stability: %.1f%%",
-                best_params, np.mean(outer_scores), np.std(outer_scores), params_stability * 100
+                best_params,
+                np.mean(outer_scores),
+                np.std(outer_scores),
+                params_stability * 100,
             )
 
         return self

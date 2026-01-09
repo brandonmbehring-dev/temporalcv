@@ -121,11 +121,13 @@ class TestBrierScore:
     def test_three_class_brier(self) -> None:
         """3-class Brier should work with probability vectors."""
         # [P(DOWN), P(FLAT), P(UP)]
-        pred_probs = np.array([
-            [0.1, 0.2, 0.7],  # Predicts UP
-            [0.8, 0.1, 0.1],  # Predicts DOWN
-            [0.1, 0.8, 0.1],  # Predicts FLAT
-        ])
+        pred_probs = np.array(
+            [
+                [0.1, 0.2, 0.7],  # Predicts UP
+                [0.8, 0.1, 0.1],  # Predicts DOWN
+                [0.1, 0.8, 0.1],  # Predicts FLAT
+            ]
+        )
         actuals = np.array([2, 0, 1])  # UP, DOWN, FLAT
 
         result = compute_direction_brier(pred_probs, actuals, n_classes=3)
@@ -137,11 +139,13 @@ class TestBrierScore:
 
     def test_three_class_perfect(self) -> None:
         """Perfect 3-class predictions should have Brier close to 0."""
-        pred_probs = np.array([
-            [0.0, 0.0, 1.0],  # Perfect UP
-            [1.0, 0.0, 0.0],  # Perfect DOWN
-            [0.0, 1.0, 0.0],  # Perfect FLAT
-        ])
+        pred_probs = np.array(
+            [
+                [0.0, 0.0, 1.0],  # Perfect UP
+                [1.0, 0.0, 0.0],  # Perfect DOWN
+                [0.0, 1.0, 0.0],  # Perfect FLAT
+            ]
+        )
         actuals = np.array([2, 0, 1])
 
         result = compute_direction_brier(pred_probs, actuals, n_classes=3)
@@ -150,11 +154,13 @@ class TestBrierScore:
 
     def test_three_class_worst(self) -> None:
         """Maximally wrong 3-class predictions should have high Brier."""
-        pred_probs = np.array([
-            [1.0, 0.0, 0.0],  # Predicts DOWN, actual UP
-            [0.0, 0.0, 1.0],  # Predicts UP, actual DOWN
-            [1.0, 0.0, 0.0],  # Predicts DOWN, actual FLAT
-        ])
+        pred_probs = np.array(
+            [
+                [1.0, 0.0, 0.0],  # Predicts DOWN, actual UP
+                [0.0, 0.0, 1.0],  # Predicts UP, actual DOWN
+                [1.0, 0.0, 0.0],  # Predicts DOWN, actual FLAT
+            ]
+        )
         actuals = np.array([2, 0, 1])
 
         result = compute_direction_brier(pred_probs, actuals, n_classes=3)
@@ -195,10 +201,12 @@ class TestBrierScore:
 
     def test_probability_sum_validation(self) -> None:
         """Should reject 3-class probs that don't sum to 1."""
-        probs = np.array([
-            [0.3, 0.3, 0.3],  # Sums to 0.9
-            [0.4, 0.4, 0.4],  # Sums to 1.2
-        ])
+        probs = np.array(
+            [
+                [0.3, 0.3, 0.3],  # Sums to 0.9
+                [0.4, 0.4, 0.4],  # Sums to 1.2
+            ]
+        )
         actuals = np.array([2, 0])
 
         with pytest.raises(ValueError, match="must sum to 1.0"):
@@ -333,9 +341,7 @@ class TestPRAUC:
         assert result.baseline == 1.0
         assert result.n_negative == 0
 
-    def test_imbalanced_data(
-        self, imbalanced_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_imbalanced_data(self, imbalanced_data: tuple[np.ndarray, np.ndarray]) -> None:
         """Should handle highly imbalanced data."""
         probs, actuals = imbalanced_data
         result = compute_pr_auc(probs, actuals)
@@ -377,9 +383,7 @@ class TestCalibratedBrier:
         probs = np.array([0.1, 0.2, 0.8, 0.9])
         actuals = np.array([0, 0, 1, 1])
 
-        brier, bin_means, bin_fracs = compute_calibrated_direction_brier(
-            probs, actuals, n_bins=5
-        )
+        brier, bin_means, bin_fracs = compute_calibrated_direction_brier(probs, actuals, n_bins=5)
 
         assert isinstance(brier, float)
         assert isinstance(bin_means, np.ndarray)
@@ -417,9 +421,7 @@ class TestCalibratedBrier:
         # Generate actuals with P(1|p) = p
         actuals = (rng.random(n) < probs).astype(int)
 
-        _, bin_means, bin_fracs = compute_calibrated_direction_brier(
-            probs, actuals, n_bins=10
-        )
+        _, bin_means, bin_fracs = compute_calibrated_direction_brier(probs, actuals, n_bins=10)
 
         # Non-NaN bins should have means close to fractions
         valid = ~np.isnan(bin_means)
@@ -432,9 +434,7 @@ class TestCalibratedBrier:
         probs = np.array([0.0, 0.1, 0.1, 0.2])
         actuals = np.array([0, 0, 1, 1])
 
-        _, bin_means, bin_fracs = compute_calibrated_direction_brier(
-            probs, actuals, n_bins=5
-        )
+        _, bin_means, bin_fracs = compute_calibrated_direction_brier(probs, actuals, n_bins=5)
 
         # Bins 1-4 should be empty (NaN)
         assert np.isnan(bin_means[2])  # Bin for [0.4, 0.6)

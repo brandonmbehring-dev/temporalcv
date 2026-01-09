@@ -81,12 +81,8 @@ class TestVolatilityRegime:
 
         The key difference is WHERE the HIGH regimes appear, not the total count.
         """
-        regimes_changes = classify_volatility_regime(
-            drifting_values, window=13, basis="changes"
-        )
-        regimes_levels = classify_volatility_regime(
-            drifting_values, window=13, basis="levels"
-        )
+        regimes_changes = classify_volatility_regime(drifting_values, window=13, basis="changes")
+        regimes_levels = classify_volatility_regime(drifting_values, window=13, basis="levels")
 
         # For drifting data with basis='levels':
         # - Early points should be LOW (small cumsum, low std)
@@ -114,9 +110,7 @@ class TestVolatilityRegime:
         """Default should be basis='changes'."""
         # Call without explicit basis
         regimes_default = classify_volatility_regime(sample_values, window=13)
-        regimes_changes = classify_volatility_regime(
-            sample_values, window=13, basis="changes"
-        )
+        regimes_changes = classify_volatility_regime(sample_values, window=13, basis="changes")
 
         np.testing.assert_array_equal(regimes_default, regimes_changes)
 
@@ -346,9 +340,7 @@ class TestRegimeIntegration:
         changes = np.diff(sample_values)
 
         # Classify volatility
-        vol_regimes = classify_volatility_regime(
-            sample_values[:-1], window=13, basis="changes"
-        )
+        vol_regimes = classify_volatility_regime(sample_values[:-1], window=13, basis="changes")
 
         # Classify direction with threshold
         threshold = np.percentile(np.abs(changes), 70)

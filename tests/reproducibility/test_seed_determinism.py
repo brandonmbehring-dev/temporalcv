@@ -53,12 +53,8 @@ class TestShuffledTargetGateDeterminism:
         X, y = data
         model = DummyModel()
 
-        result1 = gate_signal_verification(
-            model=model, X=X, y=y, n_shuffles=20, random_state=seed
-        )
-        result2 = gate_signal_verification(
-            model=model, X=X, y=y, n_shuffles=20, random_state=seed
-        )
+        result1 = gate_signal_verification(model=model, X=X, y=y, n_shuffles=20, random_state=seed)
+        result2 = gate_signal_verification(model=model, X=X, y=y, n_shuffles=20, random_state=seed)
 
         assert result1.status == result2.status
         assert result1.message == result2.message
@@ -73,9 +69,7 @@ class TestShuffledTargetGateDeterminism:
         X, y = data
         model = DummyModel()
 
-        result1 = gate_signal_verification(
-            model=model, X=X, y=y, n_shuffles=20, random_state=seed
-        )
+        result1 = gate_signal_verification(model=model, X=X, y=y, n_shuffles=20, random_state=seed)
         result2 = gate_signal_verification(
             model=model, X=X, y=y, n_shuffles=20, random_state=seed + 100
         )

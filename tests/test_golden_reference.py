@@ -143,9 +143,7 @@ class TestWildBootstrapGoldenReference:
         )
 
         # Check estimate is near zero
-        assert abs(result.estimate) < 0.1, (
-            f"Estimate {result.estimate:.4f} should be near zero"
-        )
+        assert abs(result.estimate) < 0.1, f"Estimate {result.estimate:.4f} should be near zero"
 
         # Check p-value indicates non-rejection
         assert result.p_value > 0.10, (

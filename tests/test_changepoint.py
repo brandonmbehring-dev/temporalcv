@@ -63,9 +63,7 @@ class TestChangepointVariance:
 
     def test_multiple_level_shifts(self) -> None:
         """Should detect multiple level shifts."""
-        series = generate_piecewise_constant(
-            [30, 30, 30], [1.0, 5.0, 2.0], noise_std=0.1, seed=43
-        )
+        series = generate_piecewise_constant([30, 30, 30], [1.0, 5.0, 2.0], noise_std=0.1, seed=43)
         result = detect_changepoints_variance(series, penalty=2.0)
 
         # Should detect at least 1 changepoint (may not find all due to heuristic)
@@ -103,9 +101,7 @@ class TestChangepointVariance:
 
     def test_min_segment_length(self) -> None:
         """Should respect minimum segment length."""
-        series = generate_piecewise_constant(
-            [30, 5, 30], [1.0, 5.0, 1.0], noise_std=0.1, seed=46
-        )
+        series = generate_piecewise_constant([30, 5, 30], [1.0, 5.0, 1.0], noise_std=0.1, seed=46)
         result = detect_changepoints_variance(series, min_segment_length=10)
 
         # Changepoints should be at least 10 apart
@@ -345,7 +341,9 @@ class TestClassifyRegimes:
 
         with pytest.raises(ValueError, match="Unknown method"):
             classify_regimes_from_changepoints(
-                series, [], method="invalid"  # type: ignore[arg-type]
+                series,
+                [],
+                method="invalid",  # type: ignore[arg-type]
             )
 
 

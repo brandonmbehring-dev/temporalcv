@@ -293,9 +293,7 @@ class PurgedKFold:
         current = 0
         for fold_size in fold_sizes:
             test_indices = indices[current : current + fold_size]
-            train_indices = np.concatenate(
-                [indices[:current], indices[current + fold_size :]]
-            )
+            train_indices = np.concatenate([indices[:current], indices[current + fold_size :]])
 
             purged_train, _, _ = _apply_purge_and_embargo(
                 train_indices,
@@ -346,9 +344,7 @@ class PurgedKFold:
         current = 0
         for fold_size in fold_sizes:
             test_indices = indices[current : current + fold_size]
-            train_indices = np.concatenate(
-                [indices[:current], indices[current + fold_size :]]
-            )
+            train_indices = np.concatenate([indices[:current], indices[current + fold_size :]])
 
             purged_train, n_purged, n_embargoed = _apply_purge_and_embargo(
                 train_indices,
@@ -413,9 +409,7 @@ class CombinatorialPurgedCV:
         if n_splits < 2:
             raise ValueError(f"n_splits must be >= 2, got {n_splits}")
         if n_test_splits < 1 or n_test_splits >= n_splits:
-            raise ValueError(
-                f"n_test_splits must be in [1, n_splits), got {n_test_splits}"
-            )
+            raise ValueError(f"n_test_splits must be in [1, n_splits), got {n_test_splits}")
         if purge_gap < 0:
             raise ValueError(f"purge_gap must be >= 0, got {purge_gap}")
         if not 0 <= embargo_pct < 1:

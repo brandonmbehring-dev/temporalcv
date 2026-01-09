@@ -649,9 +649,7 @@ class TestPTTestVarianceRegression:
 
         # Variance should be O(1/n), not O(1/n²)
         # For n=100, variance should be O(0.01), not O(0.0001)
-        assert expected_var > 1e-4, (
-            f"Variance {expected_var:.6f} is too small (likely n² bug)"
-        )
+        assert expected_var > 1e-4, f"Variance {expected_var:.6f} is too small (likely n² bug)"
 
         # Also verify that the test produces a reasonable result
         assert 0 < result.pvalue < 1, f"P-value should be in (0,1), got {result.pvalue}"
@@ -855,10 +853,12 @@ class TestCompareMultipleModels:
     def test_raises_on_mismatched_lengths(self) -> None:
         """Should raise error if error arrays have different lengths."""
         with pytest.raises(ValueError, match="same length"):
-            compare_multiple_models({
-                "A": np.random.randn(50),
-                "B": np.random.randn(60),
-            })
+            compare_multiple_models(
+                {
+                    "A": np.random.randn(50),
+                    "B": np.random.randn(60),
+                }
+            )
 
     def test_four_models_has_six_comparisons(self) -> None:
         """4 models should result in 4*3/2 = 6 pairwise comparisons."""
@@ -1010,7 +1010,8 @@ class TestDMTestSelfNormalized:
         errors_2 = errors_1 + rng.normal(0, 0.1, n)  # Very similar predictions
 
         result = dm_test(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             h=1,
             variance_method="self_normalized",
         )
@@ -1085,7 +1086,8 @@ class TestDMTestSelfNormalized:
         errors_2 = rng.normal(0, 1.5, n)
 
         result = dm_test(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             harvey_correction=True,  # Request Harvey
             variance_method="self_normalized",
         )
@@ -1103,7 +1105,8 @@ class TestDMTestSelfNormalized:
 
         for alt in ["two-sided", "less", "greater"]:
             result = dm_test(
-                errors_1, errors_2,
+                errors_1,
+                errors_2,
                 alternative=alt,
                 variance_method="self_normalized",
             )
@@ -1112,12 +1115,14 @@ class TestDMTestSelfNormalized:
 
         # "less" (model 1 better) should have smallest p-value
         result_less = dm_test(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             alternative="less",
             variance_method="self_normalized",
         )
         result_greater = dm_test(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             alternative="greater",
             variance_method="self_normalized",
         )
@@ -1135,15 +1140,14 @@ class TestDMTestSelfNormalized:
         errors_2 = rng.normal(0, 1.5, n)
 
         result = dm_test(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             alternative="less",
             variance_method="self_normalized",
         )
 
         # Should be significant at 0.05 level
-        assert result.pvalue < 0.10, (
-            f"Expected significant result, got p={result.pvalue:.4f}"
-        )
+        assert result.pvalue < 0.10, f"Expected significant result, got p={result.pvalue:.4f}"
 
 
 # =============================================================================
@@ -1421,9 +1425,7 @@ class TestGWTest:
 class TestGWTestPredictableSwitching:
     """Tests for GW test detecting predictable switching patterns."""
 
-    def test_detects_alternating_pattern(
-        self, predictable_switching_errors: tuple
-    ) -> None:
+    def test_detects_alternating_pattern(self, predictable_switching_errors: tuple) -> None:
         """GW test should detect predictable alternating pattern.
 
         When model superiority alternates every period (odd/even),
@@ -1443,9 +1445,7 @@ class TestGWTestPredictableSwitching:
             f"Expected significant result for alternating pattern, p={result.pvalue:.4f}"
         )
 
-    def test_dm_vs_gw_equal_average_predictable(
-        self, predictable_switching_errors: tuple
-    ) -> None:
+    def test_dm_vs_gw_equal_average_predictable(self, predictable_switching_errors: tuple) -> None:
         """Key insight: DM may not reject when GW does.
 
         When models alternate superiority, average performance may be equal
@@ -1595,9 +1595,7 @@ class TestGWEdgeCases:
 
         result = gw_test(errors_1, errors_2)
 
-        assert 0 <= result.r_squared <= 1, (
-            f"R² should be in [0, 1], got {result.r_squared}"
-        )
+        assert 0 <= result.r_squared <= 1, f"R² should be in [0, 1], got {result.r_squared}"
 
 
 # =============================================================================
@@ -2178,9 +2176,14 @@ class TestMultiHorizonResult:
     def test_significant_horizons_all_significant(self) -> None:
         """All horizons significant when all p < alpha."""
         dm_sig = DMTestResult(
-            statistic=-3.0, pvalue=0.003, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-3.0,
+            pvalue=0.003,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
 
         result = MultiHorizonResult(
@@ -2199,9 +2202,14 @@ class TestMultiHorizonResult:
     def test_significant_horizons_none_significant(self) -> None:
         """No horizons significant when all p >= alpha."""
         dm_nonsig = DMTestResult(
-            statistic=-0.5, pvalue=0.30, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.1,
+            statistic=-0.5,
+            pvalue=0.30,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.1,
         )
 
         result = MultiHorizonResult(
@@ -2220,14 +2228,24 @@ class TestMultiHorizonResult:
     def test_first_insignificant_horizon(self) -> None:
         """Should find first horizon where significance is lost."""
         dm_sig = DMTestResult(
-            statistic=-3.0, pvalue=0.003, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-3.0,
+            pvalue=0.003,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
         dm_nonsig = DMTestResult(
-            statistic=-0.5, pvalue=0.30, h=4, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.1,
+            statistic=-0.5,
+            pvalue=0.30,
+            h=4,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.1,
         )
 
         result = MultiHorizonResult(
@@ -2246,9 +2264,14 @@ class TestMultiHorizonResult:
     def test_first_insignificant_horizon_all_significant(self) -> None:
         """Should return None when all horizons are significant."""
         dm_sig = DMTestResult(
-            statistic=-3.0, pvalue=0.003, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-3.0,
+            pvalue=0.003,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
 
         result = MultiHorizonResult(
@@ -2267,19 +2290,34 @@ class TestMultiHorizonResult:
     def test_best_horizon(self) -> None:
         """Should find horizon with smallest p-value."""
         dm_h1 = DMTestResult(
-            statistic=-2.0, pvalue=0.045, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.3,
+            statistic=-2.0,
+            pvalue=0.045,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.3,
         )
         dm_h2 = DMTestResult(
-            statistic=-3.0, pvalue=0.003, h=2, n=100,  # Best!
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-3.0,
+            pvalue=0.003,
+            h=2,
+            n=100,  # Best!
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
         dm_h4 = DMTestResult(
-            statistic=-1.5, pvalue=0.10, h=4, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.2,
+            statistic=-1.5,
+            pvalue=0.10,
+            h=4,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.2,
         )
 
         result = MultiHorizonResult(
@@ -2298,9 +2336,14 @@ class TestMultiHorizonResult:
     def test_degradation_pattern_consistent(self) -> None:
         """Pattern should be 'consistent' when all horizons significant."""
         dm_sig = DMTestResult(
-            statistic=-3.0, pvalue=0.003, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-3.0,
+            pvalue=0.003,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
 
         result = MultiHorizonResult(
@@ -2319,9 +2362,14 @@ class TestMultiHorizonResult:
     def test_degradation_pattern_none(self) -> None:
         """Pattern should be 'none' when no horizons significant."""
         dm_nonsig = DMTestResult(
-            statistic=-0.5, pvalue=0.30, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.1,
+            statistic=-0.5,
+            pvalue=0.30,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.1,
         )
 
         result = MultiHorizonResult(
@@ -2340,19 +2388,34 @@ class TestMultiHorizonResult:
     def test_degradation_pattern_degrading(self) -> None:
         """Pattern should be 'degrading' when p-values increase with horizon."""
         dm_h1 = DMTestResult(
-            statistic=-3.0, pvalue=0.003, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-3.0,
+            pvalue=0.003,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
         dm_h2 = DMTestResult(
-            statistic=-2.0, pvalue=0.045, h=2, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.3,
+            statistic=-2.0,
+            pvalue=0.045,
+            h=2,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.3,
         )
         dm_h4 = DMTestResult(
-            statistic=-0.5, pvalue=0.30, h=4, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.1,
+            statistic=-0.5,
+            pvalue=0.30,
+            h=4,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.1,
         )
 
         result = MultiHorizonResult(
@@ -2371,14 +2434,24 @@ class TestMultiHorizonResult:
     def test_get_pvalues(self) -> None:
         """get_pvalues should return dict of horizon -> p-value."""
         dm_h1 = DMTestResult(
-            statistic=-3.0, pvalue=0.003, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-3.0,
+            pvalue=0.003,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
         dm_h2 = DMTestResult(
-            statistic=-2.0, pvalue=0.045, h=2, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.3,
+            statistic=-2.0,
+            pvalue=0.045,
+            h=2,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.3,
         )
 
         result = MultiHorizonResult(
@@ -2398,14 +2471,24 @@ class TestMultiHorizonResult:
     def test_get_statistics(self) -> None:
         """get_statistics should return dict of horizon -> DM statistic."""
         dm_h1 = DMTestResult(
-            statistic=-3.0, pvalue=0.003, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-3.0,
+            pvalue=0.003,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
         dm_h2 = DMTestResult(
-            statistic=-2.0, pvalue=0.045, h=2, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.3,
+            statistic=-2.0,
+            pvalue=0.045,
+            h=2,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.3,
         )
 
         result = MultiHorizonResult(
@@ -2425,9 +2508,14 @@ class TestMultiHorizonResult:
     def test_summary_contains_key_info(self) -> None:
         """Summary should include model names and pattern."""
         dm_sig = DMTestResult(
-            statistic=-3.0, pvalue=0.003, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-3.0,
+            pvalue=0.003,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
 
         result = MultiHorizonResult(
@@ -2449,9 +2537,14 @@ class TestMultiHorizonResult:
     def test_to_markdown_table_format(self) -> None:
         """to_markdown should produce table with headers."""
         dm_sig = DMTestResult(
-            statistic=-3.0, pvalue=0.003, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-3.0,
+            pvalue=0.003,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
 
         result = MultiHorizonResult(
@@ -2484,7 +2577,8 @@ class TestCompareHorizons:
         errors_2 = rng.normal(0, 1.5, n)
 
         result = compare_horizons(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             horizons=(1, 2, 4),
         )
 
@@ -2549,7 +2643,8 @@ class TestCompareHorizons:
         errors_2 = rng.normal(0, 1.5, n)
 
         result = compare_horizons(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             horizons=(1,),
             alternative="less",
         )
@@ -2582,12 +2677,14 @@ class TestCompareHorizons:
         errors_2 = rng.normal(0, 1.5, n)
 
         result_hac = compare_horizons(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             horizons=(1,),
             variance_method="hac",
         )
         result_sn = compare_horizons(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             horizons=(1,),
             variance_method="self_normalized",
         )
@@ -2604,7 +2701,8 @@ class TestCompareHorizons:
         errors_2 = rng.normal(0, 1.5, n)
 
         result = compare_horizons(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             horizons=(1,),
             model_1_name="ARIMA",
             model_2_name="Persistence",
@@ -2645,7 +2743,8 @@ class TestCompareHorizons:
         errors_2 = rng.normal(0, 1.5, n)
 
         result = compare_horizons(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             horizons=(1, 2, 4, 8),
             alternative="less",
         )
@@ -2688,9 +2787,14 @@ class TestMultiModelHorizonResult:
         """Should have correct basic attributes."""
         # Create mock MultiModelComparisonResult
         dm_result = DMTestResult(
-            statistic=-2.5, pvalue=0.01, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-2.5,
+            pvalue=0.01,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
 
         comp = MultiModelComparisonResult(
@@ -2716,9 +2820,14 @@ class TestMultiModelHorizonResult:
     def test_best_model_by_horizon(self) -> None:
         """Should return best model for each horizon."""
         dm_result = DMTestResult(
-            statistic=-2.5, pvalue=0.01, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-2.5,
+            pvalue=0.01,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
 
         comp_h1 = MultiModelComparisonResult(
@@ -2751,9 +2860,14 @@ class TestMultiModelHorizonResult:
     def test_consistent_best_when_same(self) -> None:
         """consistent_best should return model when same across all horizons."""
         dm_result = DMTestResult(
-            statistic=-2.5, pvalue=0.01, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-2.5,
+            pvalue=0.01,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
 
         comp = MultiModelComparisonResult(
@@ -2777,9 +2891,14 @@ class TestMultiModelHorizonResult:
     def test_consistent_best_none_when_varies(self) -> None:
         """consistent_best should return None when best model varies."""
         dm_result = DMTestResult(
-            statistic=-2.5, pvalue=0.01, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-2.5,
+            pvalue=0.01,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
 
         comp_a = MultiModelComparisonResult(
@@ -2812,9 +2931,14 @@ class TestMultiModelHorizonResult:
     def test_summary_contains_key_info(self) -> None:
         """Summary should include models and horizons."""
         dm_result = DMTestResult(
-            statistic=-2.5, pvalue=0.01, h=1, n=100,
-            loss="squared", alternative="less",
-            harvey_adjusted=True, mean_loss_diff=-0.5,
+            statistic=-2.5,
+            pvalue=0.01,
+            h=1,
+            n=100,
+            loss="squared",
+            alternative="less",
+            harvey_adjusted=True,
+            mean_loss_diff=-0.5,
         )
 
         comp = MultiModelComparisonResult(
@@ -2956,7 +3080,8 @@ class TestMultiHorizonIntegration:
         errors_2 = rng.normal(0, 1.5, n)
 
         result = compare_horizons(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             horizons=(1, 2, 4, 8),
             alternative="less",
         )
@@ -2981,7 +3106,8 @@ class TestMultiHorizonIntegration:
 
         # Two-model comparison across horizons
         result = compare_horizons(
-            errors_model, errors_baseline,
+            errors_model,
+            errors_baseline,
             horizons=(1, 2, 4, 8, 12),
             alternative="less",
             model_1_name="Model",
@@ -3455,9 +3581,7 @@ class TestSPATest:
             "B": rng.normal(0, 1.2, n) ** 2,
         }
 
-        result = spa_test(
-            benchmark_errors, model_errors, n_bootstrap=100, random_state=42
-        )
+        result = spa_test(benchmark_errors, model_errors, n_bootstrap=100, random_state=42)
 
         assert hasattr(result, "pvalue")
         assert hasattr(result, "pvalue_consistent")
@@ -3496,9 +3620,7 @@ class TestSPATest:
             "low_var": rng.normal(0.5, 0.2, n).clip(0),
         }
 
-        result = spa_test(
-            benchmark, models, n_bootstrap=100, random_state=42
-        )
+        result = spa_test(benchmark, models, n_bootstrap=100, random_state=42)
 
         # Should produce valid result despite variance differences
         assert 0 <= result.pvalue <= 1

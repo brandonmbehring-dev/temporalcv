@@ -576,8 +576,7 @@ class TestCoverageGuarantees:
         # Average coverage should be ≥ 1 - α = 0.90
         mean_coverage = np.mean(coverages)
         assert mean_coverage >= 0.85, (
-            f"Mean coverage {mean_coverage:.3f} < 0.85. "
-            f"Finite sample guarantee may be violated."
+            f"Mean coverage {mean_coverage:.3f} < 0.85. Finite sample guarantee may be violated."
         )
 
     def test_coverage_not_grossly_overconservative(self) -> None:
@@ -596,8 +595,7 @@ class TestCoverageGuarantees:
 
         # Should not be extremely overconservative
         assert coverage < 0.995, (
-            f"Coverage {coverage:.3f} is too high. "
-            f"Intervals may be excessively wide."
+            f"Coverage {coverage:.3f} is too high. Intervals may be excessively wide."
         )
 
 
@@ -703,8 +701,7 @@ class TestWalkForwardConformal:
 
         # Average coverage should be >= 1 - alpha = 0.90 (approximately)
         assert mean_coverage >= 0.80, (
-            f"Mean coverage {mean_coverage:.3f} < 0.80. "
-            f"Coverage guarantee may be violated."
+            f"Mean coverage {mean_coverage:.3f} < 0.80. Coverage guarantee may be violated."
         )
 
     def test_length_mismatch_raises(self) -> None:
@@ -879,9 +876,7 @@ class TestCoverageDiagnostics:
         rng = np.random.default_rng(42)
         actuals = point + rng.normal(0, 1.0, 100)
 
-        diag = compute_coverage_diagnostics(
-            interval, actuals, undercoverage_threshold=0.05
-        )
+        diag = compute_coverage_diagnostics(interval, actuals, undercoverage_threshold=0.05)
 
         # Should warn: coverage << 95%
         assert diag.undercoverage_warning is True
@@ -1007,9 +1002,7 @@ class TestCoverageDiagnostics:
         )
         actuals = np.zeros(50)
 
-        diag = compute_coverage_diagnostics(
-            interval, actuals, target_coverage=0.95
-        )
+        diag = compute_coverage_diagnostics(interval, actuals, target_coverage=0.95)
         assert diag.target_coverage == 0.95
 
 

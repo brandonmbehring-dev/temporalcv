@@ -113,7 +113,15 @@ class DMTestResult:
 
     def __str__(self) -> str:
         """Format result as string."""
-        sig = "***" if self.pvalue < 0.01 else "**" if self.pvalue < 0.05 else "*" if self.pvalue < 0.10 else ""
+        sig = (
+            "***"
+            if self.pvalue < 0.01
+            else "**"
+            if self.pvalue < 0.05
+            else "*"
+            if self.pvalue < 0.10
+            else ""
+        )
         return f"DM({self.h}): {self.statistic:.3f} (p={self.pvalue:.4f}){sig}"
 
     @property
@@ -157,7 +165,15 @@ class PTTestResult:
 
     def __str__(self) -> str:
         """Format result as string."""
-        sig = "***" if self.pvalue < 0.01 else "**" if self.pvalue < 0.05 else "*" if self.pvalue < 0.10 else ""
+        sig = (
+            "***"
+            if self.pvalue < 0.01
+            else "**"
+            if self.pvalue < 0.05
+            else "*"
+            if self.pvalue < 0.10
+            else ""
+        )
         return f"PT: {self.accuracy:.1%} vs {self.expected:.1%} expected (z={self.statistic:.3f}, p={self.pvalue:.4f}){sig}"
 
     @property
@@ -233,7 +249,15 @@ class GWTestResult:
 
     def __str__(self) -> str:
         """Format result as string."""
-        sig = "***" if self.pvalue < 0.01 else "**" if self.pvalue < 0.05 else "*" if self.pvalue < 0.10 else ""
+        sig = (
+            "***"
+            if self.pvalue < 0.01
+            else "**"
+            if self.pvalue < 0.05
+            else "*"
+            if self.pvalue < 0.10
+            else ""
+        )
         return f"GW({self.n_lags}): {self.statistic:.3f} (p={self.pvalue:.4f}, R²={self.r_squared:.3f}){sig}"
 
     @property
@@ -325,7 +349,15 @@ class CWTestResult:
 
     def __str__(self) -> str:
         """Format result as string."""
-        sig = "***" if self.pvalue < 0.01 else "**" if self.pvalue < 0.05 else "*" if self.pvalue < 0.10 else ""
+        sig = (
+            "***"
+            if self.pvalue < 0.01
+            else "**"
+            if self.pvalue < 0.05
+            else "*"
+            if self.pvalue < 0.10
+            else ""
+        )
         return f"CW({self.h}): {self.statistic:.3f} (p={self.pvalue:.4f}, adj={self.adjustment_magnitude:.4f}){sig}"
 
     @property
@@ -710,8 +742,7 @@ def dm_test(
 
     if len(errors_1) != len(errors_2):
         raise ValueError(
-            f"Error arrays must have same length. "
-            f"Got {len(errors_1)} and {len(errors_2)}"
+            f"Error arrays must have same length. Got {len(errors_1)} and {len(errors_2)}"
         )
 
     n = len(errors_1)
@@ -743,8 +774,7 @@ def dm_test(
     # Validate variance_method
     if variance_method not in ("hac", "self_normalized"):
         raise ValueError(
-            f"Unknown variance_method: {variance_method}. "
-            "Use 'hac' or 'self_normalized'."
+            f"Unknown variance_method: {variance_method}. Use 'hac' or 'self_normalized'."
         )
 
     # Branch variance computation based on method
@@ -801,7 +831,7 @@ def dm_test(
     # Per Coroneo & Iacone (2016), large bandwidth can cause negative variance estimates
     if bandwidth > n / 4:
         warnings.warn(
-            f"DM test bandwidth ({bandwidth}) exceeds n/4 ({n/4:.0f}). "
+            f"DM test bandwidth ({bandwidth}) exceeds n/4 ({n / 4:.0f}). "
             f"HAC variance estimation may be unreliable with long forecast horizons "
             f"relative to sample size. Consider: (1) increasing sample size, "
             f"(2) using variance_method='self_normalized', (3) reducing forecast horizon. "
@@ -1011,8 +1041,7 @@ def gw_test(
     # Validate lengths match
     if len(errors_1) != len(errors_2):
         raise ValueError(
-            f"Error arrays must have same length. "
-            f"Got {len(errors_1)} and {len(errors_2)}"
+            f"Error arrays must have same length. Got {len(errors_1)} and {len(errors_2)}"
         )
 
     n_original = len(errors_1)
@@ -1290,13 +1319,9 @@ def cw_test(
 
     # Validate no NaN values
     if np.any(np.isnan(errors_unrestricted)):
-        raise ValueError(
-            "errors_unrestricted contains NaN values. Clean data before processing."
-        )
+        raise ValueError("errors_unrestricted contains NaN values. Clean data before processing.")
     if np.any(np.isnan(errors_restricted)):
-        raise ValueError(
-            "errors_restricted contains NaN values. Clean data before processing."
-        )
+        raise ValueError("errors_restricted contains NaN values. Clean data before processing.")
     if np.any(np.isnan(predictions_unrestricted)):
         raise ValueError(
             "predictions_unrestricted contains NaN values. Clean data before processing."
@@ -1310,8 +1335,7 @@ def cw_test(
     n = len(errors_unrestricted)
     if len(errors_restricted) != n:
         raise ValueError(
-            f"Error arrays must have same length. "
-            f"Got {n} and {len(errors_restricted)}"
+            f"Error arrays must have same length. Got {n} and {len(errors_restricted)}"
         )
     if len(predictions_unrestricted) != n:
         raise ValueError(
@@ -1370,8 +1394,7 @@ def cw_test(
         variance = compute_self_normalized_variance(d_adjusted)
     else:
         raise ValueError(
-            f"Unknown variance method: {variance_method}. "
-            f"Use 'hac' or 'self_normalized'."
+            f"Unknown variance method: {variance_method}. Use 'hac' or 'self_normalized'."
         )
 
     # Handle zero variance
@@ -1531,8 +1554,7 @@ def pt_test(
 
     if len(actual) != len(predicted):
         raise ValueError(
-            f"Arrays must have same length. "
-            f"Got actual={len(actual)}, predicted={len(predicted)}"
+            f"Arrays must have same length. Got actual={len(actual)}, predicted={len(predicted)}"
         )
 
     n = len(actual)
@@ -1664,8 +1686,6 @@ def pt_test(
 # =============================================================================
 # Multi-Model Comparison
 # =============================================================================
-
-
 
 
 @dataclass
@@ -2050,7 +2070,15 @@ class MultiHorizonResult:
         lines.append("Results by Horizon:")
         for h in sorted(self.horizons):
             r = self.dm_results[h]
-            sig = "***" if r.pvalue < 0.01 else "**" if r.pvalue < 0.05 else "*" if r.pvalue < 0.10 else ""
+            sig = (
+                "***"
+                if r.pvalue < 0.01
+                else "**"
+                if r.pvalue < 0.05
+                else "*"
+                if r.pvalue < 0.10
+                else ""
+            )
             lines.append(f"  h={h}: DM={r.statistic:7.3f}, p={r.pvalue:.4f}{sig:3s} (n={r.n})")
 
         lines.append("")
@@ -2581,9 +2609,7 @@ def forecast_encompassing_test(
             for j in range(2):
                 # Compute covariance with HAC
                 u_X[:, i] * u_X[:, j] / n
-                meat[i, j] = compute_hac_variance(
-                    u_X[:, i] * u_X[:, j], bandwidth=bandwidth
-                ) * n
+                meat[i, j] = compute_hac_variance(u_X[:, i] * u_X[:, j], bandwidth=bandwidth) * n
         var_beta = XtX_inv @ meat @ XtX_inv
     else:
         # Standard OLS variance: σ² (X'X)^(-1)
@@ -2750,11 +2776,7 @@ class RealityCheckResult:
     @property
     def significant_models(self) -> list[str]:
         """Return models that beat the benchmark (positive test statistics)."""
-        return [
-            model
-            for model, stat in self.individual_statistics.items()
-            if stat > 0
-        ]
+        return [model for model, stat in self.individual_statistics.items() if stat > 0]
 
 
 @dataclass
@@ -2934,8 +2956,7 @@ def reality_check_test(
     else:  # absolute
         benchmark_loss = np.abs(benchmark_errors)
         model_losses = {
-            name: np.abs(np.asarray(errors))
-            for name, errors in model_errors_dict.items()
+            name: np.abs(np.asarray(errors)) for name, errors in model_errors_dict.items()
         }
 
     # Compute loss differentials: d_i = L_benchmark - L_i (positive = model i better)
@@ -2965,9 +2986,7 @@ def reality_check_test(
         block_size = max(1, int(np.floor(n ** (1 / 3))))
 
     # Bootstrap p-value
-    bootstrap_indices = _stationary_bootstrap_indices(
-        n, n_bootstrap, float(block_size), rng
-    )
+    bootstrap_indices = _stationary_bootstrap_indices(n, n_bootstrap, float(block_size), rng)
 
     bootstrap_stats = []
     for b in range(n_bootstrap):
@@ -2979,9 +2998,7 @@ def reality_check_test(
             # Center at zero under H0
             diff_centered = diff_boot - np.mean(diff)
             mean_boot = np.mean(diff_centered)
-            var_boot = compute_hac_variance(
-                diff_centered, bandwidth=h - 1 if h > 1 else None
-            )
+            var_boot = compute_hac_variance(diff_centered, bandwidth=h - 1 if h > 1 else None)
             se_boot = np.sqrt(var_boot) if var_boot > 0 else 1e-10
             stat_boot = np.sqrt(n) * mean_boot / se_boot
             max_stat = max(max_stat, stat_boot)
@@ -3084,8 +3101,7 @@ def spa_test(
     else:
         benchmark_loss = np.abs(benchmark_errors)
         model_losses = {
-            name: np.abs(np.asarray(errors))
-            for name, errors in model_errors_dict.items()
+            name: np.abs(np.asarray(errors)) for name, errors in model_errors_dict.items()
         }
 
     # Loss differentials
@@ -3117,9 +3133,7 @@ def spa_test(
         block_size = max(1, int(np.floor(n ** (1 / 3))))
 
     # Bootstrap
-    bootstrap_indices = _stationary_bootstrap_indices(
-        n, n_bootstrap, float(block_size), rng
-    )
+    bootstrap_indices = _stationary_bootstrap_indices(n, n_bootstrap, float(block_size), rng)
 
     # For SPA: compute three different null distributions
     boot_stats_consistent = []  # Like RC

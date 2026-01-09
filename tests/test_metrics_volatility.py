@@ -178,17 +178,13 @@ class TestComputeLocalVolatility:
 
     def test_rolling_std_method(self, constant_volatility_data):
         """Rolling std method works."""
-        vol = compute_local_volatility(
-            constant_volatility_data, window=13, method="rolling_std"
-        )
+        vol = compute_local_volatility(constant_volatility_data, window=13, method="rolling_std")
         assert len(vol) == len(constant_volatility_data)
         assert np.all(np.isfinite(vol))
 
     def test_ewm_method(self, constant_volatility_data):
         """EWM method works."""
-        vol = compute_local_volatility(
-            constant_volatility_data, window=13, method="ewm"
-        )
+        vol = compute_local_volatility(constant_volatility_data, window=13, method="ewm")
         assert len(vol) == len(constant_volatility_data)
         assert np.all(np.isfinite(vol))
 
@@ -330,9 +326,7 @@ class TestComputeVolatilityWeightedMAE:
         volatility = np.ones(len(predictions))
 
         with pytest.raises(ValueError, match="weighting must be"):
-            compute_volatility_weighted_mae(
-                predictions, actuals, volatility, weighting="invalid"
-            )
+            compute_volatility_weighted_mae(predictions, actuals, volatility, weighting="invalid")
 
     def test_length_mismatch_error(self):
         """Different lengths raise ValueError."""
@@ -361,9 +355,7 @@ class TestComputeVolatilityStratifiedMetrics:
         """Basic stratification produces valid result."""
         predictions, actuals = predictions_actuals
 
-        result = compute_volatility_stratified_metrics(
-            predictions, actuals, window=13
-        )
+        result = compute_volatility_stratified_metrics(predictions, actuals, window=13)
 
         assert isinstance(result, VolatilityStratifiedResult)
         assert result.overall_mae > 0
@@ -401,9 +393,7 @@ class TestComputeVolatilityStratifiedMetrics:
         predictions, actuals = predictions_actuals
         volatility = np.abs(actuals) + 0.1
 
-        result = compute_volatility_stratified_metrics(
-            predictions, actuals, volatility=volatility
-        )
+        result = compute_volatility_stratified_metrics(predictions, actuals, volatility=volatility)
 
         assert isinstance(result, VolatilityStratifiedResult)
 
@@ -508,9 +498,7 @@ class TestVolatilityMetricsIntegration:
         predictions[100:] = actuals[100:] + rng.normal(0, 0.5, 50)
         volatility[100:] = 0.5
 
-        result = compute_volatility_stratified_metrics(
-            predictions, actuals, volatility=volatility
-        )
+        result = compute_volatility_stratified_metrics(predictions, actuals, volatility=volatility)
 
         # Should see increasing MAE from low to high vol
         assert result.low_vol_mae < result.med_vol_mae < result.high_vol_mae
@@ -530,9 +518,7 @@ class TestVolatilityMetricsEdgeCases:
         actuals = np.array([1.1, 2.1])
         volatility = np.array([1e-10, 1e-10])
 
-        vnmae = compute_volatility_normalized_mae(
-            predictions, actuals, volatility, epsilon=1e-8
-        )
+        vnmae = compute_volatility_normalized_mae(predictions, actuals, volatility, epsilon=1e-8)
         assert np.isfinite(vnmae)
 
     def test_large_values(self):
@@ -550,9 +536,7 @@ class TestVolatilityMetricsEdgeCases:
         actuals = np.array([1.1, 2.2, 2.9])
 
         # Stratified metrics might have empty terciles
-        result = compute_volatility_stratified_metrics(
-            predictions, actuals, window=2
-        )
+        result = compute_volatility_stratified_metrics(predictions, actuals, window=2)
         assert result.n_low + result.n_med + result.n_high == 3
 
     def test_list_inputs_all_functions(self):
@@ -564,9 +548,7 @@ class TestVolatilityMetricsEdgeCases:
         assert isinstance(
             compute_volatility_normalized_mae(predictions, actuals, volatility), float
         )
-        assert isinstance(
-            compute_volatility_weighted_mae(predictions, actuals, volatility), float
-        )
+        assert isinstance(compute_volatility_weighted_mae(predictions, actuals, volatility), float)
         assert isinstance(
             compute_volatility_stratified_metrics(predictions, actuals),
             VolatilityStratifiedResult,

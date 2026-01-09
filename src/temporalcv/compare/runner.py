@@ -171,9 +171,7 @@ def run_comparison(
                 # Compute metrics for each series
                 series_metrics: list[dict[str, float]] = []
                 for i in range(n_series):
-                    series_metrics.append(
-                        compute_comparison_metrics(predictions[i], test[i])
-                    )
+                    series_metrics.append(compute_comparison_metrics(predictions[i], test[i]))
 
                 # Aggregate across series
                 agg_func = np.mean if aggregation_mode == "per_series_mean" else np.median

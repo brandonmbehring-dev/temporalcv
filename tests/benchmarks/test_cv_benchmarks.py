@@ -37,9 +37,7 @@ class TestWalkForwardCVBenchmarks:
         y = rng.standard_normal(10000)
         return X, y
 
-    def test_walk_forward_small(
-        self, benchmark, small_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_walk_forward_small(self, benchmark, small_data: tuple[np.ndarray, np.ndarray]) -> None:
         """WalkForwardCV with n=500, 5 splits."""
         X, y = small_data
         cv = WalkForwardCV(n_splits=5)
@@ -63,9 +61,7 @@ class TestWalkForwardCVBenchmarks:
         result = benchmark(split_all)
         assert len(result) == 10
 
-    def test_walk_forward_large(
-        self, benchmark, large_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_walk_forward_large(self, benchmark, large_data: tuple[np.ndarray, np.ndarray]) -> None:
         """WalkForwardCV with n=10000, 20 splits."""
         X, y = large_data
         cv = WalkForwardCV(n_splits=20)
@@ -101,9 +97,7 @@ class TestCrossFitCVBenchmarks:
         y = rng.standard_normal(2000)
         return X, y
 
-    def test_crossfit_5_folds(
-        self, benchmark, medium_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_crossfit_5_folds(self, benchmark, medium_data: tuple[np.ndarray, np.ndarray]) -> None:
         """CrossFitCV with 5 folds."""
         X, y = medium_data
         cv = CrossFitCV(n_splits=5, extra_gap=5)
@@ -115,9 +109,7 @@ class TestCrossFitCVBenchmarks:
         # CrossFitCV yields n_splits - 1 pairs (fold 0 has no training data)
         assert len(result) == 4
 
-    def test_crossfit_10_folds(
-        self, benchmark, medium_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_crossfit_10_folds(self, benchmark, medium_data: tuple[np.ndarray, np.ndarray]) -> None:
         """CrossFitCV with 10 folds."""
         X, y = medium_data
         cv = CrossFitCV(n_splits=10, extra_gap=5)
@@ -188,9 +180,7 @@ class TestPurgedKFoldBenchmarks:
         result = benchmark(split_all)
         assert len(result) == 5
 
-    def test_purged_kfold_large(
-        self, benchmark, large_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_purged_kfold_large(self, benchmark, large_data: tuple[np.ndarray, np.ndarray]) -> None:
         """PurgedKFold with n=10000, purge_gap=20."""
         X, y = large_data
         cv = PurgedKFold(n_splits=5, purge_gap=20)
@@ -213,9 +203,7 @@ class TestCombinatorialPurgedCVBenchmarks:
         y = rng.standard_normal(1000)
         return X, y
 
-    def test_cpcv_5_choose_2(
-        self, benchmark, medium_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_cpcv_5_choose_2(self, benchmark, medium_data: tuple[np.ndarray, np.ndarray]) -> None:
         """CombinatorialPurgedCV with C(5,2)=10 paths."""
         X, y = medium_data
         cv = CombinatorialPurgedCV(n_splits=5, n_test_splits=2)
@@ -226,9 +214,7 @@ class TestCombinatorialPurgedCVBenchmarks:
         result = benchmark(split_all)
         assert len(result) == 10  # C(5,2) = 10
 
-    def test_cpcv_6_choose_2(
-        self, benchmark, medium_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_cpcv_6_choose_2(self, benchmark, medium_data: tuple[np.ndarray, np.ndarray]) -> None:
         """CombinatorialPurgedCV with C(6,2)=15 paths."""
         X, y = medium_data
         cv = CombinatorialPurgedCV(n_splits=6, n_test_splits=2)
@@ -256,9 +242,7 @@ class TestPurgedWalkForwardBenchmarks:
     ) -> None:
         """PurgedWalkForward with fixed train window."""
         X, y = medium_data
-        cv = PurgedWalkForward(
-            n_splits=10, train_size=200, test_size=50, purge_gap=10
-        )
+        cv = PurgedWalkForward(n_splits=10, train_size=200, test_size=50, purge_gap=10)
 
         def split_all() -> list:
             return list(cv.split(X, y))
@@ -271,9 +255,7 @@ class TestPurgedWalkForwardBenchmarks:
     ) -> None:
         """PurgedWalkForward with expanding train window."""
         X, y = medium_data
-        cv = PurgedWalkForward(
-            n_splits=10, train_size=None, test_size=50, purge_gap=10
-        )
+        cv = PurgedWalkForward(n_splits=10, train_size=None, test_size=50, purge_gap=10)
 
         def split_all() -> list:
             return list(cv.split(X, y))

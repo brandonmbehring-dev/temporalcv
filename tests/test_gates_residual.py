@@ -167,9 +167,7 @@ class TestLjungBoxCalibration:
         rejection_rate = false_positives / N_SIMS
 
         # Type I error should be near 5% (allowing 3-8% range)
-        assert 0.02 <= rejection_rate <= 0.10, (
-            f"Type I error = {rejection_rate:.1%}, expected ~5%"
-        )
+        assert 0.02 <= rejection_rate <= 0.10, f"Type I error = {rejection_rate:.1%}, expected ~5%"
 
     @pytest.mark.slow
     @pytest.mark.monte_carlo
@@ -235,7 +233,12 @@ class TestResidualDiagnosticsAdversarial:
         assert result.status in (GateStatus.WARN, GateStatus.HALT)
         details_str = str(result.details).lower()
         # Should mention kurtosis or normality issue
-        assert "kurtosis" in details_str or "normal" in details_str or "outlier" in details_str or result.status != GateStatus.PASS
+        assert (
+            "kurtosis" in details_str
+            or "normal" in details_str
+            or "outlier" in details_str
+            or result.status != GateStatus.PASS
+        )
 
     def test_minimum_samples_skip(self):
         """n=20 should SKIP (insufficient for reliable Ljung-Box, min is 30)."""

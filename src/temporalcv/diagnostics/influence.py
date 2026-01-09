@@ -144,9 +144,7 @@ def compute_dm_influence(
     errors2 = np.asarray(errors2, dtype=np.float64)
 
     if len(errors1) != len(errors2):
-        raise ValueError(
-            f"Error arrays must have same length: {len(errors1)} vs {len(errors2)}"
-        )
+        raise ValueError(f"Error arrays must have same length: {len(errors1)} vs {len(errors2)}")
 
     n = len(errors1)
     if n < 10:

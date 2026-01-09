@@ -196,9 +196,7 @@ class TestComparisonResult:
         assert ranking[0][0] == "ModelB"  # Best (lowest MAE)
         assert ranking[1][0] == "ModelA"
 
-    def test_get_ranking_different_metric(
-        self, sample_results: list[ModelResult]
-    ) -> None:
+    def test_get_ranking_different_metric(self, sample_results: list[ModelResult]) -> None:
         """Should rank by specified metric."""
         result = ComparisonResult(
             dataset_name="test",
@@ -268,17 +266,11 @@ class TestComparisonReport:
         ]
 
         return [
-            ComparisonResult(
-                dataset_name="dataset_1", models=results_1, primary_metric="mae"
-            ),
-            ComparisonResult(
-                dataset_name="dataset_2", models=results_2, primary_metric="mae"
-            ),
+            ComparisonResult(dataset_name="dataset_1", models=results_1, primary_metric="mae"),
+            ComparisonResult(dataset_name="dataset_2", models=results_2, primary_metric="mae"),
         ]
 
-    def test_basic_creation(
-        self, sample_comparisons: list[ComparisonResult]
-    ) -> None:
+    def test_basic_creation(self, sample_comparisons: list[ComparisonResult]) -> None:
         """Should create report with summary."""
         report = ComparisonReport(results=sample_comparisons)
 
@@ -503,9 +495,7 @@ class TestRunBenchmarkSuite:
         """Create multiple synthetic datasets."""
         from temporalcv.benchmarks import create_synthetic_dataset
 
-        return [
-            create_synthetic_dataset(n_obs=50, seed=i) for i in range(3)
-        ]
+        return [create_synthetic_dataset(n_obs=50, seed=i) for i in range(3)]
 
     def test_multiple_datasets(self, datasets: list) -> None:
         """Should run across multiple datasets."""
@@ -594,14 +584,10 @@ class TestCompareIntegration:
         """Should generate markdown report."""
         from temporalcv.benchmarks import create_synthetic_dataset
 
-        datasets = [
-            create_synthetic_dataset(n_obs=50, seed=i) for i in range(2)
-        ]
+        datasets = [create_synthetic_dataset(n_obs=50, seed=i) for i in range(2)]
         adapters = [NaiveAdapter()]
 
-        report = run_benchmark_suite(
-            datasets, adapters, include_dm_test=False
-        )
+        report = run_benchmark_suite(datasets, adapters, include_dm_test=False)
 
         md = report.to_markdown()
         assert "# Model Comparison Report" in md
@@ -689,7 +675,8 @@ class TestDMTestRunnerIntegration:
 
         if result.statistical_tests:
             error_count = sum(
-                1 for dm_data in result.statistical_tests.values()
+                1
+                for dm_data in result.statistical_tests.values()
                 if isinstance(dm_data, dict) and "error" in dm_data
             )
             total_count = len(result.statistical_tests)

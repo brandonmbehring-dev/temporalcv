@@ -45,9 +45,7 @@ class TestMetricComparisonDisplayInit:
         metric_names = ["MAE"]
         values = np.array([[0.20], [0.15]])
 
-        display = MetricComparisonDisplay(
-            model_names, metric_names, values, baseline_idx=0
-        )
+        display = MetricComparisonDisplay(model_names, metric_names, values, baseline_idx=0)
 
         assert display.baseline_idx == 0
 
@@ -220,9 +218,7 @@ class TestMetricComparisonDisplayPlotRelative:
 
     def test_plot_relative_requires_baseline(self):
         """plot_relative raises if no baseline set."""
-        display = MetricComparisonDisplay.from_dict(
-            {"A": {"MAE": 0.15}, "B": {"MAE": 0.12}}
-        )
+        display = MetricComparisonDisplay.from_dict({"A": {"MAE": 0.15}, "B": {"MAE": 0.12}})
 
         with pytest.raises(ValueError, match="baseline_idx must be set"):
             display.plot_relative()

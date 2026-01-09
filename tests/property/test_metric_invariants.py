@@ -61,9 +61,7 @@ class TestMAEInvariants:
 
     @given(pair=valid_prediction_pair())
     @settings(max_examples=100)
-    def test_mae_zero_for_perfect_predictions(
-        self, pair: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_mae_zero_for_perfect_predictions(self, pair: tuple[np.ndarray, np.ndarray]) -> None:
         """MAE must be 0 for perfect predictions."""
         _, actuals = pair
         result = compute_mae(actuals, actuals)
@@ -92,9 +90,7 @@ class TestMSEInvariants:
 
     @given(pair=valid_prediction_pair())
     @settings(max_examples=100)
-    def test_mse_zero_for_perfect_predictions(
-        self, pair: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_mse_zero_for_perfect_predictions(self, pair: tuple[np.ndarray, np.ndarray]) -> None:
         """MSE must be 0 for perfect predictions."""
         _, actuals = pair
         result = compute_mse(actuals, actuals)
@@ -153,9 +149,7 @@ class TestMAPEInvariants:
 
     @given(pair=positive_prediction_pair())
     @settings(max_examples=100)
-    def test_mape_zero_for_perfect_predictions(
-        self, pair: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_mape_zero_for_perfect_predictions(self, pair: tuple[np.ndarray, np.ndarray]) -> None:
         """MAPE must be 0 for perfect predictions."""
         _, actuals = pair
         result = compute_mape(actuals, actuals)
@@ -197,9 +191,7 @@ class TestBiasInvariants:
 
     @given(pair=valid_prediction_pair())
     @settings(max_examples=100)
-    def test_bias_zero_for_perfect_predictions(
-        self, pair: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_bias_zero_for_perfect_predictions(self, pair: tuple[np.ndarray, np.ndarray]) -> None:
         """Bias must be 0 for perfect predictions."""
         _, actuals = pair
         result = compute_bias(actuals, actuals)
@@ -240,9 +232,7 @@ class TestPinballLossInvariants:
 
     @given(pair=valid_prediction_pair())
     @settings(max_examples=100)
-    def test_pinball_median_equals_half_mae(
-        self, pair: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_pinball_median_equals_half_mae(self, pair: tuple[np.ndarray, np.ndarray]) -> None:
         """Pinball loss at tau=0.5 equals 0.5 * MAE."""
         predictions, actuals = pair
         pinball = compute_pinball_loss(actuals, predictions, tau=0.5)
@@ -263,9 +253,7 @@ class TestHuberLossInvariants:
 
     @given(pair=valid_prediction_pair())
     @settings(max_examples=100)
-    def test_huber_zero_for_perfect_predictions(
-        self, pair: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_huber_zero_for_perfect_predictions(self, pair: tuple[np.ndarray, np.ndarray]) -> None:
         """Huber loss must be 0 for perfect predictions."""
         _, actuals = pair
         result = compute_huber_loss(actuals, actuals, delta=1.0)
@@ -297,9 +285,7 @@ class TestLinExLossInvariants:
 
     @given(pair=valid_prediction_pair())
     @settings(max_examples=100)
-    def test_linex_zero_for_perfect_predictions(
-        self, pair: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_linex_zero_for_perfect_predictions(self, pair: tuple[np.ndarray, np.ndarray]) -> None:
         """LinEx loss must be 0 for perfect predictions."""
         _, actuals = pair
         result = compute_linex_loss(actuals, actuals, a=1.0, b=0.5)
@@ -324,9 +310,7 @@ class TestMetricConsistency:
 
     @given(pair=valid_prediction_pair())
     @settings(max_examples=50)
-    def test_perfect_predictions_all_zero(
-        self, pair: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_perfect_predictions_all_zero(self, pair: tuple[np.ndarray, np.ndarray]) -> None:
         """All error metrics should be 0 for perfect predictions."""
         _, actuals = pair
 

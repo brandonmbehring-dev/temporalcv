@@ -66,11 +66,13 @@ class TestLagLeakageDetection:
         # This represents improperly constructed features
         y = rng.standard_normal(n)
         noise = rng.standard_normal((n, 3)) * 0.1
-        X = np.column_stack([
-            y + noise[:, 0],      # Leaked feature 1
-            y * 0.5 + noise[:, 1], # Leaked feature 2
-            noise[:, 2],           # Noise feature
-        ])
+        X = np.column_stack(
+            [
+                y + noise[:, 0],  # Leaked feature 1
+                y * 0.5 + noise[:, 1],  # Leaked feature 2
+                noise[:, 2],  # Noise feature
+            ]
+        )
 
         model = LeakyModel()
 
@@ -168,14 +170,12 @@ class TestLagLeakageDetection:
 
         # Strict threshold should catch
         strict = gate_signal_verification(
-            model, X, y, n_shuffles=3, threshold=0.01,
-            method="effect_size", random_state=42
+            model, X, y, n_shuffles=3, threshold=0.01, method="effect_size", random_state=42
         )
 
         # Lenient threshold might not
         lenient = gate_signal_verification(
-            model, X, y, n_shuffles=3, threshold=0.50,
-            method="effect_size", random_state=42
+            model, X, y, n_shuffles=3, threshold=0.50, method="effect_size", random_state=42
         )
 
         # Strict should be at least as severe as lenient

@@ -105,18 +105,17 @@ def _generate_summary_section(report: ComparisonReport) -> str:
     ]
 
     # Best model per dataset table
-    lines.extend([
-        "### Best Model by Dataset\n",
-        "| Dataset | Best Model | MAE | RMSE | Runtime |",
-        "|---------|------------|-----|------|---------|",
-    ])
+    lines.extend(
+        [
+            "### Best Model by Dataset\n",
+            "| Dataset | Best Model | MAE | RMSE | Runtime |",
+            "|---------|------------|-----|------|---------|",
+        ]
+    )
 
     for result in report.results:
         best_model = result.best_model
-        best_result = next(
-            (m for m in result.models if m.model_name == best_model),
-            None
-        )
+        best_result = next((m for m in result.models if m.model_name == best_model), None)
 
         if best_result:
             mae = best_result.metrics.get("mae", float("nan"))
@@ -130,17 +129,16 @@ def _generate_summary_section(report: ComparisonReport) -> str:
 
     # Model wins summary
     if report.summary.get("wins_by_model"):
-        lines.extend([
-            "\n### Model Wins\n",
-            "| Model | Wins | Win Rate |",
-            "|-------|------|----------|",
-        ])
+        lines.extend(
+            [
+                "\n### Model Wins\n",
+                "| Model | Wins | Win Rate |",
+                "|-------|------|----------|",
+            ]
+        )
 
         total = len(report.results)
-        for model, wins in sorted(
-            report.summary["wins_by_model"].items(),
-            key=lambda x: -x[1]
-        ):
+        for model, wins in sorted(report.summary["wins_by_model"].items(), key=lambda x: -x[1]):
             rate = wins / total * 100 if total > 0 else 0
             lines.append(f"| {model} | {wins} | {rate:.0f}% |")
 
@@ -156,17 +154,16 @@ def _generate_detailed_results(report: ComparisonReport) -> str:
         lines.append(f"Best model: **{result.best_model}**\n")
 
         # Ranking table
-        lines.extend([
-            "| Rank | Model | MAE | RMSE | MAPE | Direction Acc | Runtime |",
-            "|------|-------|-----|------|------|---------------|---------|",
-        ])
+        lines.extend(
+            [
+                "| Rank | Model | MAE | RMSE | MAPE | Direction Acc | Runtime |",
+                "|------|-------|-----|------|------|---------------|---------|",
+            ]
+        )
 
         ranking = result.get_ranking()
         for rank, (model_name, mae) in enumerate(ranking, 1):
-            model = next(
-                (m for m in result.models if m.model_name == model_name),
-                None
-            )
+            model = next((m for m in result.models if m.model_name == model_name), None)
             if model:
                 rmse = model.metrics.get("rmse", float("nan"))
                 mape = model.metrics.get("mape", float("nan"))
@@ -198,19 +195,19 @@ def _generate_significance_section(report: ComparisonReport) -> str:
         lines.append(f"### {result.dataset_name}\n")
         lines.append(f"Best model: {result.best_model}\n")
 
-        lines.extend([
-            "| Comparison | DM Statistic | p-value | Significant |",
-            "|------------|--------------|---------|-------------|",
-        ])
+        lines.extend(
+            [
+                "| Comparison | DM Statistic | p-value | Significant |",
+                "|------------|--------------|---------|-------------|",
+            ]
+        )
 
         for model_name, test_result in result.statistical_tests.items():
             if isinstance(test_result, dict) and "statistic" in test_result:
                 stat = test_result["statistic"]
                 pval = test_result["p_value"]
                 sig = "Yes" if test_result.get("significant", False) else "No"
-                lines.append(
-                    f"| vs {model_name} | {stat:.3f} | {pval:.4f} | {sig} |"
-                )
+                lines.append(f"| vs {model_name} | {stat:.3f} | {pval:.4f} | {sig} |")
             elif isinstance(test_result, dict) and "error" in test_result:
                 lines.append(f"| vs {model_name} | - | - | Error: {test_result['error']} |")
 
@@ -311,14 +308,8 @@ def generate_summary_table(report: ComparisonReport) -> str:
 
     for result in report.results:
         best = result.best_model
-        best_result = next(
-            (m for m in result.models if m.model_name == best),
-            None
-        )
-        naive_result = next(
-            (m for m in result.models if m.model_name == "Naive"),
-            None
-        )
+        best_result = next((m for m in result.models if m.model_name == best), None)
+        naive_result = next((m for m in result.models if m.model_name == "Naive"), None)
 
         if best_result:
             mae = best_result.metrics.get("mae", float("nan"))
@@ -330,9 +321,7 @@ def generate_summary_table(report: ComparisonReport) -> str:
                     improvement = (naive_mae - mae) / naive_mae * 100
                     vs_naive = f"{improvement:+.1f}%"
 
-            lines.append(
-                f"| {result.dataset_name} | **{best}** | {mae:.4f} | {vs_naive} |"
-            )
+            lines.append(f"| {result.dataset_name} | **{best}** | {mae:.4f} | {vs_naive} |")
 
     return "\n".join(lines)
 

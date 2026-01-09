@@ -124,8 +124,7 @@ def compute_linex_loss(
 
     if len(predictions) != len(actuals):
         raise ValueError(
-            f"Array lengths must match. "
-            f"Got predictions={len(predictions)}, actuals={len(actuals)}"
+            f"Array lengths must match. Got predictions={len(predictions)}, actuals={len(actuals)}"
         )
 
     if len(predictions) == 0:
@@ -214,8 +213,7 @@ def compute_asymmetric_mape(
 
     if len(predictions) != len(actuals):
         raise ValueError(
-            f"Array lengths must match. "
-            f"Got predictions={len(predictions)}, actuals={len(actuals)}"
+            f"Array lengths must match. Got predictions={len(predictions)}, actuals={len(actuals)}"
         )
 
     if len(predictions) == 0:
@@ -322,8 +320,7 @@ def compute_directional_loss(
 
     if len(predictions) != len(actuals):
         raise ValueError(
-            f"Array lengths must match. "
-            f"Got predictions={len(predictions)}, actuals={len(actuals)}"
+            f"Array lengths must match. Got predictions={len(predictions)}, actuals={len(actuals)}"
         )
 
     if len(predictions) == 0:
@@ -418,8 +415,7 @@ def compute_squared_log_error(
 
     if len(predictions) != len(actuals):
         raise ValueError(
-            f"Array lengths must match. "
-            f"Got predictions={len(predictions)}, actuals={len(actuals)}"
+            f"Array lengths must match. Got predictions={len(predictions)}, actuals={len(actuals)}"
         )
 
     if len(predictions) == 0:
@@ -502,8 +498,7 @@ def compute_huber_loss(
 
     if len(predictions) != len(actuals):
         raise ValueError(
-            f"Array lengths must match. "
-            f"Got predictions={len(predictions)}, actuals={len(actuals)}"
+            f"Array lengths must match. Got predictions={len(predictions)}, actuals={len(actuals)}"
         )
 
     if len(predictions) == 0:

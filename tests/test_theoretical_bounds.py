@@ -57,7 +57,7 @@ class TestTheoreticalAR1MSEBound:
     def test_mse_converges_to_unconditional_variance(self) -> None:
         """For large h, MSE → Var(y) = σ²/(1-φ²)."""
         phi, sigma_sq = 0.9, 1.0
-        unconditional_var = sigma_sq / (1 - phi ** 2)  # 5.263...
+        unconditional_var = sigma_sq / (1 - phi**2)  # 5.263...
 
         # Large horizon should approach unconditional variance
         mse_h100 = theoretical_ar1_mse_bound(phi=phi, sigma_sq=sigma_sq, h=100)
@@ -203,9 +203,7 @@ class TestCheckAgainstAR1Bounds:
         """Should respect custom tolerance factor."""
         # With tolerance=2.0, threshold is 0.5
         # Model MSE of 0.6 should PASS (0.6 > 0.5)
-        result = check_against_ar1_bounds(
-            model_mse=0.6, phi=0.9, sigma_sq=1.0, h=1, tolerance=2.0
-        )
+        result = check_against_ar1_bounds(model_mse=0.6, phi=0.9, sigma_sq=1.0, h=1, tolerance=2.0)
         assert result.status != GateStatus.HALT
 
     def test_details_contain_metadata(self) -> None:
@@ -264,7 +262,7 @@ class TestGenerateAR1Series:
     def test_variance_matches_theory(self) -> None:
         """Generated series variance should ≈ σ²/(1-φ²)."""
         phi, sigma = 0.9, 1.0
-        theoretical_var = sigma ** 2 / (1 - phi ** 2)
+        theoretical_var = sigma**2 / (1 - phi**2)
 
         series = generate_ar1_series(phi=phi, sigma=sigma, n=50000, random_state=42)
         empirical_var = np.var(series)
@@ -306,9 +304,7 @@ class TestGenerateAR2Series:
     def test_reduces_to_ar1_when_phi2_zero(self) -> None:
         """When φ₂=0, variance should match AR(1)."""
         phi1, sigma = 0.7, 1.0
-        ar2_series = generate_ar2_series(
-            phi1=phi1, phi2=0.0, sigma=sigma, n=50000, random_state=42
-        )
+        ar2_series = generate_ar2_series(phi1=phi1, phi2=0.0, sigma=sigma, n=50000, random_state=42)
         ar1_series = generate_ar1_series(phi=phi1, sigma=sigma, n=50000, random_state=42)
 
         # Variances should match (both are σ²/(1-φ₁²))
@@ -341,7 +337,7 @@ class TestTheoreticalBoundsIntegration:
         empirical_mse = np.mean((forecasts - actuals) ** 2)
 
         # Theoretical MSE
-        theoretical_mse = theoretical_ar1_mse_bound(phi=phi, sigma_sq=sigma ** 2, h=1)
+        theoretical_mse = theoretical_ar1_mse_bound(phi=phi, sigma_sq=sigma**2, h=1)
 
         # Empirical should be close to theoretical (allowing sampling variation)
         assert empirical_mse == pytest.approx(theoretical_mse, rel=0.1)
@@ -359,9 +355,7 @@ class TestTheoreticalBoundsIntegration:
         model_mse = np.mean((forecasts - actuals) ** 2)
 
         # Check gate - should not HALT
-        result = check_against_ar1_bounds(
-            model_mse=model_mse, phi=phi, sigma_sq=sigma ** 2, h=1
-        )
+        result = check_against_ar1_bounds(model_mse=model_mse, phi=phi, sigma_sq=sigma**2, h=1)
         assert result.status != GateStatus.HALT
 
     def test_gate_halts_for_impossible_performance(self) -> None:
@@ -369,10 +363,8 @@ class TestTheoreticalBoundsIntegration:
         phi, sigma = 0.9, 1.0
 
         # Pretend model has MSE much better than theoretical minimum
-        theoretical_mse = theoretical_ar1_mse_bound(phi=phi, sigma_sq=sigma ** 2, h=1)
+        theoretical_mse = theoretical_ar1_mse_bound(phi=phi, sigma_sq=sigma**2, h=1)
         impossible_mse = theoretical_mse * 0.3  # 30% of minimum
 
-        result = check_against_ar1_bounds(
-            model_mse=impossible_mse, phi=phi, sigma_sq=sigma ** 2, h=1
-        )
+        result = check_against_ar1_bounds(model_mse=impossible_mse, phi=phi, sigma_sq=sigma**2, h=1)
         assert result.status == GateStatus.HALT

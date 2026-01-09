@@ -94,8 +94,7 @@ def load_m5(
             dataset_name="M5 Walmart",
             download_url=M5_DOWNLOAD_URL,
             instructions=(
-                f"sales_train_evaluation.csv not found in {data_path}\n\n"
-                f"{M5_INSTRUCTIONS}"
+                f"sales_train_evaluation.csv not found in {data_path}\n\n{M5_INSTRUCTIONS}"
             ),
         )
 
@@ -103,9 +102,7 @@ def load_m5(
     try:
         import pandas as pd
     except ImportError as e:
-        raise ImportError(
-            "pandas required for M5 loading: pip install pandas"
-        ) from e
+        raise ImportError("pandas required for M5 loading: pip install pandas") from e
 
     df = pd.read_csv(sales_file)
 

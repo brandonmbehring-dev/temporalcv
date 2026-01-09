@@ -227,9 +227,7 @@ class TestMoveConditionalMetrics:
         # Unreliable case (not enough DOWN)
         actuals_few_down = np.concatenate([np.ones(15) * 0.1, np.ones(5) * -0.1])
         predictions_few = np.zeros(20)
-        mc_few = compute_move_conditional_metrics(
-            predictions_few, actuals_few_down, threshold=0.05
-        )
+        mc_few = compute_move_conditional_metrics(predictions_few, actuals_few_down, threshold=0.05)
         assert mc_few.is_reliable is False
 
     def test_empty_arrays(self) -> None:
@@ -469,9 +467,7 @@ class TestPersistenceIntegration:
         test_predictions = test_actuals * 0.3  # Captures some signal
 
         # Compute metrics
-        mc = compute_move_conditional_metrics(
-            test_predictions, test_actuals, threshold=threshold
-        )
+        mc = compute_move_conditional_metrics(test_predictions, test_actuals, threshold=threshold)
 
         # Verify reasonable results
         assert -1 < mc.skill_score < 1  # Bounded

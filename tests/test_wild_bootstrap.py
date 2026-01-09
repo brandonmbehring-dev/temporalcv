@@ -120,9 +120,7 @@ class TestReproducibility:
         result1 = wild_cluster_bootstrap(fold_stats, n_bootstrap=99, random_state=42)
         result2 = wild_cluster_bootstrap(fold_stats, n_bootstrap=99, random_state=123)
 
-        assert not np.allclose(
-            result1.bootstrap_distribution, result2.bootstrap_distribution
-        )
+        assert not np.allclose(result1.bootstrap_distribution, result2.bootstrap_distribution)
 
 
 class TestEdgeCases:

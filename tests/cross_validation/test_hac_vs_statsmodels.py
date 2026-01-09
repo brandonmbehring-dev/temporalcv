@@ -147,8 +147,7 @@ class TestHACVarianceIndependent:
 
         # AR series should have larger HAC variance
         assert var_ar > var_iid, (
-            f"AR series HAC variance ({var_ar:.6f}) should be > "
-            f"IID variance ({var_iid:.6f})"
+            f"AR series HAC variance ({var_ar:.6f}) should be > IID variance ({var_iid:.6f})"
         )
 
     def test_automatic_bandwidth_selection(self) -> None:

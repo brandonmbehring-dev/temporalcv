@@ -263,9 +263,7 @@ class SplitConformalPredictor:
             )
 
         if len(predictions) < 10:
-            raise ValueError(
-                f"Need at least 10 calibration samples, got {len(predictions)}"
-            )
+            raise ValueError(f"Need at least 10 calibration samples, got {len(predictions)}")
 
         # Tiered sample size warnings [T2]
         # n>=10: allowed (minimum for quantile estimation)
@@ -695,9 +693,7 @@ class BellmanConformalPredictor:
         actuals = np.asarray(actuals)
 
         if len(predictions) < 10:
-            raise ValueError(
-                f"Need at least 10 calibration samples, got {len(predictions)}"
-            )
+            raise ValueError(f"Need at least 10 calibration samples, got {len(predictions)}")
 
         # Compute residual distribution (nonconformity scores)
         residuals = np.abs(actuals - predictions)
@@ -719,9 +715,7 @@ class BellmanConformalPredictor:
         n = len(residuals)
         q_level = np.ceil((n + 1) * (1 - self.alpha)) / n
         q_level = min(q_level, 1.0)
-        self._current_quantile = float(
-            np.quantile(residuals, q_level, method="higher")
-        )
+        self._current_quantile = float(np.quantile(residuals, q_level, method="higher"))
         self.quantile_history = [self._current_quantile]
 
         return self
@@ -1321,9 +1315,7 @@ def walk_forward_conformal(
     n = len(predictions)
 
     if len(actuals) != n:
-        raise ValueError(
-            f"predictions ({n}) and actuals ({len(actuals)}) must have same length"
-        )
+        raise ValueError(f"predictions ({n}) and actuals ({len(actuals)}) must have same length")
 
     cal_size = int(n * calibration_fraction)
 
@@ -1468,8 +1460,7 @@ def compute_coverage_diagnostics(
 
     if len(intervals.lower) != n or len(intervals.upper) != n:
         raise ValueError(
-            f"Interval length ({len(intervals.lower)}) doesn't match "
-            f"actuals length ({n})"
+            f"Interval length ({len(intervals.lower)}) doesn't match actuals length ({n})"
         )
 
     # Use interval's confidence if target not specified
@@ -1503,9 +1494,7 @@ def compute_coverage_diagnostics(
     if regimes is not None:
         regimes = np.asarray(regimes)
         if len(regimes) != n:
-            raise ValueError(
-                f"Regimes length ({len(regimes)}) doesn't match actuals length ({n})"
-            )
+            raise ValueError(f"Regimes length ({len(regimes)}) doesn't match actuals length ({n})")
 
         coverage_by_regime = {}
         unique_regimes = np.unique(regimes)

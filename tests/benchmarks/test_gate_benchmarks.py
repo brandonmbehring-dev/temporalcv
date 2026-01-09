@@ -62,9 +62,7 @@ class TestShuffledTargetGateBenchmarks:
         model = DummyModel()
 
         def run_gate() -> object:
-            return gate_signal_verification(
-                model=model, X=X, y=y, n_shuffles=10, random_state=42
-            )
+            return gate_signal_verification(model=model, X=X, y=y, n_shuffles=10, random_state=42)
 
         result = benchmark(run_gate)
         assert result is not None
@@ -77,9 +75,7 @@ class TestShuffledTargetGateBenchmarks:
         model = DummyModel()
 
         def run_gate() -> object:
-            return gate_signal_verification(
-                model=model, X=X, y=y, n_shuffles=50, random_state=42
-            )
+            return gate_signal_verification(model=model, X=X, y=y, n_shuffles=50, random_state=42)
 
         result = benchmark(run_gate)
         assert result is not None
@@ -92,9 +88,7 @@ class TestShuffledTargetGateBenchmarks:
         model = DummyModel()
 
         def run_gate() -> object:
-            return gate_signal_verification(
-                model=model, X=X, y=y, n_shuffles=100, random_state=42
-            )
+            return gate_signal_verification(model=model, X=X, y=y, n_shuffles=100, random_state=42)
 
         result = benchmark(run_gate)
         assert result is not None
@@ -195,9 +189,7 @@ class TestResidualDiagnosticsGateBenchmarks:
             residuals[i] = 0.6 * residuals[i - 1] + rng.standard_normal()
         return residuals
 
-    def test_residual_diagnostics_white_noise(
-        self, benchmark, residuals: np.ndarray
-    ) -> None:
+    def test_residual_diagnostics_white_noise(self, benchmark, residuals: np.ndarray) -> None:
         """Residual diagnostics gate with white noise residuals."""
 
         def run_gate() -> object:
@@ -212,9 +204,7 @@ class TestResidualDiagnosticsGateBenchmarks:
         """Residual diagnostics gate with autocorrelated residuals."""
 
         def run_gate() -> object:
-            return gate_residual_diagnostics(
-                residuals=autocorrelated_residuals, max_lag=10
-            )
+            return gate_residual_diagnostics(residuals=autocorrelated_residuals, max_lag=10)
 
         result = benchmark(run_gate)
         assert result is not None
@@ -244,9 +234,7 @@ class TestRunGatesBenchmarks:
                 model_metric=model_mae,
                 baseline_metric=baseline_mae,
             ),
-            gate_temporal_boundary(
-                train_end_idx=99, test_start_idx=100, horizon=1, extra_gap=0
-            ),
+            gate_temporal_boundary(train_end_idx=99, test_start_idx=100, horizon=1, extra_gap=0),
         ]
         return gates
 

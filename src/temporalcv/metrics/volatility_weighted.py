@@ -165,9 +165,7 @@ class EWMAVolatility:
         ewma_var[0] = squared_devs[0]
 
         for i in range(1, n):
-            ewma_var[i] = self.alpha * squared_devs[i] + (1 - self.alpha) * ewma_var[
-                i - 1
-            ]
+            ewma_var[i] = self.alpha * squared_devs[i] + (1 - self.alpha) * ewma_var[i - 1]
 
         volatility = np.sqrt(ewma_var)
 
@@ -197,8 +195,7 @@ class GARCHVolatility:
             from arch import arch_model  # noqa: F401
         except ImportError:
             raise ImportError(
-                "GARCH estimation requires the 'arch' package. "
-                "Install with: pip install arch"
+                "GARCH estimation requires the 'arch' package. Install with: pip install arch"
             ) from None
         self.p = p
         self.q = q
@@ -588,8 +585,7 @@ def compute_volatility_stratified_metrics(
 
     if len(predictions) != len(actuals):
         raise ValueError(
-            f"Array lengths must match. Got predictions={len(predictions)}, "
-            f"actuals={len(actuals)}"
+            f"Array lengths must match. Got predictions={len(predictions)}, actuals={len(actuals)}"
         )
 
     if len(predictions) == 0:
@@ -602,8 +598,7 @@ def compute_volatility_stratified_metrics(
         volatility = np.asarray(volatility, dtype=np.float64)
         if len(volatility) != len(predictions):
             raise ValueError(
-                f"volatility length must match. Got {len(volatility)}, "
-                f"expected {len(predictions)}"
+                f"volatility length must match. Got {len(volatility)}, expected {len(predictions)}"
             )
 
     # Compute tercile thresholds

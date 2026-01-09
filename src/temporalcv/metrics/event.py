@@ -335,8 +335,7 @@ def compute_direction_brier(
 
         if len(pred_probs) != n:
             raise ValueError(
-                f"Length mismatch: pred_probs has {len(pred_probs)}, "
-                f"actual_directions has {n}"
+                f"Length mismatch: pred_probs has {len(pred_probs)}, actual_directions has {n}"
             )
 
         # Validate probability range
@@ -382,8 +381,7 @@ def compute_direction_brier(
         for i, a in enumerate(actual_directions):
             if not 0 <= a <= 2:
                 raise ValueError(
-                    f"For n_classes=3, actual_directions must be 0, 1, or 2. "
-                    f"Got {a} at index {i}"
+                    f"For n_classes=3, actual_directions must be 0, 1, or 2. Got {a} at index {i}"
                 )
             actual_onehot[i, int(a)] = 1.0
 
@@ -486,8 +484,7 @@ def compute_pr_auc(
     # Handle degenerate cases with explicit warnings (NEVER FAIL SILENTLY)
     if n_positive == 0:
         warnings.warn(
-            "PR-AUC undefined: no positive samples. "
-            "Returning 0.0 as skill-equivalent fallback.",
+            "PR-AUC undefined: no positive samples. Returning 0.0 as skill-equivalent fallback.",
             UndefinedMetricWarning,
             stacklevel=2,
         )
@@ -501,8 +498,7 @@ def compute_pr_auc(
 
     if n_negative == 0:
         warnings.warn(
-            "PR-AUC degenerate: all positive samples. "
-            "Returning 1.0 (trivially correct).",
+            "PR-AUC degenerate: all positive samples. Returning 1.0 (trivially correct).",
             UndefinedMetricWarning,
             stacklevel=2,
         )

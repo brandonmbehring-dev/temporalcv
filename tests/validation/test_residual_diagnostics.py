@@ -36,9 +36,7 @@ class TestResidualDiagnosticsBasic:
 
         result = gate_residual_diagnostics(residuals)
 
-        assert result.status == GateStatus.PASS, (
-            f"White noise should pass, got {result.status}"
-        )
+        assert result.status == GateStatus.PASS, f"White noise should pass, got {result.status}"
         assert result.details["failing_tests"] == []
 
     def test_autocorrelated_residuals_detected(self) -> None:
@@ -135,9 +133,7 @@ class TestResidualDiagnosticsHaltBehavior:
         assert result_default.status == GateStatus.WARN
 
         # With flag: HALT on autocorrelation
-        result_halt = gate_residual_diagnostics(
-            residuals, halt_on_autocorr=True
-        )
+        result_halt = gate_residual_diagnostics(residuals, halt_on_autocorr=True)
         assert result_halt.status == GateStatus.HALT
         assert "autocorrelation" in result_halt.message
 
@@ -154,9 +150,7 @@ class TestResidualDiagnosticsHaltBehavior:
         assert "jarque_bera" in result_default.details["failing_tests"]
 
         # With flag: HALT on non-normality
-        result_halt = gate_residual_diagnostics(
-            residuals, halt_on_normality=True
-        )
+        result_halt = gate_residual_diagnostics(residuals, halt_on_normality=True)
         assert result_halt.status == GateStatus.HALT
         assert "non-normality" in result_halt.message
 
@@ -260,9 +254,7 @@ class TestResidualDiagnosticsEdgeCases:
         result = gate_residual_diagnostics(residuals, max_lag=30)
 
         actual_lag = result.details["tests"]["ljung_box"]["max_lag"]
-        assert actual_lag == 20, (
-            f"max_lag should be clamped to 20, got {actual_lag}"
-        )
+        assert actual_lag == 20, f"max_lag should be clamped to 20, got {actual_lag}"
 
     def test_very_small_valid_sample(self) -> None:
         """Test with minimum valid sample size (30)."""

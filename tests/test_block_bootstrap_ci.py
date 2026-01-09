@@ -27,7 +27,7 @@ class TestComputeBlockLength:
         """Block length should follow n^(1/3) rule."""
         # Note: Due to floating-point, perfect cubes round down
         # 27^(1/3) = 3.0 exactly, but 1000^(1/3) = 9.9999... -> floor = 9
-        assert compute_block_length(27) == 3   # 3.0 exactly
+        assert compute_block_length(27) == 3  # 3.0 exactly
         assert compute_block_length(100) == 4  # 4.64
         assert compute_block_length(500) == 7  # 7.94
         assert compute_block_length(1000) == 9  # 9.9999... due to float
@@ -53,9 +53,7 @@ class TestMovingBlockBootstrapBasic:
     def test_basic_bootstrap_runs(self) -> None:
         """Basic bootstrap should run without errors."""
         data = np.random.default_rng(42).standard_normal(100)
-        result = moving_block_bootstrap(
-            data, statistic_fn=np.mean, n_bootstrap=50, random_state=42
-        )
+        result = moving_block_bootstrap(data, statistic_fn=np.mean, n_bootstrap=50, random_state=42)
 
         assert isinstance(result, BlockBootstrapResult)
         assert result.n_bootstrap == 50
@@ -64,9 +62,7 @@ class TestMovingBlockBootstrapBasic:
     def test_estimate_matches_statistic(self) -> None:
         """Original estimate should match statistic_fn(data)."""
         data = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])
-        result = moving_block_bootstrap(
-            data, statistic_fn=np.mean, n_bootstrap=50, random_state=42
-        )
+        result = moving_block_bootstrap(data, statistic_fn=np.mean, n_bootstrap=50, random_state=42)
 
         expected_mean = np.mean(data)
         assert abs(result.estimate - expected_mean) < 1e-10
@@ -102,9 +98,7 @@ class TestMovingBlockBootstrapBasic:
     def test_block_length_recorded(self) -> None:
         """Block length should be recorded in result."""
         data = np.random.default_rng(42).standard_normal(100)
-        result = moving_block_bootstrap(
-            data, statistic_fn=np.mean, n_bootstrap=50, random_state=42
-        )
+        result = moving_block_bootstrap(data, statistic_fn=np.mean, n_bootstrap=50, random_state=42)
 
         # n=100 -> block_length = 4 (100^(1/3) ≈ 4.64)
         assert result.block_length == 4
@@ -134,9 +128,7 @@ class TestBlockLengthSelection:
     def test_manual_block_length(self) -> None:
         """Manual block length should be used."""
         data = np.random.default_rng(42).standard_normal(100)
-        result = moving_block_bootstrap(
-            data, statistic_fn=np.mean, block_length=10, n_bootstrap=50
-        )
+        result = moving_block_bootstrap(data, statistic_fn=np.mean, block_length=10, n_bootstrap=50)
 
         assert result.block_length == 10
 
@@ -145,9 +137,7 @@ class TestBlockLengthSelection:
         data = np.random.default_rng(42).standard_normal(20)
 
         with pytest.warns(UserWarning, match="Block length"):
-            moving_block_bootstrap(
-                data, statistic_fn=np.mean, block_length=15, n_bootstrap=50
-            )
+            moving_block_bootstrap(data, statistic_fn=np.mean, block_length=15, n_bootstrap=50)
 
     def test_invalid_block_length_type(self) -> None:
         """Should raise for invalid block_length type."""
@@ -155,7 +145,10 @@ class TestBlockLengthSelection:
 
         with pytest.raises(TypeError, match="block_length"):
             moving_block_bootstrap(
-                data, statistic_fn=np.mean, block_length=5.5, n_bootstrap=50  # type: ignore
+                data,
+                statistic_fn=np.mean,
+                block_length=5.5,
+                n_bootstrap=50,  # type: ignore
             )
 
     def test_invalid_block_length_value(self) -> None:
@@ -163,9 +156,7 @@ class TestBlockLengthSelection:
         data = np.random.default_rng(42).standard_normal(100)
 
         with pytest.raises(ValueError, match="block_length"):
-            moving_block_bootstrap(
-                data, statistic_fn=np.mean, block_length=0, n_bootstrap=50
-            )
+            moving_block_bootstrap(data, statistic_fn=np.mean, block_length=0, n_bootstrap=50)
 
 
 class TestReproducibility:
@@ -200,9 +191,7 @@ class TestReproducibility:
             data, statistic_fn=np.mean, n_bootstrap=50, random_state=123
         )
 
-        assert not np.allclose(
-            result1.bootstrap_distribution, result2.bootstrap_distribution
-        )
+        assert not np.allclose(result1.bootstrap_distribution, result2.bootstrap_distribution)
 
 
 class TestEdgeCases:
@@ -211,9 +200,7 @@ class TestEdgeCases:
     def test_minimum_data_length(self) -> None:
         """Should work with minimum 2 data points."""
         data = np.array([1.0, 2.0])
-        result = moving_block_bootstrap(
-            data, statistic_fn=np.mean, n_bootstrap=50, random_state=42
-        )
+        result = moving_block_bootstrap(data, statistic_fn=np.mean, n_bootstrap=50, random_state=42)
 
         assert isinstance(result, BlockBootstrapResult)
 
@@ -234,9 +221,7 @@ class TestEdgeCases:
     def test_constant_data(self) -> None:
         """Should handle constant data (zero variance)."""
         data = np.ones(50)
-        result = moving_block_bootstrap(
-            data, statistic_fn=np.mean, n_bootstrap=50, random_state=42
-        )
+        result = moving_block_bootstrap(data, statistic_fn=np.mean, n_bootstrap=50, random_state=42)
 
         # All bootstrap samples should give same mean
         assert result.estimate == 1.0
@@ -299,18 +284,14 @@ class TestStatisticFunctions:
     def test_mean_statistic(self) -> None:
         """Should work with mean statistic."""
         data = np.random.default_rng(42).standard_normal(100)
-        result = moving_block_bootstrap(
-            data, statistic_fn=np.mean, n_bootstrap=50, random_state=42
-        )
+        result = moving_block_bootstrap(data, statistic_fn=np.mean, n_bootstrap=50, random_state=42)
 
         assert abs(result.estimate - np.mean(data)) < 1e-10
 
     def test_std_statistic(self) -> None:
         """Should work with std statistic."""
         data = np.random.default_rng(42).standard_normal(100)
-        result = moving_block_bootstrap(
-            data, statistic_fn=np.std, n_bootstrap=50, random_state=42
-        )
+        result = moving_block_bootstrap(data, statistic_fn=np.std, n_bootstrap=50, random_state=42)
 
         assert abs(result.estimate - np.std(data)) < 1e-10
 
@@ -330,9 +311,7 @@ class TestStatisticFunctions:
         def mae(x: np.ndarray) -> float:
             return float(np.mean(np.abs(x)))
 
-        result = moving_block_bootstrap(
-            errors, statistic_fn=mae, n_bootstrap=50, random_state=42
-        )
+        result = moving_block_bootstrap(errors, statistic_fn=mae, n_bootstrap=50, random_state=42)
 
         assert result.estimate > 0
 
@@ -363,9 +342,7 @@ class TestDataclassProperties:
     def test_frozen_dataclass(self) -> None:
         """BlockBootstrapResult should be frozen."""
         data = np.random.default_rng(42).standard_normal(100)
-        result = moving_block_bootstrap(
-            data, statistic_fn=np.mean, n_bootstrap=50, random_state=42
-        )
+        result = moving_block_bootstrap(data, statistic_fn=np.mean, n_bootstrap=50, random_state=42)
 
         from dataclasses import FrozenInstanceError
 
@@ -375,9 +352,7 @@ class TestDataclassProperties:
     def test_all_fields_present(self) -> None:
         """Result should have all expected fields."""
         data = np.random.default_rng(42).standard_normal(100)
-        result = moving_block_bootstrap(
-            data, statistic_fn=np.mean, n_bootstrap=50, random_state=42
-        )
+        result = moving_block_bootstrap(data, statistic_fn=np.mean, n_bootstrap=50, random_state=42)
 
         assert hasattr(result, "estimate")
         assert hasattr(result, "ci_lower")

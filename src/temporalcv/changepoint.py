@@ -266,17 +266,14 @@ def detect_changepoints_pelt(
     """
     if not HAS_RUPTURES:
         raise ImportError(
-            "ruptures package required for PELT algorithm. "
-            "Install with: pip install ruptures"
+            "ruptures package required for PELT algorithm. Install with: pip install ruptures"
         )
 
     arr = np.asarray(series).ravel()
     n = len(arr)
 
     if n < 2 * min_size:
-        raise ValueError(
-            f"Series too short for PELT: n={n}, need >= {2 * min_size}"
-        )
+        raise ValueError(f"Series too short for PELT: n={n}, need >= {2 * min_size}")
 
     # Create cost model
     if cost_model == "l2":

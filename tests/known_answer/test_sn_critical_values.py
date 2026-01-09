@@ -112,8 +112,7 @@ class TestCriticalValueProperties:
             cv_two = SHAO_LOBATO_CRITICAL_VALUES[("two-sided", alpha)]
             cv_one = SHAO_LOBATO_CRITICAL_VALUES[("one-sided", alpha)]
             assert cv_two > cv_one, (
-                f"Two-sided CV ({cv_two}) should be > one-sided CV ({cv_one}) "
-                f"for α={alpha}"
+                f"Two-sided CV ({cv_two}) should be > one-sided CV ({cv_one}) for α={alpha}"
             )
 
     def test_critical_values_decrease_with_alpha(self) -> None:
@@ -125,9 +124,7 @@ class TestCriticalValueProperties:
             cv_05 = SHAO_LOBATO_CRITICAL_VALUES[(test_type, 0.05)]
             cv_10 = SHAO_LOBATO_CRITICAL_VALUES[(test_type, 0.10)]
 
-            assert cv_01 > cv_05 > cv_10, (
-                f"Critical values should decrease with α for {test_type}"
-            )
+            assert cv_01 > cv_05 > cv_10, f"Critical values should decrease with α for {test_type}"
 
     def test_all_critical_values_positive(self) -> None:
         """
@@ -219,9 +216,7 @@ class TestComparisonWithNormal:
             ratios.append(sn_cv / normal_cv)
 
         # Ratios should be reasonably consistent (within 30% of each other)
-        assert max(ratios) / min(ratios) < 1.30, (
-            f"Ratio variation too large: {ratios}"
-        )
+        assert max(ratios) / min(ratios) < 1.30, f"Ratio variation too large: {ratios}"
 
 
 # =============================================================================
@@ -246,7 +241,8 @@ class TestDMTestSelfNormalizedIntegration:
         errors_2 = rng.normal(0, 1.0, n)
 
         result = dm_test(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             h=1,
             variance_method="self_normalized",
             alternative="two-sided",
@@ -279,7 +275,8 @@ class TestDMTestSelfNormalizedIntegration:
         errors_2 = rng.normal(0.3, 1.0, n)  # Slightly worse
 
         result = dm_test(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             h=1,
             variance_method="self_normalized",
             alternative="two-sided",
@@ -302,7 +299,8 @@ class TestDMTestSelfNormalizedIntegration:
         errors_2 = rng.normal(0, 2.0, n)  # Poor forecaster
 
         result = dm_test(
-            errors_1, errors_2,
+            errors_1,
+            errors_2,
             h=1,
             variance_method="self_normalized",
             alternative="two-sided",
@@ -372,9 +370,7 @@ class TestSelfNormalizedVariance:
         # the partial sum formulation which accounts for serial correlation
         # even when there is none (conservative estimate)
         sample_var = np.var(d)
-        assert var_sn < sample_var, (
-            "SN variance of mean should be less than sample variance"
-        )
+        assert var_sn < sample_var, "SN variance of mean should be less than sample variance"
 
     def test_autocorrelated_series_larger_variance(self) -> None:
         """
@@ -443,10 +439,12 @@ class TestNumericalStability:
         Mixed magnitudes should be handled correctly.
         """
         rng = np.random.default_rng(42)
-        d = np.concatenate([
-            rng.normal(0, 1e-3, 50),
-            rng.normal(0, 1e3, 50),
-        ])
+        d = np.concatenate(
+            [
+                rng.normal(0, 1e-3, 50),
+                rng.normal(0, 1e3, 50),
+            ]
+        )
         rng.shuffle(d)
 
         var_sn = compute_self_normalized_variance(d)

@@ -201,9 +201,7 @@ class TestCombinatorialPurgedCV:
         cv_no_purge = CombinatorialPurgedCV(n_splits=5, n_test_splits=2, purge_gap=0)
         cv_with_purge = CombinatorialPurgedCV(n_splits=5, n_test_splits=2, purge_gap=5)
 
-        for (train_no, _), (train_with, _) in zip(
-            cv_no_purge.split(X), cv_with_purge.split(X)
-        ):
+        for (train_no, _), (train_with, _) in zip(cv_no_purge.split(X), cv_with_purge.split(X)):
             # With purging, training set should be smaller (or equal if no overlap)
             assert len(train_with) <= len(train_no)
 
@@ -213,9 +211,7 @@ class TestPurgedWalkForward:
 
     def test_initialization(self) -> None:
         """Should initialize with valid parameters."""
-        cv = PurgedWalkForward(
-            n_splits=5, train_size=100, test_size=20, purge_gap=5
-        )
+        cv = PurgedWalkForward(n_splits=5, train_size=100, test_size=20, purge_gap=5)
 
         assert cv.n_splits == 5
         assert cv.train_size == 100
@@ -324,9 +320,7 @@ class TestEdgeCases:
         cv_no_embargo = PurgedKFold(n_splits=5, embargo_pct=0.0)
         cv_with_embargo = PurgedKFold(n_splits=5, embargo_pct=0.1)
 
-        for (train_no, _), (train_with, _) in zip(
-            cv_no_embargo.split(X), cv_with_embargo.split(X)
-        ):
+        for (train_no, _), (train_with, _) in zip(cv_no_embargo.split(X), cv_with_embargo.split(X)):
             assert len(train_with) <= len(train_no)
 
     def test_list_input(self) -> None:

@@ -172,9 +172,7 @@ class TestPValueRangeMatchesR:
         result = dm_test(e1, e2, h=1, alternative="two-sided")
 
         # R gives p ≈ 0.0001, we should also be < 0.01
-        assert result.pvalue < 0.01, (
-            f"Clear difference should be p < 0.01, got {result.pvalue}"
-        )
+        assert result.pvalue < 0.01, f"Clear difference should be p < 0.01, got {result.pvalue}"
 
     def test_marginal_difference_borderline(self) -> None:
         """
@@ -239,8 +237,7 @@ class TestOneSidedMatchesR:
         # Model 1 has variance 0.8, model 2 has 1.2
         # Model 1 is BETTER, so testing "greater" (model 1 worse) gives high p
         assert result.pvalue > 0.5, (
-            f"Testing 'greater' when model 1 is better should give p > 0.5, "
-            f"got {result.pvalue}"
+            f"Testing 'greater' when model 1 is better should give p > 0.5, got {result.pvalue}"
         )
 
     def test_one_sided_less_when_better(self) -> None:
@@ -254,8 +251,7 @@ class TestOneSidedMatchesR:
 
         # Model 1 is better, testing "less" should be significant
         assert result.pvalue < 0.20, (
-            f"Testing 'less' when model 1 is better should give small p, "
-            f"got {result.pvalue}"
+            f"Testing 'less' when model 1 is better should give small p, got {result.pvalue}"
         )
 
 
@@ -365,8 +361,7 @@ class TestAgainstReferenceCSV:
 
         # R gives negative statistic, we should too
         assert np.sign(result.statistic) == np.sign(ref_row["statistic"]), (
-            f"Statistic sign mismatch: Python={result.statistic:.3f}, "
-            f"R={ref_row['statistic']:.3f}"
+            f"Statistic sign mismatch: Python={result.statistic:.3f}, R={ref_row['statistic']:.3f}"
         )
 
     def test_reference_cases_significance_alignment(self, reference_df: pd.DataFrame) -> None:
@@ -404,18 +399,18 @@ class TestAgainstReferenceCSV:
             if r_rejects == py_rejects:
                 agreements += 1
             else:
-                disagreements.append({
-                    "case": case,
-                    "r_pvalue": row["pvalue"],
-                    "py_pvalue": result.pvalue,
-                    "r_rejects": r_rejects,
-                    "py_rejects": py_rejects,
-                })
+                disagreements.append(
+                    {
+                        "case": case,
+                        "r_pvalue": row["pvalue"],
+                        "py_pvalue": result.pvalue,
+                        "r_rejects": r_rejects,
+                        "py_rejects": py_rejects,
+                    }
+                )
 
         # Allow at most 1 disagreement (implementation differences)
-        assert len(disagreements) <= 1, (
-            f"Too many significance disagreements: {disagreements}"
-        )
+        assert len(disagreements) <= 1, f"Too many significance disagreements: {disagreements}"
 
 
 # =============================================================================

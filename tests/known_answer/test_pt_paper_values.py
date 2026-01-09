@@ -31,9 +31,7 @@ from temporalcv.statistical_tests import pt_test
 # =============================================================================
 
 
-def _compute_pt_variance_formula(
-    p_y: float, p_x: float, n: int
-) -> tuple[float, float, float]:
+def _compute_pt_variance_formula(p_y: float, p_x: float, n: int) -> tuple[float, float, float]:
     """
     Compute PT (1992) variance components from Equation 8.
 
@@ -174,9 +172,7 @@ class TestPTVarianceFormula:
         """
         for p_y in [0.1, 0.3, 0.5, 0.7, 0.9]:
             for p_x in [0.1, 0.3, 0.5, 0.7, 0.9]:
-                var_p_hat, var_p_star, var_total = _compute_pt_variance_formula(
-                    p_y, p_x, 100
-                )
+                var_p_hat, var_p_star, var_total = _compute_pt_variance_formula(p_y, p_x, 100)
                 assert var_p_hat >= 0, f"var_p_hat negative for p_y={p_y}, p_x={p_x}"
                 assert var_p_star >= 0, f"var_p_star negative for p_y={p_y}, p_x={p_x}"
                 assert var_total >= 0, f"var_total negative for p_y={p_y}, p_x={p_x}"
@@ -198,18 +194,16 @@ class TestExpectedAccuracy:
     @pytest.mark.parametrize(
         "p_y,p_x,expected_p_star",
         [
-            (0.5, 0.5, 0.50),    # Balanced case: random guessing
-            (0.6, 0.6, 0.52),    # 0.6*0.6 + 0.4*0.4 = 0.36 + 0.16
-            (0.7, 0.7, 0.58),    # 0.7*0.7 + 0.3*0.3 = 0.49 + 0.09
-            (0.5, 1.0, 0.50),    # Always predict positive: 0.5*1 + 0.5*0
-            (0.5, 0.0, 0.50),    # Always predict negative: 0.5*0 + 0.5*1
-            (0.9, 0.9, 0.82),    # High imbalance: 0.81 + 0.01
-            (0.6, 0.7, 0.54),    # Asymmetric: 0.42 + 0.12
+            (0.5, 0.5, 0.50),  # Balanced case: random guessing
+            (0.6, 0.6, 0.52),  # 0.6*0.6 + 0.4*0.4 = 0.36 + 0.16
+            (0.7, 0.7, 0.58),  # 0.7*0.7 + 0.3*0.3 = 0.49 + 0.09
+            (0.5, 1.0, 0.50),  # Always predict positive: 0.5*1 + 0.5*0
+            (0.5, 0.0, 0.50),  # Always predict negative: 0.5*0 + 0.5*1
+            (0.9, 0.9, 0.82),  # High imbalance: 0.81 + 0.01
+            (0.6, 0.7, 0.54),  # Asymmetric: 0.42 + 0.12
         ],
     )
-    def test_expected_accuracy_values(
-        self, p_y: float, p_x: float, expected_p_star: float
-    ) -> None:
+    def test_expected_accuracy_values(self, p_y: float, p_x: float, expected_p_star: float) -> None:
         """Verify p* formula matches manual calculations."""
         computed = p_y * p_x + (1 - p_y) * (1 - p_x)
         assert_allclose(computed, expected_p_star, rtol=1e-10)

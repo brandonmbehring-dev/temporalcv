@@ -230,10 +230,7 @@ def check_minimum_sample_size(
     if n < min_n:
         return GuardrailResult(
             passed=False,
-            errors=[
-                f"Insufficient sample size for {context}: "
-                f"n={n} < minimum required {min_n}"
-            ],
+            errors=[f"Insufficient sample size for {context}: n={n} < minimum required {min_n}"],
             details=details,
             recommendations=[
                 f"Collect more data (need at least {min_n} samples)",
@@ -246,8 +243,7 @@ def check_minimum_sample_size(
         return GuardrailResult(
             passed=True,
             warnings=[
-                f"Sample size ({n}) is marginal for {context}. "
-                f"Results may have high variance."
+                f"Sample size ({n}) is marginal for {context}. Results may have high variance."
             ],
             details=details,
         )

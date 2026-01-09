@@ -132,9 +132,7 @@ class MultiSeriesAdapter(ForecastAdapter):
 
         for i in range(n_series):
             try:
-                predictions[i] = self._base.fit_predict(
-                    train_values[i], test_size, horizon
-                )
+                predictions[i] = self._base.fit_predict(train_values[i], test_size, horizon)
             except Exception as e:
                 logger.warning(
                     "Series %d failed for %s: %s. Using NaN.",
@@ -180,9 +178,7 @@ class MultiSeriesAdapter(ForecastAdapter):
         def fit_single(series_idx: int) -> np.ndarray:
             """Fit single series and return predictions."""
             try:
-                return self._base.fit_predict(
-                    train_values[series_idx], test_size, horizon
-                )
+                return self._base.fit_predict(train_values[series_idx], test_size, horizon)
             except Exception as e:
                 logger.warning(
                     "Series %d failed for %s: %s",
@@ -192,9 +188,7 @@ class MultiSeriesAdapter(ForecastAdapter):
                 )
                 return cast(np.ndarray, np.full(test_size, np.nan))
 
-        results = Parallel(n_jobs=self._n_jobs)(
-            delayed(fit_single)(i) for i in range(n_series)
-        )
+        results = Parallel(n_jobs=self._n_jobs)(delayed(fit_single)(i) for i in range(n_series))
 
         return cast(np.ndarray, np.array(results))
 
@@ -274,9 +268,7 @@ class ProgressAdapter(ForecastAdapter):
 
         for i in range(n_series):
             try:
-                predictions[i] = self._base.fit_predict(
-                    train_values[i], test_size, horizon
-                )
+                predictions[i] = self._base.fit_predict(train_values[i], test_size, horizon)
             except Exception as e:
                 logger.warning(
                     "Series %d failed for %s: %s. Using NaN.",

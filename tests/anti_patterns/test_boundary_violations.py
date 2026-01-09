@@ -68,7 +68,7 @@ class TestBoundaryViolationDetection:
         result = gate_temporal_boundary(
             train_end_idx=99,
             test_start_idx=101,  # Gap of 1
-            horizon=3,           # Need gap of 3
+            horizon=3,  # Need gap of 3
             extra_gap=0,
         )
 
@@ -81,8 +81,8 @@ class TestBoundaryViolationDetection:
         result = gate_temporal_boundary(
             train_end_idx=99,
             test_start_idx=103,  # Gap of 3
-            horizon=2,           # Need gap of 2
-            extra_gap=1,               # Additional gap of 1
+            horizon=2,  # Need gap of 2
+            extra_gap=1,  # Additional gap of 1
         )
 
         assert result.status == GateStatus.PASS
@@ -97,12 +97,10 @@ class TestBoundaryViolationDetection:
             train_end_idx=99,
             test_start_idx=103,  # Gap of 3
             horizon=2,
-            extra_gap=2,               # Need horizon(2) + gap(2) = 4
+            extra_gap=2,  # Need horizon(2) + gap(2) = 4
         )
 
-        assert result.status == GateStatus.HALT, (
-            "Should HALT when gap + horizon not satisfied"
-        )
+        assert result.status == GateStatus.HALT, "Should HALT when gap + horizon not satisfied"
 
 
 class TestSplitInfoBoundaryEnforcement:
@@ -184,9 +182,7 @@ class TestWalkForwardCVBoundaries:
             test_start = min(test_idx)
             actual_gap = test_start - train_end - 1
 
-            assert actual_gap >= gap, (
-                f"Gap violation: expected >= {gap}, got {actual_gap}"
-            )
+            assert actual_gap >= gap, f"Gap violation: expected >= {gap}, got {actual_gap}"
 
     def test_cv_train_precedes_test(self) -> None:
         """All train indices must be less than all test indices."""

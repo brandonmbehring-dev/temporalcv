@@ -44,9 +44,7 @@ class TestPredictionIntervalDisplayInit:
         upper = np.array([1.5, 2.5, 3.5])
         actuals = np.array([1.0, 2.0, 4.0])  # Last one outside interval
 
-        display = PredictionIntervalDisplay(
-            predictions, lower, upper, actuals=actuals
-        )
+        display = PredictionIntervalDisplay(predictions, lower, upper, actuals=actuals)
 
         assert display.actuals is not None
         assert display.coverage_ is not None
@@ -58,9 +56,7 @@ class TestPredictionIntervalDisplayInit:
         upper = np.array([1.5, 2.5, 3.5, 4.5])
         actuals = np.array([1.0, 2.0, 3.0, 5.0])  # 3/4 covered
 
-        display = PredictionIntervalDisplay(
-            predictions, lower, upper, actuals=actuals
-        )
+        display = PredictionIntervalDisplay(predictions, lower, upper, actuals=actuals)
 
         assert display.coverage_ == 0.75
 

@@ -56,41 +56,31 @@ class TestCoreMetricBenchmarks:
         predictions = actuals + rng.standard_normal(50000) * 0.3
         return predictions, actuals
 
-    def test_mae_small(
-        self, benchmark, small_arrays: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_mae_small(self, benchmark, small_arrays: tuple[np.ndarray, np.ndarray]) -> None:
         """MAE with n=500."""
         predictions, actuals = small_arrays
         result = benchmark(lambda: compute_mae(predictions, actuals))
         assert result >= 0
 
-    def test_mae_large(
-        self, benchmark, large_arrays: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_mae_large(self, benchmark, large_arrays: tuple[np.ndarray, np.ndarray]) -> None:
         """MAE with n=50000."""
         predictions, actuals = large_arrays
         result = benchmark(lambda: compute_mae(predictions, actuals))
         assert result >= 0
 
-    def test_mse_large(
-        self, benchmark, large_arrays: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_mse_large(self, benchmark, large_arrays: tuple[np.ndarray, np.ndarray]) -> None:
         """MSE with n=50000."""
         predictions, actuals = large_arrays
         result = benchmark(lambda: compute_mse(predictions, actuals))
         assert result >= 0
 
-    def test_rmse_large(
-        self, benchmark, large_arrays: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_rmse_large(self, benchmark, large_arrays: tuple[np.ndarray, np.ndarray]) -> None:
         """RMSE with n=50000."""
         predictions, actuals = large_arrays
         result = benchmark(lambda: compute_rmse(predictions, actuals))
         assert result >= 0
 
-    def test_mape_medium(
-        self, benchmark, medium_arrays: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_mape_medium(self, benchmark, medium_arrays: tuple[np.ndarray, np.ndarray]) -> None:
         """MAPE with n=5000."""
         predictions, actuals = medium_arrays
         # Add offset to avoid division by zero
@@ -99,9 +89,7 @@ class TestCoreMetricBenchmarks:
         result = benchmark(lambda: compute_mape(predictions_safe, actuals_safe))
         assert result >= 0
 
-    def test_smape_medium(
-        self, benchmark, medium_arrays: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_smape_medium(self, benchmark, medium_arrays: tuple[np.ndarray, np.ndarray]) -> None:
         """SMAPE with n=5000."""
         predictions, actuals = medium_arrays
         # Add offset to avoid division by zero
@@ -132,9 +120,7 @@ class TestScaledMetricBenchmarks:
         predictions, actuals, _ = time_series_data
         # Precompute naive MAE (random walk: use lag-1 naive)
         naive_mae = float(np.mean(np.abs(np.diff(actuals))))
-        result = benchmark(
-            lambda: compute_mase(predictions, actuals, naive_mae)
-        )
+        result = benchmark(lambda: compute_mase(predictions, actuals, naive_mae))
         assert result >= 0
 
     def test_mrae(
@@ -188,14 +174,10 @@ class TestQuantileMetricBenchmarks:
         ensemble = actuals[:, np.newaxis] + rng.standard_normal((n, n_members)) * 0.5
         return ensemble, actuals
 
-    def test_pinball_loss(
-        self, benchmark, quantile_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_pinball_loss(self, benchmark, quantile_data: tuple[np.ndarray, np.ndarray]) -> None:
         """Pinball loss with n=2000."""
         predictions, actuals = quantile_data
-        result = benchmark(
-            lambda: compute_pinball_loss(actuals, predictions, tau=0.5)
-        )
+        result = benchmark(lambda: compute_pinball_loss(actuals, predictions, tau=0.5))
         assert result >= 0
 
     def test_interval_score(
@@ -203,14 +185,10 @@ class TestQuantileMetricBenchmarks:
     ) -> None:
         """Interval score with n=2000."""
         lower, upper, actuals = interval_data
-        result = benchmark(
-            lambda: compute_interval_score(actuals, lower, upper, alpha=0.05)
-        )
+        result = benchmark(lambda: compute_interval_score(actuals, lower, upper, alpha=0.05))
         assert result >= 0
 
-    def test_crps_ensemble(
-        self, benchmark, ensemble_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_crps_ensemble(self, benchmark, ensemble_data: tuple[np.ndarray, np.ndarray]) -> None:
         """CRPS with n=500, 100 ensemble members."""
         ensemble, actuals = ensemble_data
         result = benchmark(lambda: compute_crps(actuals, ensemble))
@@ -229,9 +207,7 @@ class TestFinancialMetricBenchmarks:
 
     def test_sharpe_ratio(self, benchmark, returns_data: np.ndarray) -> None:
         """Sharpe ratio with 5 years of daily returns."""
-        result = benchmark(
-            lambda: compute_sharpe_ratio(returns_data, annualization=252.0)
-        )
+        result = benchmark(lambda: compute_sharpe_ratio(returns_data, annualization=252.0))
         assert isinstance(result, float)
 
     def test_max_drawdown(self, benchmark, returns_data: np.ndarray) -> None:
@@ -254,24 +230,16 @@ class TestAsymmetricLossBenchmarks:
         predictions = actuals + rng.standard_normal(n) * 0.3
         return predictions, actuals
 
-    def test_linex_loss(
-        self, benchmark, prediction_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_linex_loss(self, benchmark, prediction_data: tuple[np.ndarray, np.ndarray]) -> None:
         """LinEx loss with n=5000."""
         predictions, actuals = prediction_data
-        result = benchmark(
-            lambda: compute_linex_loss(predictions, actuals, a=0.5)
-        )
+        result = benchmark(lambda: compute_linex_loss(predictions, actuals, a=0.5))
         assert result >= 0
 
-    def test_huber_loss(
-        self, benchmark, prediction_data: tuple[np.ndarray, np.ndarray]
-    ) -> None:
+    def test_huber_loss(self, benchmark, prediction_data: tuple[np.ndarray, np.ndarray]) -> None:
         """Huber loss with n=5000."""
         predictions, actuals = prediction_data
-        result = benchmark(
-            lambda: compute_huber_loss(predictions, actuals, delta=1.0)
-        )
+        result = benchmark(lambda: compute_huber_loss(predictions, actuals, delta=1.0))
         assert result >= 0
 
 

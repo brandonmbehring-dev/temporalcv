@@ -472,10 +472,14 @@ class MetricComparisonDisplay(BaseDisplay):
             lower_better = self.lower_is_better.get(metric, True)
             if lower_better:
                 # Improvement = (baseline - model) / baseline * 100
-                relative[:, m_idx] = (baseline_values[m_idx] - self.values[:, m_idx]) / baseline_values[m_idx] * 100
+                relative[:, m_idx] = (
+                    (baseline_values[m_idx] - self.values[:, m_idx]) / baseline_values[m_idx] * 100
+                )
             else:
                 # Improvement = (model - baseline) / baseline * 100
-                relative[:, m_idx] = (self.values[:, m_idx] - baseline_values[m_idx]) / baseline_values[m_idx] * 100
+                relative[:, m_idx] = (
+                    (self.values[:, m_idx] - baseline_values[m_idx]) / baseline_values[m_idx] * 100
+                )
 
         # For single metric, use simple bar chart
         if self.n_metrics == 1:

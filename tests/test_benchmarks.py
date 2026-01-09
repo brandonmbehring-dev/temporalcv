@@ -486,9 +486,7 @@ class TestBenchmarksIntegration:
     def test_synthetic_workflow(self) -> None:
         """Complete workflow with synthetic data."""
         # Create dataset
-        dataset = create_synthetic_dataset(
-            n_obs=200, n_series=1, ar_coef=0.9, train_fraction=0.8
-        )
+        dataset = create_synthetic_dataset(n_obs=200, n_series=1, ar_coef=0.9, train_fraction=0.8)
 
         # Validate
         validate_dataset(dataset)

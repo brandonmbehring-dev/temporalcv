@@ -312,12 +312,8 @@ class TestComputeIntervalScore:
         wide_lower = actuals - 1.0
         wide_upper = actuals + 1.0
 
-        score_narrow = compute_interval_score(
-            actuals, narrow_lower, narrow_upper, alpha=0.05
-        )
-        score_wide = compute_interval_score(
-            actuals, wide_lower, wide_upper, alpha=0.05
-        )
+        score_narrow = compute_interval_score(actuals, narrow_lower, narrow_upper, alpha=0.05)
+        score_wide = compute_interval_score(actuals, wide_lower, wide_upper, alpha=0.05)
 
         assert score_narrow < score_wide
 
@@ -398,9 +394,7 @@ class TestComputeIntervalScore:
     def test_empty_arrays(self):
         """Empty arrays raise ValueError."""
         with pytest.raises(ValueError, match="cannot be empty"):
-            compute_interval_score(
-                np.array([]), np.array([]), np.array([]), alpha=0.05
-            )
+            compute_interval_score(np.array([]), np.array([]), np.array([]), alpha=0.05)
 
     def test_interval_score_non_negative(self):
         """Interval score is always non-negative."""

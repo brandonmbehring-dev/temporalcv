@@ -343,7 +343,7 @@ class TestWindowTypes:
         # Each subsequent training set should be larger or equal
         for i in range(1, len(train_sizes)):
             assert train_sizes[i] >= train_sizes[i - 1], (
-                f"Expanding window shrunk: {train_sizes[i-1]} -> {train_sizes[i]}"
+                f"Expanding window shrunk: {train_sizes[i - 1]} -> {train_sizes[i]}"
             )
 
     def test_sliding_window_fixed_size(self, sample_data: tuple) -> None:
@@ -1068,6 +1068,7 @@ class TestNestedWalkForwardCV:
         """New semantics: extra_gap < horizon is ALLOWED without warning."""
         # This used to warn, but now it's valid without any warning
         import warnings
+
         with warnings.catch_warnings():
             warnings.simplefilter("error")  # Treat warnings as errors
             nested_cv = NestedWalkForwardCV(
@@ -1273,9 +1274,7 @@ class TestNestedWalkForwardCV:
         nested_cv_slide.fit(X, y)
         assert nested_cv_slide.best_params_ is not None
 
-    def test_verbose_output(
-        self, nested_cv_data: tuple, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_verbose_output(self, nested_cv_data: tuple, caplog: pytest.LogCaptureFixture) -> None:
         """verbose=1 should log progress."""
         import logging
 

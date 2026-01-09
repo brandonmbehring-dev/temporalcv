@@ -162,9 +162,7 @@ def load_m3(
 
 
 def load_m4(
-    subset: Literal[
-        "yearly", "quarterly", "monthly", "weekly", "daily", "hourly"
-    ] = "monthly",
+    subset: Literal["yearly", "quarterly", "monthly", "weekly", "daily", "hourly"] = "monthly",
     sample_size: int | None = 100,
 ) -> TimeSeriesDataset:
     """

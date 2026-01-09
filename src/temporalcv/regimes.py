@@ -414,9 +414,7 @@ class StratifiedMetricsResult:
         ]
 
         # Sort by n descending
-        sorted_regimes = sorted(
-            self.by_regime.items(), key=lambda x: x[1]["n"], reverse=True
-        )
+        sorted_regimes = sorted(self.by_regime.items(), key=lambda x: x[1]["n"], reverse=True)
 
         for regime, metrics in sorted_regimes:
             lines.append(

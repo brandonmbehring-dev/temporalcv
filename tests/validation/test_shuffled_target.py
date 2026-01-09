@@ -112,11 +112,13 @@ class TestShuffledTargetValidation:
             y[t] = phi * y[t - 1] + rng.standard_normal()
 
         # Features include lag-1 (legitimate)
-        X = np.column_stack([
-            np.roll(y, 1),  # Lag 1
-            np.roll(y, 2),  # Lag 2
-            rng.standard_normal(n),  # Noise
-        ])
+        X = np.column_stack(
+            [
+                np.roll(y, 1),  # Lag 1
+                np.roll(y, 2),  # Lag 2
+                rng.standard_normal(n),  # Noise
+            ]
+        )
         X[0, :2] = 0  # Clean up edge
 
         model = MockLag1Predictor(coefficient=phi)

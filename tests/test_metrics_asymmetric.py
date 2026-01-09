@@ -325,9 +325,7 @@ class TestComputeDirectionalLoss:
         predictions = np.array([110.0, 90.0])  # Predict UP, DOWN
         actuals = np.array([105.0, 95.0])  # Both correct direction
 
-        loss = compute_directional_loss(
-            predictions, actuals, previous_actuals=previous
-        )
+        loss = compute_directional_loss(predictions, actuals, previous_actuals=previous)
         assert loss == 0.0
 
     def test_previous_actuals_length_mismatch(self):

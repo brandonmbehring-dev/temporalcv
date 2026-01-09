@@ -15,6 +15,7 @@ from temporalcv.cv import WalkForwardCV
 
 # === Strategies ===
 
+
 @st.composite
 def valid_cv_params(draw):
     """Generate valid parameters for WalkForwardCV."""
@@ -39,6 +40,7 @@ def valid_cv_params(draw):
 
 # === Core CV Invariants ===
 
+
 class TestCVCoreInvariants:
     """Test core invariants that must always hold."""
 
@@ -62,9 +64,7 @@ class TestCVCoreInvariants:
             test_set = set(test_idx)
 
             # No overlap
-            assert len(train_set & test_set) == 0, (
-                f"Train and test overlap: {train_set & test_set}"
-            )
+            assert len(train_set & test_set) == 0, f"Train and test overlap: {train_set & test_set}"
 
     @given(valid_cv_params())
     @settings(max_examples=100)
@@ -88,9 +88,7 @@ class TestCVCoreInvariants:
 
             # Gap must be respected
             actual_gap = test_start - train_end - 1
-            assert actual_gap >= gap, (
-                f"Gap violated: expected >= {gap}, got {actual_gap}"
-            )
+            assert actual_gap >= gap, f"Gap violated: expected >= {gap}, got {actual_gap}"
 
     @given(valid_cv_params())
     @settings(max_examples=100)
@@ -131,12 +129,12 @@ class TestCVCoreInvariants:
 
         for train_idx, test_idx in cv.split(X, y):
             assert max(train_idx) < min(test_idx), (
-                f"Train should precede test: max(train)={max(train_idx)}, "
-                f"min(test)={min(test_idx)}"
+                f"Train should precede test: max(train)={max(train_idx)}, min(test)={min(test_idx)}"
             )
 
 
 # === Window Type Invariants ===
+
 
 class TestWindowTypeInvariants:
     """Test invariants specific to window types."""
@@ -189,12 +187,13 @@ class TestWindowTypeInvariants:
         if len(train_sizes) > 1:
             # Each training set should be >= previous
             for i in range(1, len(train_sizes)):
-                assert train_sizes[i] >= train_sizes[i-1], (
+                assert train_sizes[i] >= train_sizes[i - 1], (
                     f"Expanding window should grow: {train_sizes}"
                 )
 
 
 # === Test Size Invariants ===
+
 
 class TestTestSizeInvariants:
     """Test invariants for test set size."""
@@ -229,6 +228,7 @@ class TestTestSizeInvariants:
 
 # === SplitInfo Invariants ===
 
+
 class TestSplitInfoInvariants:
     """Test invariants for SplitInfo metadata."""
 
@@ -254,8 +254,7 @@ class TestSplitInfoInvariants:
 
             # This split's test should start after previous split's test
             assert test_start > prev_test_end, (
-                f"Splits should progress: test_start={test_start}, "
-                f"prev_test_end={prev_test_end}"
+                f"Splits should progress: test_start={test_start}, prev_test_end={prev_test_end}"
             )
 
             prev_test_end = test_end

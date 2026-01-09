@@ -54,7 +54,7 @@ class TestTheoreticalAR1MSEBound:
         """As h→∞, MSE → σ²/(1-φ²) = Var(y)."""
         phi = 0.9
         sigma_sq = 1.0
-        unconditional_var = sigma_sq / (1 - phi ** 2)
+        unconditional_var = sigma_sq / (1 - phi**2)
 
         # Large h should approach unconditional variance
         mse_large_h = theoretical_ar1_mse_bound(phi=phi, sigma_sq=sigma_sq, h=100)
@@ -118,7 +118,7 @@ class TestTheoreticalAR1MAEBound:
     def test_consistency_with_mse(self) -> None:
         """MAE should be consistent with MSE via √(2/π) factor."""
         phi, sigma, h = 0.7, 1.5, 3
-        mse = theoretical_ar1_mse_bound(phi=phi, sigma_sq=sigma ** 2, h=h)
+        mse = theoretical_ar1_mse_bound(phi=phi, sigma_sq=sigma**2, h=h)
         rmse = np.sqrt(mse)
         expected_mae = rmse * np.sqrt(2 / np.pi)
         actual_mae = theoretical_ar1_mae_bound(sigma=sigma, phi=phi, h=h)
@@ -175,27 +175,21 @@ class TestCheckAgainstAR1Bounds:
         # Theoretical MSE = 1.0 for h=1
         # With tolerance=1.5, threshold = 1/1.5 ≈ 0.667
         # MSE=0.5 is 50% of theoretical, which is < 66.7%, so HALT
-        result = check_against_ar1_bounds(
-            model_mse=0.5, phi=0.9, sigma_sq=1.0, h=1, tolerance=1.5
-        )
+        result = check_against_ar1_bounds(model_mse=0.5, phi=0.9, sigma_sq=1.0, h=1, tolerance=1.5)
         assert result.status == GateStatus.HALT
         assert "leakage" in result.message.lower()
 
     def test_warn_when_suspiciously_close(self) -> None:
         """Should WARN when model MSE is unusually good but not impossible."""
         # MSE = 1.1 is 110% of theoretical (1.0), which is > 66.7% but < 120%
-        result = check_against_ar1_bounds(
-            model_mse=1.1, phi=0.9, sigma_sq=1.0, h=1, tolerance=1.5
-        )
+        result = check_against_ar1_bounds(model_mse=1.1, phi=0.9, sigma_sq=1.0, h=1, tolerance=1.5)
         assert result.status == GateStatus.WARN
         assert "unusually good" in result.message.lower()
 
     def test_pass_when_within_expected_range(self) -> None:
         """Should PASS when model MSE is within expected range."""
         # MSE = 1.5 is 150% of theoretical, well within expected range
-        result = check_against_ar1_bounds(
-            model_mse=1.5, phi=0.9, sigma_sq=1.0, h=1, tolerance=1.5
-        )
+        result = check_against_ar1_bounds(model_mse=1.5, phi=0.9, sigma_sq=1.0, h=1, tolerance=1.5)
         assert result.status == GateStatus.PASS
         assert "within expected range" in result.message.lower()
 
@@ -208,9 +202,7 @@ class TestCheckAgainstAR1Bounds:
 
     def test_details_contain_expected_fields(self) -> None:
         """Gate result details should contain all diagnostic info."""
-        result = check_against_ar1_bounds(
-            model_mse=1.5, phi=0.8, sigma_sq=1.0, h=2, tolerance=1.5
-        )
+        result = check_against_ar1_bounds(model_mse=1.5, phi=0.8, sigma_sq=1.0, h=2, tolerance=1.5)
         assert result.details is not None
         assert "model_mse" in result.details
         assert "theoretical_mse" in result.details
@@ -221,9 +213,7 @@ class TestCheckAgainstAR1Bounds:
 
     def test_metric_name_customization(self) -> None:
         """Metric name should appear in message."""
-        result = check_against_ar1_bounds(
-            model_mse=1.5, phi=0.9, sigma_sq=1.0, metric_name="RMSE"
-        )
+        result = check_against_ar1_bounds(model_mse=1.5, phi=0.9, sigma_sq=1.0, metric_name="RMSE")
         assert "RMSE" in result.message
 
     def test_tolerance_affects_threshold(self) -> None:
@@ -281,7 +271,7 @@ class TestGenerateAR1Series:
     def test_variance_matches_theory(self) -> None:
         """Generated series variance should match theoretical σ²/(1-φ²)."""
         phi, sigma = 0.8, 1.0
-        theoretical_var = sigma ** 2 / (1 - phi ** 2)
+        theoretical_var = sigma**2 / (1 - phi**2)
 
         series = generate_ar1_series(phi=phi, sigma=sigma, n=10000, random_state=42)
         empirical_var = np.var(series)
@@ -317,12 +307,8 @@ class TestGenerateAR2Series:
 
     def test_reproducibility_with_seed(self) -> None:
         """Same seed should produce identical series."""
-        series1 = generate_ar2_series(
-            phi1=0.5, phi2=0.2, sigma=1.0, n=100, random_state=42
-        )
-        series2 = generate_ar2_series(
-            phi1=0.5, phi2=0.2, sigma=1.0, n=100, random_state=42
-        )
+        series1 = generate_ar2_series(phi1=0.5, phi2=0.2, sigma=1.0, n=100, random_state=42)
+        series2 = generate_ar2_series(phi1=0.5, phi2=0.2, sigma=1.0, n=100, random_state=42)
         np.testing.assert_array_equal(series1, series2)
 
     def test_ar1_special_case(self) -> None:
@@ -368,9 +354,7 @@ class TestIntegration:
         model_mse = np.mean((y_true - y_pred) ** 2)
 
         # Should pass bounds check
-        result = check_against_ar1_bounds(
-            model_mse=model_mse, phi=phi, sigma_sq=sigma ** 2
-        )
+        result = check_against_ar1_bounds(model_mse=model_mse, phi=phi, sigma_sq=sigma**2)
 
         # Optimal AR(1) predictor should pass (MSE ≈ σ²)
         assert result.status in (GateStatus.PASS, GateStatus.WARN)
@@ -387,7 +371,5 @@ class TestIntegration:
         model_mse = np.mean((y_true - y_pred) ** 2)
 
         # Should HALT - this is impossibly good
-        result = check_against_ar1_bounds(
-            model_mse=model_mse, phi=phi, sigma_sq=sigma ** 2
-        )
+        result = check_against_ar1_bounds(model_mse=model_mse, phi=phi, sigma_sq=sigma**2)
         assert result.status == GateStatus.HALT

@@ -18,6 +18,7 @@ from temporalcv.gates import (
 
 # === Strategies ===
 
+
 @st.composite
 def valid_gate_result(draw):
     """Generate a valid GateResult."""
@@ -26,11 +27,15 @@ def valid_gate_result(draw):
         name=draw(st.text(min_size=1, max_size=50).filter(lambda x: x.strip())),
         status=status,
         message=draw(st.text(max_size=200)),
-        details=draw(st.dictionaries(
-            keys=st.text(min_size=1, max_size=20).filter(lambda x: x.strip()),
-            values=st.one_of(st.integers(), st.floats(allow_nan=False, allow_infinity=False), st.text()),
-            max_size=5
-        )),
+        details=draw(
+            st.dictionaries(
+                keys=st.text(min_size=1, max_size=20).filter(lambda x: x.strip()),
+                values=st.one_of(
+                    st.integers(), st.floats(allow_nan=False, allow_infinity=False), st.text()
+                ),
+                max_size=5,
+            )
+        ),
     )
 
 
@@ -49,6 +54,7 @@ def positive_errors(draw):
 
 
 # === Gate Composition Invariants ===
+
 
 class TestGateCompositionInvariants:
     """Test that gate aggregation always respects priority order."""
@@ -81,9 +87,7 @@ class TestGateCompositionInvariants:
         """PASS status only when all gates are PASS or SKIP."""
         report = run_gates(gates)
 
-        all_pass_or_skip = all(
-            g.status in (GateStatus.PASS, GateStatus.SKIP) for g in gates
-        )
+        all_pass_or_skip = all(g.status in (GateStatus.PASS, GateStatus.SKIP) for g in gates)
         has_pass = any(g.status == GateStatus.PASS for g in gates)
 
         if all_pass_or_skip and has_pass:
@@ -98,6 +102,7 @@ class TestGateCompositionInvariants:
 
 
 # === Suspicious Improvement Gate Invariants ===
+
 
 class TestSuspiciousImprovementInvariants:
     """Test that suspicious improvement gate behaves correctly."""
@@ -155,6 +160,7 @@ class TestSuspiciousImprovementInvariants:
 
 # === GateResult Invariants ===
 
+
 class TestGateResultInvariants:
     """Test that GateResult always has valid structure."""
 
@@ -180,6 +186,7 @@ class TestGateResultInvariants:
 
 # === Priority Order Invariants ===
 
+
 class TestPriorityOrderInvariants:
     """Test that priority order is consistent."""
 
@@ -190,8 +197,7 @@ class TestPriorityOrderInvariants:
 
         # Create gates with each status
         gates = [
-            GateResult(name=f"gate_{i}", status=s, message="test")
-            for i, s in enumerate(statuses)
+            GateResult(name=f"gate_{i}", status=s, message="test") for i, s in enumerate(statuses)
         ]
 
         # Verify HALT dominates when present
