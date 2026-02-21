@@ -210,6 +210,16 @@ See [Testing Strategy](https://temporalcv.readthedocs.io/en/latest/testing_strat
 
 ---
 
+## Ecosystem
+
+Part of the **Rigorous AI Engineering** ecosystem:
+
+| Project | Description |
+|---------|-------------|
+| **temporalcv** (this repo) | Temporal cross-validation with leakage detection |
+| [ir-eval](https://github.com/brandonmbehring-dev/ir-eval) | Statistical retrieval evaluation with drift detection |
+| [research-kb](https://github.com/brandonmbehring-dev/research-kb) | Graph-boosted semantic search for research literature |
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
