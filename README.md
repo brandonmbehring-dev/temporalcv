@@ -7,12 +7,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/brandonmbehring-dev/temporalcv/actions/workflows/ci.yml"><img src="https://github.com/brandonmbehring-dev/temporalcv/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/brandon-behring/temporalcv/actions/workflows/ci.yml"><img src="https://github.com/brandon-behring/temporalcv/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://pypi.org/project/temporalcv/"><img src="https://img.shields.io/pypi/v/temporalcv.svg" alt="PyPI"></a>
   <a href="https://temporalcv.readthedocs.io"><img src="https://readthedocs.org/projects/temporalcv/badge/?version=latest" alt="Docs"></a>
   <a href="https://pypi.org/project/temporalcv/"><img src="https://img.shields.io/pypi/pyversions/temporalcv.svg" alt="Python"></a>
   <a href="docs/testing_strategy.md"><img src="https://img.shields.io/badge/coverage-83%25-green" alt="Coverage"></a>
-  <a href="https://colab.research.google.com/github/brandonmbehring-dev/temporalcv/blob/main/notebooks/demo.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
+  <a href="https://colab.research.google.com/github/brandon-behring/temporalcv/blob/main/notebooks/demo.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
 </p>
 
 <p align="center">
@@ -204,7 +204,7 @@ See [Testing Strategy](https://temporalcv.readthedocs.io/en/latest/testing_strat
   title     = {temporalcv: Temporal cross-validation with leakage protection},
   year      = {2025},
   publisher = {GitHub},
-  url       = {https://github.com/brandonmbehring-dev/temporalcv}
+  url       = {https://github.com/brandon-behring/temporalcv}
 }
 ```
 
@@ -217,8 +217,8 @@ Part of the **Rigorous AI Engineering** ecosystem:
 | Project | Description |
 |---------|-------------|
 | **temporalcv** (this repo) | Temporal cross-validation with leakage detection |
-| [ir-eval](https://github.com/brandonmbehring-dev/ir-eval) | Statistical retrieval evaluation with drift detection |
-| [research-kb](https://github.com/brandonmbehring-dev/research-kb) | Graph-boosted semantic search for research literature |
+| [ir-eval](https://github.com/brandon-behring/ir-eval) | Statistical retrieval evaluation with drift detection |
+| [research-kb](https://github.com/brandon-behring/research-kb) | Graph-boosted semantic search for research literature |
 
 ## Contributing
 

@@ -201,4 +201,4 @@ from temporalcv.[module] import [ComponentName]
 
 ---
 
-**Contributing**: To improve this model card, please submit a PR or open an issue at [https://github.com/brandonmbehring-dev/temporalcv](https://github.com/brandonmbehring-dev/temporalcv).
+**Contributing**: To improve this model card, please submit a PR or open an issue at [https://github.com/brandon-behring/temporalcv](https://github.com/brandon-behring/temporalcv).

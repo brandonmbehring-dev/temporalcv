@@ -12,7 +12,7 @@
 We take security vulnerabilities seriously. If you discover a security issue,
 please report it through GitHub's private vulnerability reporting feature:
 
-1. Go to the [Security Advisories](https://github.com/brandonmbehring-dev/temporalcv/security/advisories) page
+1. Go to the [Security Advisories](https://github.com/brandon-behring/temporalcv/security/advisories) page
 2. Click "Report a vulnerability"
 3. Fill out the form with details about the vulnerability
 

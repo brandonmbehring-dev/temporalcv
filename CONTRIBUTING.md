@@ -6,7 +6,7 @@ Thank you for your interest in contributing to temporalcv!
 
 ```bash
 # Clone the repository
-git clone https://github.com/brandonmbehring-dev/temporalcv.git
+git clone https://github.com/brandon-behring/temporalcv.git
 cd temporalcv
 
 # Install in development mode

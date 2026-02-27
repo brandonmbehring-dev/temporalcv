@@ -323,4 +323,4 @@ predictor.initialize(cal_preds, cal_actuals)
 
 1. **Check examples**: `examples/` directory has working scripts for each feature
 2. **Read API docs**: Each function has detailed docstrings with usage examples
-3. **File an issue**: https://github.com/brandonmbehring-dev/temporalcv/issues
+3. **File an issue**: https://github.com/brandon-behring/temporalcv/issues
