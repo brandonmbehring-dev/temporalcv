@@ -7,7 +7,7 @@ authors:
   - family-names: Behring
     given-names: Brandon
     orcid: "https://orcid.org/0000-0000-0000-0000"
-repository-code: "https://github.com/brandonmbehring-dev/temporalcv"
+repository-code: "https://github.com/brandon-behring/temporalcv"
 url: "https://temporalcv.readthedocs.io"
 license: MIT
 version: "1.0.0"
