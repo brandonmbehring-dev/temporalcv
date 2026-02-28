@@ -77,7 +77,7 @@ jobs:
           # Execute all notebooks including slow ones
           for notebook in notebooks/*.ipynb; do
             echo "Executing $notebook"
-            jupyter nbconvert --to notebook --execute --inplace "$notebook" \
+            jupyter nbconvert --to notebook --execute --output-dir /tmp "$notebook" \
               --ExecutePreprocessor.timeout=600 \
               --ExecutePreprocessor.kernel_name=python3
           done
