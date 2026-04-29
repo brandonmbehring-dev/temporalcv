@@ -43,8 +43,9 @@ scores = cross_val_score(model, X, y, cv=cv)
 ```python
 from temporalcv.gates import gate_signal_verification
 
-result = gate_signal_verification(y_train, y_test)
-# Returns HALT if target appears randomly shuffled (r² with shuffle > 0.1)
+# Detects whether the model has any signal beyond a shuffled-target baseline.
+# HALT means signal exists — investigate whether legitimate temporal pattern or leakage.
+result = gate_signal_verification(model, X, y, n_shuffles=100)
 ```
 
 ---
@@ -78,8 +79,9 @@ df['rolling_std'] = df['price'].shift(1).rolling(5).std()
 ```python
 from temporalcv.gates import gate_signal_verification
 
-# If features contain target information, shuffled correlation will be high
-result = gate_signal_verification(y_train, y_test, features=X_train)
+# Detects rolling-feature leakage: features built on the full series will let the
+# model beat a shuffled-target baseline at p < 0.05, triggering HALT.
+result = gate_signal_verification(model, X, y, n_shuffles=100)
 ```
 
 ---

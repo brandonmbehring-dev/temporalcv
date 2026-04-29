@@ -50,13 +50,13 @@ Some features require additional packages:
 2. **Overfitting to test period** — Model memorized test patterns during development
 3. **Weak baseline** — Wrong persistence lag or inappropriate baseline model
 
-**Solution**: Run `gate_signal_verification()` first to detect leakage:
+**Solution**: Run `gate_signal_verification()` first to confirm whether signal exists; if it does, investigate whether the source is legitimate temporal structure or feature leakage:
 ```python
 from temporalcv.gates import gate_signal_verification
 
 result = gate_signal_verification(model, X, y, n_shuffles=100)
 if result.status == GateStatus.HALT:
-    print("Leakage detected! Check feature engineering.")
+    print("Signal detected — investigate feature engineering for leakage.")
 ```
 
 ### "gate_signal_verification returns high p-value even with leakage"

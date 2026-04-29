@@ -11,7 +11,7 @@
   <a href="https://pypi.org/project/temporalcv/"><img src="https://img.shields.io/pypi/v/temporalcv.svg" alt="PyPI"></a>
   <a href="https://temporalcv.readthedocs.io"><img src="https://readthedocs.org/projects/temporalcv/badge/?version=latest" alt="Docs"></a>
   <a href="https://pypi.org/project/temporalcv/"><img src="https://img.shields.io/pypi/pyversions/temporalcv.svg" alt="Python"></a>
-  <a href="docs/testing_strategy.md"><img src="https://img.shields.io/badge/coverage-83%25-green" alt="Coverage"></a>
+  <a href="https://codecov.io/gh/brandon-behring/temporalcv"><img src="https://codecov.io/gh/brandon-behring/temporalcv/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://colab.research.google.com/github/brandon-behring/temporalcv/blob/main/notebooks/demo.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
 </p>
 
@@ -31,20 +31,21 @@ pip install temporalcv
 
 ## Quick Start
 
-Validate your model for temporal leakage in 3 lines:
+Validate your model for temporal leakage in 4 lines:
 
 ```python
 from temporalcv import run_gates
+from temporalcv.gates import gate_signal_verification
 
-report = run_gates(model, X, y)
+report = run_gates([gate_signal_verification(model, X, y, n_shuffles=100)])
 print(report.status)  # HALT, WARN, or PASS
 ```
 
 | Status | Meaning |
 |--------|---------|
-| **HALT** | Leakage detected — stop and investigate |
-| **WARN** | Suspicious signal — proceed with caution |
-| **PASS** | Validation passed — continue to CV |
+| **HALT** | Signal detected — investigate (legitimate temporal pattern or leakage?) |
+| **WARN** | Marginal signal — proceed with caution |
+| **PASS** | No signal — model has no detectable predictive power |
 
 ---
 
@@ -63,11 +64,13 @@ temporalcv provides:
 
 | Feature | temporalcv | sklearn | sktime | darts |
 |---------|:----------:|:-------:|:------:|:-----:|
-| Gap enforcement | ✓ | ✗ | ✗ | ✗ |
+| Horizon-derived gap (auto) | ✓ | Manual¹ | Manual | Manual |
 | Leakage detection gates | ✓ | ✗ | ✗ | ✗ |
 | Conformal prediction | ✓ | ✗ | Partial | ✓ |
 | sklearn-compatible API | ✓ | ✓ | ✓ | ✗ |
 | Statistical tests (DM, PT) | ✓ | ✗ | Partial | ✗ |
+
+¹ sklearn `TimeSeriesSplit(gap=N)` (since v0.24) requires the user to compute `N` from the forecast horizon themselves; temporalcv derives `gap = horizon + extra_gap` automatically from the `horizon` parameter.
 
 ---
 
@@ -104,7 +107,7 @@ gates = [
 
 report = run_gates(gates)
 if report.status == "HALT":
-    raise ValueError(f"Leakage detected: {report.summary()}")
+    raise ValueError(f"Signal detected — investigate: {report.summary()}")
 ```
 
 ### High-Persistence Metrics
@@ -166,7 +169,7 @@ pip install temporalcv[dev]          # Testing, linting
 pip install temporalcv[all]          # Everything
 ```
 
-**Core**: numpy >= 1.23, scipy >= 1.9, scikit-learn >= 1.1, pandas >= 1.5
+**Core**: numpy >= 1.21, scipy >= 1.7, scikit-learn >= 1.0, statsmodels >= 0.13, matplotlib >= 3.5  •  **Optional**: pandas >= 1.3 (`pip install temporalcv[pandas]`)
 
 **Platforms**: Linux, macOS, Windows | **Python**: 3.10+
 

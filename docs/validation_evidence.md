@@ -221,7 +221,7 @@ pytest tests/ -v
 pytest tests/ --cov=temporalcv --cov-report=html
 
 # Monte Carlo tests only (slow, ~10 min)
-pytest tests/monte_carlo/ -v --run-slow
+pytest tests/monte_carlo/ -v -m monte_carlo
 ```
 
 ### Regenerate R Reference Values
@@ -244,12 +244,11 @@ python -m temporalcv.benchmarks.run --dataset m4_subset --output results/
 For users auditing this library:
 
 - [ ] Run `pytest tests/test_golden_reference.py -v` — Verify R agreement
-- [ ] Run `pytest tests/monte_carlo/ -v --run-slow` — Verify calibration
+- [ ] Run `pytest tests/monte_carlo/ -v -m monte_carlo` — Verify calibration
 - [ ] Check `tests/fixtures/golden_reference.json` — Review frozen values
 - [ ] Read `docs/benchmarks.md` — Verify benchmark claims
 - [ ] Search for `[T3]` tags — Review heuristic components
 
 ---
 
-**Last Updated**: 2026-01-09
-**Coverage**: 83% (318 tests passing)
+**Last Updated**: 2026-04-29  •  **Tests**: 1,943 passing, 15 skipped  •  **Coverage**: 86% (5,898 statements, 1,956 branches)  •  **Runtime**: ~80 s

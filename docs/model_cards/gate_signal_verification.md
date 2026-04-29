@@ -197,7 +197,7 @@ from temporalcv.gates import gate_signal_verification, gate_synthetic_ar1
 # Stage 1: External validation (run first)
 result1 = gate_signal_verification(model, X, y)
 if result1.status == "HALT":
-    raise ValueError("Leakage detected - do not proceed")
+    raise ValueError("Signal detected — investigate (legitimate or leakage?) before proceeding")
 
 # Stage 2: Synthetic validation
 result2 = gate_synthetic_ar1(model, ar_coef=0.9)

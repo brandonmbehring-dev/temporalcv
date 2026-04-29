@@ -11,6 +11,27 @@ No unreleased changes.
 
 ---
 
+## [1.0.1] - 2026-04-29
+
+Trust-repair patch. No API or behavioral changes — pure documentation, configuration, and metadata corrections from the 2026-04-29 audit (`docs/audits/claude-audit-2026-04-29.md`). See `docs/plans/active/remediation_2026-04-29.md` Phase 1 for per-task evidence.
+
+### Fixed
+
+- **B1** — Reconciled gate semantics across `README.md`, `gates.py`, `quickstart.md`, `SPECIFICATION.md`, `docs/troubleshooting.md`, `docs/index.rst`, and `docs/model_cards/gate_signal_verification.md`: HALT now consistently means "signal detected — investigate (legitimate or leakage?)", matching the function-level docstring at `gates.py:305-315`.
+- **B2** — Replaced invalid `run_gates(model, X, y)` quickstart in `README.md` with the correct `run_gates([gate_signal_verification(...)])` idiom.
+- **H2** — Reframed sklearn comparison row in `README.md`: sklearn `TimeSeriesSplit(gap=N)` (since v0.24) acknowledged via footnote; temporalcv differentiator is *horizon-derived* gap.
+- **H3** — Synced `README.md` core dependency table to `pyproject.toml` (numpy>=1.21, scipy>=1.7, scikit-learn>=1.0, statsmodels>=0.13, matplotlib>=3.5; pandas>=1.3 optional).
+- **H4** — Replaced broken Lobato (2001) DOI `10.1198/016214501750333073` (404) with the correct `10.1198/016214501753208726` and corrected the citation metadata to *JASA* 96(455), 1066-1076 across `docs/api/statistical_tests.md`, `SPECIFICATION.md`, and `src/temporalcv/statistical_tests.py`.
+- **M2** — Refreshed `docs/validation_evidence.md` footer: 1,943 tests passing / 15 skipped, 86% coverage, 2026-04-29; replaced bogus `--run-slow` flag with `-m monte_carlo` per `tests/conftest.py`.
+- **M3** — Replaced static `coverage-83%` shield with the dynamic Codecov badge already wired up in CI.
+- **M5** — Fixed invalid `gate_signal_verification(y_train, y_test, ...)` calls in `docs/guide/common_pitfalls.md`; rewrote both call sites to use the `(model, X, y, n_shuffles=100)` signature.
+- **L1** — Removed placeholder ORCID `0000-0000-0000-0000` from `CITATION.cff`; updated `date-released` to `2026-01-08` (PyPI publication date).
+- **M8** — Two parts:
+  - `.gitignore`: tightened `.venv` → `.venv*` so sibling envs (`.venv-fresh`, `.venv-test`) are also ignored.
+  - `src/temporalcv/benchmarks/monash.py`: replaced `M3.load(directory=None, ...)` and `M4.load(directory=None, ...)` (which `datasetsforecast` stringified into a literal `"None/"` directory consuming 661 MB) with a `_default_cache_dir()` helper resolving to `$XDG_CACHE_HOME/datasetsforecast` or `~/.cache/datasetsforecast`.
+
+---
+
 ## [1.1.0] - 2026-01-01
 
 Statistical extensions and enhanced features (implemented, documented retroactively).

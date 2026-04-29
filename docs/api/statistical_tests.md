@@ -733,6 +733,6 @@ else:
 
 - Shao, X. (2010). "A Self-Normalized Approach to Confidence Interval Construction in Time Series." *Journal of the Royal Statistical Society: Series B*, 72(3), 343-366. [DOI: 10.1111/j.1467-9868.2009.00737.x](https://doi.org/10.1111/j.1467-9868.2009.00737.x)
 
-- Lobato, I.N. (2001). "Testing That a Dependent Process Is Uncorrelated." *Journal of the American Statistical Association*, 96(453), 169-176. [DOI: 10.1198/016214501750333073](https://doi.org/10.1198/016214501750333073)
+- Lobato, I.N. (2001). "Testing That a Dependent Process Is Uncorrelated." *Journal of the American Statistical Association*, 96(455), 1066-1076. [DOI: 10.1198/016214501753208726](https://doi.org/10.1198/016214501753208726)
 
 - Giacomini, R. & White, H. (2006). "Tests of Conditional Predictive Ability." *Econometrica*, 74(6), 1545-1578. [DOI: 10.1111/j.1468-0262.2006.00718.x](https://doi.org/10.1111/j.1468-0262.2006.00718.x)

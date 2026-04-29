@@ -61,9 +61,10 @@ shuffled_result = gate_signal_verification(
 print(shuffled_result)
 # GateResult(name='shuffled_target', status=PASS, ...)
 
-# If your model beats shuffled targets, something is WRONG
+# If your model beats shuffled targets, the gate halts so you can investigate
+# whether the signal is a legitimate temporal pattern or data leakage.
 if shuffled_result.status.name == "HALT":
-    raise ValueError("Leakage detected! Model beats shuffled baseline.")
+    raise ValueError("Signal detected — investigate (legitimate or leakage?)")
 ```
 
 ---
@@ -225,7 +226,7 @@ y = y[5:]
 # 2. Validate - no leakage
 model = Ridge(alpha=1.0)
 gate_result = gate_signal_verification(model, X, y, random_state=42)
-assert gate_result.status.name != "HALT", "Leakage detected!"
+assert gate_result.status.name != "HALT", "Signal detected — investigate (legitimate or leakage?)"
 
 # 3. Walk-forward evaluation
 cv = WalkForwardCV(n_splits=5, window_type="sliding", window_size=150, horizon=2, extra_gap=0)

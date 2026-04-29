@@ -14,6 +14,8 @@ Example
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Literal
 
 import numpy as np
@@ -25,6 +27,20 @@ from temporalcv.benchmarks.base import (
 )
 
 MONASH_URL = "https://forecastingdata.org/"
+
+
+def _default_cache_dir() -> str:
+    """Return a sane cache directory for datasetsforecast downloads.
+
+    Resolves to ``$XDG_CACHE_HOME/datasetsforecast`` if set, else
+    ``~/.cache/datasetsforecast``. Avoids the upstream-library bug where
+    ``directory=None`` is stringified into a literal ``"None"`` directory.
+    """
+    base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    cache = Path(base) / "datasetsforecast"
+    cache.mkdir(parents=True, exist_ok=True)
+    return str(cache)
+
 
 M3_HORIZONS: dict[str, int] = {
     "yearly": 6,
@@ -108,7 +124,7 @@ def load_m3(
     from datasetsforecast.m3 import M3
 
     # Load via datasetsforecast
-    df, _, _ = M3.load(directory=None, group=subset)
+    df, _, _ = M3.load(directory=_default_cache_dir(), group=subset)
 
     # Convert to array format
     unique_ids = df["unique_id"].unique()
@@ -196,7 +212,7 @@ def load_m4(
     from datasetsforecast.m4 import M4
 
     # datasetsforecast expects capitalized group names: 'Monthly' not 'monthly'
-    df, _, _ = M4.load(directory=None, group=subset.title())
+    df, _, _ = M4.load(directory=_default_cache_dir(), group=subset.title())
 
     unique_ids = df["unique_id"].unique()
     if sample_size is not None and sample_size < len(unique_ids):

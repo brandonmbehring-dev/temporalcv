@@ -7,18 +7,22 @@ Three-stage validation framework with HALT/PASS/WARN/SKIP decisions:
 2. **Internal validation**: Suspicious improvement detection
 3. **Statistical validation**: Residual diagnostics
 
-The key insight: if a model beats a shuffled target or significantly
-outperforms theoretical bounds, it's likely learning from leakage.
+The key insight: if a model beats a shuffled-target baseline, it has detected
+*signal*. That signal could be a legitimate temporal pattern OR data leakage —
+HALT means investigate, not "leakage confirmed". The default test is a
+**block-permutation** test (Künsch 1989) which preserves short-range temporal
+dependence; an effect-size heuristic is available for fast development checks.
 
 Knowledge Tiers
 ---------------
+[T1] Block-permutation test preserves temporal dependence (Künsch 1989)
 [T1] Shuffled target test destroys temporal structure (permutation test principle)
 [T1] AR(1) optimal 1-step MAE = σ√(2/π) ≈ 0.798σ (standard statistics result)
 [T1] Walk-forward validation framework (Tashman 2000)
 [T2] Signal verification via shuffled target (myga-forecasting-v2 validation)
 [T2] "External-first" validation ordering (synthetic → shuffled → internal)
-[T3] 20% improvement threshold = "too good to be true" heuristic (empirical)
-[T3] 5% p-value threshold for shuffled comparison (standard but arbitrary)
+[T3] 5% p-value threshold for permutation test (standard but arbitrary)
+[T3] 20% improvement threshold for effect-size heuristic (fast dev check only)
 [T3] Tolerance factor 1.5 for AR(1) bounds (allows for finite-sample variation)
 
 Example

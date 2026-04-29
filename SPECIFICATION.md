@@ -39,7 +39,7 @@ The shuffled target gate supports two statistical methods:
 | `n_shuffles` | 100 (default) | Min p-value of 0.0099, sufficient for α=0.05 |
 | `strict` | False | If True, uses n_shuffles=199 for p-value resolution of 0.005 |
 
-**Interpretation**: If model beats shuffled targets at p < α, features encode target position.
+**Interpretation**: If model beats shuffled targets at p < α, the model has detected signal. Signal may be a legitimate temporal pattern OR data leakage — HALT means investigate, not "leakage confirmed".
 
 **Formula** (per Phipson & Smyth 2010):
 ```
@@ -55,7 +55,7 @@ HALT if: p-value < alpha
 | `threshold` | 0.05 (5%) | Maximum acceptable improvement over shuffled |
 | `n_shuffles` | 5 (default) | Balance between accuracy and runtime |
 
-**Interpretation**: If model improves by more than threshold over shuffled, likely leakage.
+**Interpretation**: If model improves by more than threshold over shuffled, the model has signal — investigate whether legitimate or leakage.
 
 **Formula**:
 ```
@@ -210,7 +210,7 @@ V_n^SN = (1/n²) * sum_{k=1}^{n} S_k²
 - Small samples (n < 50)
 - Long forecast horizons where HAC may be unreliable
 
-**Reference**: Shao (2010). *Self-normalized CI construction*. JRSSB 72(3). Lobato (2001). JASA 96(453).
+**Reference**: Shao (2010). *Self-normalized CI construction*. JRSSB 72(3). Lobato (2001). JASA 96(455), 1066-1076.
 
 ### 3.5 Pesaran-Timmermann Test [T1]
 

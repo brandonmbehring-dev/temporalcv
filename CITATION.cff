@@ -6,12 +6,11 @@ abstract: "Temporal cross-validation with leakage protection for time-series ML.
 authors:
   - family-names: Behring
     given-names: Brandon
-    orcid: "https://orcid.org/0000-0000-0000-0000"
 repository-code: "https://github.com/brandon-behring/temporalcv"
 url: "https://temporalcv.readthedocs.io"
 license: MIT
 version: "1.0.0"
-date-released: "2025-01-05"
+date-released: "2026-01-08"
 keywords:
   - time-series
   - cross-validation

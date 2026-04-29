@@ -26,7 +26,7 @@ Quick Example
    gate_result = gate_signal_verification(my_model, X, y, n_shuffles=100)
    report = run_gates([gate_result])
    if report.status == "HALT":
-       raise ValueError(f"Leakage detected: {report.failures}")
+       raise ValueError(f"Signal detected — investigate: {report.failures}")
 
    # Move-conditional metrics for high-persistence series
    from temporalcv import compute_move_threshold, compute_move_conditional_metrics

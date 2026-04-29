@@ -521,7 +521,7 @@ def compute_self_normalized_variance(d: np.ndarray) -> float:
     [T1] Shao, X. (2010). A self-normalized approach to confidence interval
          construction in time series. JRSSB, 72(3), 343-366.
     [T1] Lobato, I.N. (2001). Testing that a dependent process is uncorrelated.
-         JASA, 96(453), 169-176.
+         JASA, 96(455), 1066-1076.
 
     See Also
     --------
@@ -706,7 +706,7 @@ def dm_test(
     Shao, X. (2010). A self-normalized approach to confidence interval construction
         in time series. Journal of the Royal Statistical Society: Series B, 72(3), 343-366.
     Lobato, I.N. (2001). Testing that a dependent process is uncorrelated.
-        Journal of the American Statistical Association, 96(453), 169-176.
+        Journal of the American Statistical Association, 96(455), 1066-1076.
 
     Example
     -------
