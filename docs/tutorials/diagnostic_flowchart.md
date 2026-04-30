@@ -124,11 +124,11 @@ for split_info in cv.get_split_info(X):
 
 | Cause | Check | Fix |
 |-------|-------|-----|
-| gap=0 for h>1 forecasting | `WalkForwardCV(horizon=0, extra_gap=0)` | Set `gap >= horizon` |
+| `horizon=0` (or omitted) for h>1 forecasting | `WalkForwardCV(horizon=0, extra_gap=0)` | Set `horizon >= h` |
 | Target includes future | `y[t] = f(y[t+h])` | Ensure y uses only past |
 | Features computed wrong | Rolling windows include y[t] | Add `shift(1)` |
 
-**Resolution**: Set `gap >= horizon` in `WalkForwardCV`.
+**Resolution**: Set `horizon >= h` in `WalkForwardCV` (or `horizon=h, extra_gap>0` for an additional safety margin).
 
 ---
 
@@ -361,7 +361,7 @@ def full_validation_check(model, X, y, horizon=1, verbose=True):
         report["primary_issue"] = "Feature leakage detected"
 
     # 2. Walk-forward with gap
-    cv = WalkForwardCV(n_splits=5, gap=horizon, test_size=50)
+    cv = WalkForwardCV(n_splits=5, horizon=horizon, extra_gap=0, test_size=50)
     all_preds, all_actuals = [], []
 
     for train_idx, test_idx in cv.split(X):

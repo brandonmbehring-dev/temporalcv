@@ -1369,9 +1369,11 @@ class CoverageDiagnostics:
     target_coverage : float
         Nominal coverage level (1 - alpha).
     coverage_gap : float
-        Difference between target and empirical coverage.
+        ``empirical - target`` coverage. Positive when over-covering, negative
+        when under-covering. (Sign matches ``evaluate_interval_quality``.)
     undercoverage_warning : bool
-        True if coverage is significantly below target.
+        True if coverage is significantly below target
+        (``coverage_gap < -undercoverage_threshold``).
     coverage_by_window : Dict[str, float]
         Coverage computed in rolling windows.
     coverage_by_regime : Optional[Dict[str, float]]
@@ -1420,7 +1422,8 @@ def compute_coverage_diagnostics(
         Integer or string array of regime labels for each observation.
         If provided, coverage is also computed per regime.
     undercoverage_threshold : float, default=0.05
-        Trigger warning if ``target_coverage - empirical_coverage > threshold``.
+        Trigger warning if ``empirical_coverage < target_coverage - threshold``
+        (equivalently, ``coverage_gap < -threshold``).
 
     Returns
     -------
@@ -1503,9 +1506,10 @@ def compute_coverage_diagnostics(
             regime_coverage = float(np.mean(covered[mask]))
             coverage_by_regime[str(regime)] = regime_coverage
 
-    # Check for undercoverage
-    coverage_gap = target_coverage - overall_coverage
-    undercoverage_warning = coverage_gap > undercoverage_threshold
+    # Check for undercoverage. Convention (matches evaluate_interval_quality):
+    # coverage_gap = empirical - target, so gap < 0 means under-covering.
+    coverage_gap = overall_coverage - target_coverage
+    undercoverage_warning = coverage_gap < -undercoverage_threshold
 
     if undercoverage_warning:
         logger.warning(

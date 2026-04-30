@@ -166,7 +166,7 @@ test = data[102:107]  # Gap of 2 for h=2
 ```
 
 **Prevention**:
-- `WalkForwardCV(gap=horizon)` enforces correct gaps
+- `WalkForwardCV(horizon=horizon, extra_gap=0)` enforces correct gaps
 - `gate_temporal_boundary()` validates all splits
 
 ---

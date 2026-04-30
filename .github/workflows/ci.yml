@@ -117,6 +117,35 @@ jobs:
           cd docs
           sphinx-build -b linkcheck . _build/linkcheck || true
 
+  # Smoke-run the gallery examples on multiple Python versions
+  examples:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,pandas]"
+
+      - name: Run examples
+        run: |
+          set -e
+          for f in examples/*.py; do
+            echo "::group::$f"
+            python "$f"
+            echo "::endgroup::"
+          done
+
   # Notebook validation on PRs
   notebooks:
     runs-on: ubuntu-latest

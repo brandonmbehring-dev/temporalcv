@@ -58,21 +58,24 @@ START: Do you have time series data?
 ### Code Examples
 
 ```python
-from temporalcv import WalkForwardCV, SlidingWindowCV
+from temporalcv import WalkForwardCV
 from temporalcv.cv_financial import PurgedKFold
 
 # Expanding window (default choice)
 cv = WalkForwardCV(
     n_splits=5,
     min_train_periods=100,
-    gap=1  # 1-step ahead forecast
+    horizon=1,       # 1-step ahead forecast
+    extra_gap=0,
 )
 
-# Fixed window (for regime-changing data)
-cv = SlidingWindowCV(
-    train_size=252,  # 1 year of daily data
-    test_size=21,    # 1 month test
-    gap=5            # 5-day forecast horizon
+# Fixed sliding window (for regime-changing data)
+cv = WalkForwardCV(
+    window_type="sliding",
+    window_size=252,  # 1 year of daily data
+    test_size=21,     # 1 month test
+    horizon=5,        # 5-step ahead forecast
+    extra_gap=0,
 )
 
 # Financial data (label overlap concerns)

@@ -65,18 +65,19 @@ Test:  [T+h, T+h+1, ...]  ← T+h is h steps ahead
 
 ## The Fix
 
-temporalcv enforces gap >= horizon:
+temporalcv derives the gap from `horizon`:
 
 ```python
 # CORRECT CODE
 cv = WalkForwardCV(
     window_size=100,
-    gap=2,      # Gap MUST equal forecast horizon
+    horizon=2,   # Forecast horizon — auto-derives total gap = horizon + extra_gap
+    extra_gap=0,
     test_size=1
 )
 
 for train_idx, test_idx in cv.split(X, y):
-    # Guaranteed: train_idx[-1] + gap < test_idx[0]
+    # Guaranteed: train_idx[-1] + (horizon + extra_gap) < test_idx[0]
     model.fit(X[train_idx], y[train_idx])
     predictions = model.predict(X[test_idx])
 ```
@@ -104,9 +105,9 @@ if result.status == GateStatus.HALT:
 
 ## Prevention Checklist
 
-- [ ] Always set `gap=horizon` in `WalkForwardCV`
+- [ ] Always set `horizon=h` (and `extra_gap=0` unless you need a safety margin) in `WalkForwardCV`
 - [ ] Run `gate_temporal_boundary()` with correct horizon
-- [ ] Verify that `train_idx[-1] + gap < test_idx[0]` for all splits
+- [ ] Verify that `train_idx[-1] + (horizon + extra_gap) < test_idx[0]` for all splits
 - [ ] Compare h=1 vs h>1 performance—if h=1 >> h>1, investigate
 
 ---
@@ -119,8 +120,8 @@ def test_boundary_violation_detection():
     X = np.random.randn(200, 5)
     y = np.random.randn(200)
 
-    # CV with gap=0 but horizon=2
-    cv = WalkForwardCV(window_size=100, gap=0, test_size=1)
+    # CV with horizon=0 (no gap) but the forecast really needs h=2
+    cv = WalkForwardCV(window_size=100, horizon=0, extra_gap=0, test_size=1)
 
     # Gate should HALT
     result = gate_temporal_boundary(cv, X, y, horizon=2)

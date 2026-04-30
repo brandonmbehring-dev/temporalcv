@@ -575,9 +575,9 @@ class TestCoverageGuarantees:
 
         # Average coverage should be ≥ 1 - α = 0.90
         mean_coverage = np.mean(coverages)
-        assert mean_coverage >= 0.85, (
-            f"Mean coverage {mean_coverage:.3f} < 0.85. Finite sample guarantee may be violated."
-        )
+        assert (
+            mean_coverage >= 0.85
+        ), f"Mean coverage {mean_coverage:.3f} < 0.85. Finite sample guarantee may be violated."
 
     def test_coverage_not_grossly_overconservative(self) -> None:
         """Coverage should not be grossly overconservative (e.g., 100%)."""
@@ -594,9 +594,9 @@ class TestCoverageGuarantees:
         coverage = intervals.coverage(y[100:])
 
         # Should not be extremely overconservative
-        assert coverage < 0.995, (
-            f"Coverage {coverage:.3f} is too high. Intervals may be excessively wide."
-        )
+        assert (
+            coverage < 0.995
+        ), f"Coverage {coverage:.3f} is too high. Intervals may be excessively wide."
 
 
 # =============================================================================
@@ -631,17 +631,17 @@ class TestWalkForwardConformal:
         )
 
         # Verify holdout-only computation
-        assert quality["holdout_size"] == 70, (
-            f"Expected 70 holdout points, got {quality['holdout_size']}"
-        )
-        assert quality["calibration_size"] == 30, (
-            f"Expected 30 calibration points, got {quality['calibration_size']}"
-        )
+        assert (
+            quality["holdout_size"] == 70
+        ), f"Expected 70 holdout points, got {quality['holdout_size']}"
+        assert (
+            quality["calibration_size"] == 30
+        ), f"Expected 30 calibration points, got {quality['calibration_size']}"
 
         # Intervals should be sized for holdout only
-        assert len(intervals.point) == 70, (
-            f"Intervals should have 70 points, got {len(intervals.point)}"
-        )
+        assert (
+            len(intervals.point) == 70
+        ), f"Intervals should have 70 points, got {len(intervals.point)}"
 
     def test_metadata_returned(self) -> None:
         """Quality dict should include calibration metadata."""
@@ -700,9 +700,9 @@ class TestWalkForwardConformal:
         mean_coverage = np.mean(coverages)
 
         # Average coverage should be >= 1 - alpha = 0.90 (approximately)
-        assert mean_coverage >= 0.80, (
-            f"Mean coverage {mean_coverage:.3f} < 0.80. Coverage guarantee may be violated."
-        )
+        assert (
+            mean_coverage >= 0.80
+        ), f"Mean coverage {mean_coverage:.3f} < 0.80. Coverage guarantee may be violated."
 
     def test_length_mismatch_raises(self) -> None:
         """Should raise error if predictions/actuals lengths differ."""
@@ -837,7 +837,7 @@ class TestCoverageDiagnostics:
         assert diag.overall_coverage == pytest.approx(1.0, rel=0.01)
 
     def test_coverage_gap_calculation(self) -> None:
-        """coverage_gap should be target - empirical."""
+        """coverage_gap should be empirical - target (over-covering positive)."""
         point = np.arange(100, dtype=float)
         lower = point - 0.1  # Very narrow intervals
         upper = point + 0.1
@@ -854,12 +854,12 @@ class TestCoverageDiagnostics:
         actuals = point
         diag = compute_coverage_diagnostics(interval, actuals)
 
-        # gap = target - empirical = 0.95 - 1.0 = -0.05
-        assert diag.coverage_gap == pytest.approx(-0.05, rel=0.01)
+        # gap = empirical - target = 1.0 - 0.95 = +0.05 (over-covering)
+        assert diag.coverage_gap == pytest.approx(0.05, rel=0.01)
         assert diag.undercoverage_warning is False  # Not undercovered
 
     def test_undercoverage_warning_triggered(self) -> None:
-        """undercoverage_warning should be True when gap > threshold."""
+        """undercoverage_warning should be True when gap < -threshold."""
         point = np.arange(100, dtype=float)
         lower = point - 0.001  # Extremely narrow intervals
         upper = point + 0.001
@@ -878,9 +878,9 @@ class TestCoverageDiagnostics:
 
         diag = compute_coverage_diagnostics(interval, actuals, undercoverage_threshold=0.05)
 
-        # Should warn: coverage << 95%
+        # Should warn: coverage << 95% → empirical - target is very negative
         assert diag.undercoverage_warning is True
-        assert diag.coverage_gap > 0.05
+        assert diag.coverage_gap < -0.05
 
     def test_coverage_by_window(self) -> None:
         """coverage_by_window should compute coverage in rolling windows."""

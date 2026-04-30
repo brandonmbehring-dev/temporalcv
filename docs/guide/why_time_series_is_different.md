@@ -75,23 +75,24 @@ from temporalcv import WalkForwardCV
 cv = WalkForwardCV(
     n_splits=4,
     min_train_periods=10,  # Minimum training history
-    gap=1,                 # Prediction horizon (h-step ahead)
+    horizon=1,             # Prediction horizon (h-step ahead)
+    extra_gap=0,
 )
 
 for train_idx, test_idx in cv.split(X, y):
     assert train_idx.max() < test_idx.min(), "Time order preserved!"
 ```
 
-## The Gap Parameter: Your Horizon Matters
+## The Horizon Parameter: Your Horizon Matters
 
-If you're forecasting 5 days ahead, you need a **gap** between training and test:
+If you're forecasting 5 days ahead, you need a **gap** of at least 5 between training and test. `WalkForwardCV` derives this automatically from `horizon`:
 
 ```
-Without gap (h=5 forecast):
+Without gap (horizon=0 for a 5-step forecast):
   Train: [Day 1...Day 100]
   Test:  [Day 101]  <- But you don't have Day 96-100 features at prediction time!
 
-With gap=5:
+With horizon=5:
   Train: [Day 1...Day 95]
   Test:  [Day 101]  <- Features only use data through Day 95
 ```
@@ -99,14 +100,15 @@ With gap=5:
 ```python
 cv = WalkForwardCV(
     n_splits=4,
-    gap=5,  # 5-day forecast horizon
+    horizon=5,    # 5-day forecast horizon
+    extra_gap=0,  # Optional safety margin beyond horizon
 )
 ```
 
 ```{admonition} Rule of Thumb
 :class: note
 
-Set `gap` equal to your forecast horizon. If predicting 1 week ahead, use `gap=7`
+Set `horizon` equal to your forecast horizon. If predicting 1 week ahead, use `horizon=7`
 (for daily data). This ensures your cross-validation matches production conditions.
 ```
 

@@ -237,7 +237,7 @@ Always use temporal cross-validation:
 from temporalcv import WalkForwardCV
 
 # CORRECT - Temporal order preserved
-cv = WalkForwardCV(n_splits=5, gap=1)
+cv = WalkForwardCV(n_splits=5, horizon=1, extra_gap=0)
 score = cross_val_score(model, X, y, cv=cv)  # Realistic estimate
 ```
 

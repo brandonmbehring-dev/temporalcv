@@ -34,7 +34,7 @@ scores = cross_val_score(model, X, y, cv=cv)
 from temporalcv import WalkForwardCV
 
 # RIGHT: Respects temporal order
-cv = WalkForwardCV(n_splits=5, gap=horizon)
+cv = WalkForwardCV(n_splits=5, horizon=horizon, extra_gap=0)
 scores = cross_val_score(model, X, y, cv=cv)
 ```
 
@@ -194,14 +194,16 @@ cv = WalkForwardCV(n_splits=5)  # gap defaults to 0
 ### Do
 
 ```python
-# RIGHT: Gap matches forecast horizon
-cv = WalkForwardCV(n_splits=5, gap=5)  # 5-day gap
+# RIGHT: Total gap (horizon + extra_gap) matches forecast horizon
+cv = WalkForwardCV(n_splits=5, horizon=5, extra_gap=0)  # 5-step ahead
 
-# Or explicitly with SlidingWindowCV
-cv = SlidingWindowCV(
-    train_size=252,
+# Or as a fixed sliding window:
+cv = WalkForwardCV(
+    window_type="sliding",
+    window_size=252,
     test_size=5,
-    gap=5  # Matches h-step ahead forecast
+    horizon=5,     # Matches h-step ahead forecast
+    extra_gap=0,
 )
 ```
 

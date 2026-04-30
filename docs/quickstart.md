@@ -26,13 +26,17 @@ y = np.zeros(n)
 for t in range(1, n):
     y[t] = phi * y[t-1] + np.random.randn() * 0.1
 
-# Create lag features (CORRECT way: will be done per-split)
-# For now, simple features
-X = np.column_stack([
-    np.roll(y, 1),  # lag-1
-    np.roll(y, 2),  # lag-2
-])[2:]  # Remove first 2 rows (NaN from rolling)
-y = y[2:]
+
+def create_lag_features(data, n_lags=2):
+    """Create lag features. Apply INSIDE each CV fold to prevent leakage."""
+    X = np.column_stack([np.roll(data, i) for i in range(1, n_lags + 1)])
+    return X[n_lags:], data[n_lags:]  # drop wrap-around rows
+
+
+# Step 1 builds X on the full series only for the up-front gate check
+# (the gate splits internally). The walk-forward loop in Step 3 rebuilds X
+# inside each fold to enforce the no-leakage discipline.
+X, y = create_lag_features(y, n_lags=2)
 ```
 
 ---
@@ -89,12 +93,21 @@ cv = WalkForwardCV(
 # Evaluate
 from sklearn.metrics import mean_absolute_error
 
+n_lags = 2
 maes = []
-for train_idx, test_idx in cv.split(X):
-    model.fit(X[train_idx], y[train_idx])
-    preds = model.predict(X[test_idx])
-    mae = mean_absolute_error(y[test_idx], preds)
-    maes.append(mae)
+for train_idx, test_idx in cv.split(y):
+    # Inside CV loop — features computed per-fold to prevent leakage.
+    y_train, y_test = y[train_idx], y[test_idx]
+    X_train, y_train_clean = create_lag_features(y_train, n_lags=n_lags)
+
+    # Build test features using the last n_lags train values as context, so
+    # the test predictions never look at observations beyond test_idx.
+    y_context = np.concatenate([y_train[-n_lags:], y_test])
+    X_test, _ = create_lag_features(y_context, n_lags=n_lags)
+
+    model.fit(X_train, y_train_clean)
+    preds = model.predict(X_test)
+    maes.append(mean_absolute_error(y_test, preds))
 
 print(f"Mean MAE: {np.mean(maes):.4f} (+/- {np.std(maes):.4f})")
 ```
@@ -220,23 +233,29 @@ y = np.zeros(n)
 for t in range(1, n):
     y[t] = 0.95 * y[t-1] + np.random.randn() * 0.1
 
-X = np.column_stack([np.roll(y, i) for i in range(1, 6)])[5:]
-y = y[5:]
+n_lags = 5
 
-# 2. Validate - no leakage
+# 2. Validate — gate uses an up-front X for the permutation test (gates split
+#    internally); the walk-forward loop below rebuilds X per fold.
+X_full, y_full = create_lag_features(y, n_lags=n_lags)
 model = Ridge(alpha=1.0)
-gate_result = gate_signal_verification(model, X, y, random_state=42)
+gate_result = gate_signal_verification(model, X_full, y_full, random_state=42)
 assert gate_result.status.name != "HALT", "Signal detected — investigate (legitimate or leakage?)"
 
-# 3. Walk-forward evaluation
+# 3. Walk-forward evaluation — features computed per-fold to prevent leakage.
 cv = WalkForwardCV(n_splits=5, window_type="sliding", window_size=150, horizon=2, extra_gap=0)
 predictions_all, actuals_all = [], []
 
-for train_idx, test_idx in cv.split(X):
-    model.fit(X[train_idx], y[train_idx])
-    preds = model.predict(X[test_idx])
+for train_idx, test_idx in cv.split(y):
+    y_train, y_test = y[train_idx], y[test_idx]
+    X_train, y_train_clean = create_lag_features(y_train, n_lags=n_lags)
+    y_context = np.concatenate([y_train[-n_lags:], y_test])
+    X_test, _ = create_lag_features(y_context, n_lags=n_lags)
+
+    model.fit(X_train, y_train_clean)
+    preds = model.predict(X_test)
     predictions_all.extend(preds)
-    actuals_all.extend(y[test_idx])
+    actuals_all.extend(y_test)
 
 predictions_all = np.array(predictions_all)
 actuals_all = np.array(actuals_all)

@@ -92,10 +92,10 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/brandon-behring/temporalcv"
-Documentation = "https://github.com/brandon-behring/temporalcv#readme"
-Repository = "https://github.com/brandon-behring/temporalcv"
-Issues = "https://github.com/brandon-behring/temporalcv/issues"
+Homepage = "https://github.com/brandonmbehring-dev/temporalcv"
+Documentation = "https://github.com/brandonmbehring-dev/temporalcv#readme"
+Repository = "https://github.com/brandonmbehring-dev/temporalcv"
+Issues = "https://github.com/brandonmbehring-dev/temporalcv/issues"
 
 [build-system]
 requires = ["hatchling"]
