@@ -14,12 +14,12 @@ See ``STYLE.md`` and ``docs/adr/0001-v2-seams-and-layout.md`` for the seam strat
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
 from numpy.typing import ArrayLike
 
-__all__ = ["Splitter", "CrossFitter"]
+__all__ = ["Splitter", "CrossFitter", "SupportsFitPredict"]
 
 
 @runtime_checkable
@@ -65,4 +65,27 @@ class CrossFitter(Splitter, Protocol):
 
     def fit_predict_residuals(self, model: object, X: ArrayLike, y: ArrayLike) -> np.ndarray:
         """Out-of-fold residuals ``y - y_hat`` (uncovered rows are ``NaN``)."""
+        ...
+
+
+@runtime_checkable
+class SupportsFitPredict(Protocol):
+    """A model with the scikit-learn ``fit``/``predict`` interface.
+
+    The canonical **estimator** seam: nuisance learners (e.g. ``model_a``/``model_b`` in
+    :func:`~temporalcv.cross_fit_residualize`), bagging base estimators, and gate models
+    all annotate against this one Protocol. ``@runtime_checkable`` checks member
+    *presence* only (a static aid; never a hot-path validator) — use
+    :func:`~temporalcv.check_temporal_estimator` for the behavioral contract.
+
+    Inputs are typed ``ArrayLike`` (consumers may pass arrays, lists, or frames);
+    ``predict`` returns a concrete ``np.ndarray`` as scikit-learn estimators do.
+    """
+
+    def fit(self, X: ArrayLike, y: ArrayLike) -> Any:
+        """Fit the model to training data; returns the fitted estimator."""
+        ...
+
+    def predict(self, X: ArrayLike) -> np.ndarray:
+        """Predict targets for ``X``."""
         ...

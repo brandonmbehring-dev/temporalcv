@@ -25,22 +25,11 @@ from __future__ import annotations
 
 import copy
 from abc import ABC, abstractmethod
-from typing import Literal, Protocol, runtime_checkable
+from typing import Literal
 
 import numpy as np
 
-
-@runtime_checkable
-class SupportsPredict(Protocol):
-    """Protocol for models with fit/predict interface."""
-
-    def fit(self, X: np.ndarray, y: np.ndarray) -> SupportsPredict:
-        """Fit model to data."""
-        ...
-
-    def predict(self, X: np.ndarray) -> np.ndarray:
-        """Make predictions."""
-        ...
+from temporalcv.protocols import SupportsFitPredict
 
 
 class BootstrapStrategy(ABC):
@@ -109,7 +98,7 @@ class BootstrapStrategy(ABC):
         return X
 
 
-def _clone_model(model: SupportsPredict) -> SupportsPredict:
+def _clone_model(model: SupportsFitPredict) -> SupportsFitPredict:
     """
     Clone a model, handling both sklearn and custom model instances.
 
@@ -117,12 +106,12 @@ def _clone_model(model: SupportsPredict) -> SupportsPredict:
 
     Parameters
     ----------
-    model : SupportsPredict
+    model : SupportsFitPredict
         Model to clone
 
     Returns
     -------
-    SupportsPredict
+    SupportsFitPredict
         Fresh, unfitted clone of the model
     """
     # Check if model has sklearn's get_params (sklearn-compatible)
@@ -130,14 +119,14 @@ def _clone_model(model: SupportsPredict) -> SupportsPredict:
         try:
             from sklearn.base import clone
 
-            cloned: SupportsPredict = clone(model)
+            cloned: SupportsFitPredict = clone(model)
             return cloned
         except (ImportError, Exception):
             # Fallback to deepcopy if clone fails
             pass
 
     # Use deepcopy for custom models
-    cloned_model: SupportsPredict = copy.deepcopy(model)
+    cloned_model: SupportsFitPredict = copy.deepcopy(model)
     return cloned_model
 
 
@@ -150,7 +139,7 @@ class TimeSeriesBagger:
 
     Parameters
     ----------
-    base_model : SupportsPredict
+    base_model : SupportsFitPredict
         Any model implementing fit(X, y) and predict(X)
     strategy : BootstrapStrategy
         Resampling strategy (MBB, Stationary, Feature)
@@ -163,7 +152,7 @@ class TimeSeriesBagger:
 
     Attributes
     ----------
-    estimators_ : list[SupportsPredict]
+    estimators_ : list[SupportsFitPredict]
         Fitted estimators (after fit)
     is_fitted : bool
         Whether the bagger has been fitted
@@ -195,7 +184,7 @@ class TimeSeriesBagger:
 
     def __init__(
         self,
-        base_model: SupportsPredict,
+        base_model: SupportsFitPredict,
         strategy: BootstrapStrategy,
         n_estimators: int = 20,
         aggregation: Literal["mean", "median"] = "mean",
@@ -211,7 +200,7 @@ class TimeSeriesBagger:
         self.n_estimators = n_estimators
         self.aggregation = aggregation
         self.random_state = random_state
-        self.estimators_: list[SupportsPredict] = []
+        self.estimators_: list[SupportsFitPredict] = []
         self._fitted = False
 
     @property
@@ -387,7 +376,7 @@ class TimeSeriesBagger:
 # =============================================================================
 
 __all__ = [
-    "SupportsPredict",
+    "SupportsFitPredict",
     "BootstrapStrategy",
     "TimeSeriesBagger",
 ]

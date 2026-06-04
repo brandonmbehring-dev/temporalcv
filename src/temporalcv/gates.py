@@ -62,12 +62,13 @@ import warnings
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Literal, Protocol, cast
+from typing import Any, Literal, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
 
 from temporalcv.cv import WalkForwardCV
+from temporalcv.protocols import SupportsFitPredict
 
 
 class GateStatus(Enum):
@@ -185,23 +186,6 @@ class ValidationReport:
 
 
 # =============================================================================
-# Protocol for model interface
-# =============================================================================
-
-
-class FitPredictModel(Protocol):
-    """Protocol for models with fit/predict interface."""
-
-    def fit(self, X: ArrayLike, y: ArrayLike) -> Any:
-        """Fit model to training data."""
-        ...
-
-    def predict(self, X: ArrayLike) -> ArrayLike:
-        """Generate predictions."""
-        ...
-
-
-# =============================================================================
 # DRY Helper: Centralized CV Metric Computation
 # =============================================================================
 
@@ -222,7 +206,7 @@ def _clone_model(model: Any) -> Any:
 
 
 def _compute_cv_mae(
-    model: FitPredictModel,
+    model: SupportsFitPredict,
     X: np.ndarray,
     y: np.ndarray,
     n_cv_splits: int = 3,
@@ -237,7 +221,7 @@ def _compute_cv_mae(
 
     Parameters
     ----------
-    model : FitPredictModel
+    model : SupportsFitPredict
         Model with fit(X, y) and predict(X) methods.
     X : np.ndarray
         Feature matrix.
@@ -288,7 +272,7 @@ def _compute_cv_mae(
 
 
 def gate_signal_verification(
-    model: FitPredictModel,
+    model: SupportsFitPredict,
     X: ArrayLike,
     y: ArrayLike,
     n_shuffles: int | None = None,
@@ -320,7 +304,7 @@ def gate_signal_verification(
 
     Parameters
     ----------
-    model : FitPredictModel
+    model : SupportsFitPredict
         Model with fit(X, y) and predict(X) methods
     X : array-like of shape (n_samples, n_features)
         Feature matrix
@@ -686,7 +670,7 @@ def gate_signal_verification(
 
 
 def gate_synthetic_ar1(
-    model: FitPredictModel,
+    model: SupportsFitPredict,
     phi: float = 0.95,
     sigma: float = 1.0,
     n_samples: int = 500,
@@ -712,7 +696,7 @@ def gate_synthetic_ar1(
 
     Parameters
     ----------
-    model : FitPredictModel
+    model : SupportsFitPredict
         Model with fit(X, y) and predict(X) methods
     phi : float, default=0.95
         AR(1) coefficient (persistence parameter). Must be in (-1, 1) for

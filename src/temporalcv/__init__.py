@@ -219,7 +219,7 @@ from temporalcv.persistence import (
 )
 
 # Typed seams (static @runtime_checkable Protocols — see protocols.py / STYLE.md)
-from temporalcv.protocols import CrossFitter, Splitter
+from temporalcv.protocols import CrossFitter, Splitter, SupportsFitPredict
 
 # Regime classification exports
 from temporalcv.regimes import (
@@ -333,6 +333,7 @@ __all__ = [
     # Typed seams (static Protocols)
     "Splitter",
     "CrossFitter",
+    "SupportsFitPredict",
     # Conformance suite
     "check_temporal_splitter",
     "check_temporal_estimator",
