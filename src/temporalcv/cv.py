@@ -45,12 +45,15 @@ from __future__ import annotations
 import logging
 from collections.abc import Generator, Sized
 from dataclasses import dataclass
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import clone
 from sklearn.model_selection import BaseCrossValidator
+
+if TYPE_CHECKING:
+    from temporalcv.protocols import Splitter
 
 logger = logging.getLogger(__name__)
 
@@ -1142,6 +1145,110 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
 
 # =============================================================================
+# cross_fit_residualize - Dual-variable Out-of-Fold Residualization
+# =============================================================================
+
+
+def cross_fit_residualize(
+    model_a: Any,
+    model_b: Any,
+    X: ArrayLike,
+    A: ArrayLike,
+    B: ArrayLike,
+    cv: Splitter,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Residualize two targets on shared controls out-of-fold (partialling-out seam).
+
+    Estimates ``A_resid = A - E[A | X]`` and ``B_resid = B - E[B | X]`` using
+    out-of-fold predictions over the *same* temporal fold sequence, so the two residual
+    vectors are mutually aligned. This is the residual-on-residual seam that
+    Frisch-Waugh-Lovell partialling-out and Double ML build on: regressing ``A_resid``
+    on ``B_resid`` recovers the orthogonalized (Neyman-orthogonal) parameter, with the
+    nuisance estimation bias cross-fitted away.
+
+    Parameters
+    ----------
+    model_a, model_b : sklearn estimator
+        Nuisance learners for ``A`` and ``B`` respectively. Each must implement
+        ``fit(X, y)`` and ``predict(X)``; both are cloned per fold via
+        :func:`sklearn.base.clone` (falling back to the original object if it is not
+        cloneable, matching :meth:`CrossFitCV.fit_predict`).
+    X : ArrayLike of shape (n_samples, n_features)
+        Shared controls / conditioning set both targets are residualized on.
+    A, B : ArrayLike of shape (n_samples,)
+        The two targets to residualize (e.g. outcome and treatment).
+    cv : Splitter
+        Any temporal splitter yielding ``(train_idx, test_idx)`` index pairs
+        (e.g. :class:`CrossFitCV`, :class:`WalkForwardCV`). Only :meth:`split` is used,
+        so the residualization inherits the splitter's leakage guarantees.
+
+    Returns
+    -------
+    A_resid, B_resid : np.ndarray of shape (n_samples,)
+        Out-of-fold residuals. Rows never covered by any test fold (e.g. fold 0 of a
+        forward-only :class:`CrossFitCV`, which has no history to train on) are ``NaN``
+        in **both** outputs, identically — a single ``~np.isnan`` mask drops them while
+        keeping the two vectors aligned.
+
+    Notes
+    -----
+    The fold loop runs **once**: for each ``(train_idx, test_idx)`` both models are fit
+    on ``X[train_idx]`` (against ``A`` / ``B``) and predict on ``X[test_idx]``. Iterating
+    the splitter a single time guarantees the shared coverage mask and is safe for
+    single-use generator splitters.
+
+    Knowledge Tier: [T1] - Cross-fitted partialling-out / orthogonal residual-on-residual
+    estimation (Robinson 1988; Chernozhukov et al. 2018).
+
+    Example
+    -------
+    >>> from sklearn.ensemble import RandomForestRegressor
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> X = rng.standard_normal((200, 3))
+    >>> d = X[:, 0] + rng.standard_normal(200) * 0.1
+    >>> y = 2.0 * d + X[:, 1] + rng.standard_normal(200) * 0.1
+    >>> cv = CrossFitCV(n_splits=5)
+    >>> y_res, d_res = cross_fit_residualize(
+    ...     RandomForestRegressor(random_state=0),
+    ...     RandomForestRegressor(random_state=0),
+    ...     X, y, d, cv,
+    ... )
+    >>> mask = ~np.isnan(y_res)  # identical mask applies to d_res
+    >>> theta = float(np.polyfit(d_res[mask], y_res[mask], 1)[0])  # ~2.0
+
+    See Also
+    --------
+    CrossFitCV.fit_predict : Single-target out-of-fold predictions.
+    CrossFitCV.fit_predict_residuals : Single-target out-of-fold residuals.
+    """
+    X = np.asarray(X)
+    A = np.asarray(A, dtype=float)
+    B = np.asarray(B, dtype=float)
+    n_samples = A.shape[0]
+
+    if X.shape[0] != n_samples or B.shape[0] != n_samples:
+        raise ValueError(
+            "X, A, B must share the first-axis length; got "
+            f"X={X.shape[0]}, A={n_samples}, B={B.shape[0]}."
+        )
+
+    a_hat = np.full(n_samples, np.nan)
+    b_hat = np.full(n_samples, np.nan)
+
+    for train_idx, test_idx in cv.split(X):
+        for model, target, out in ((model_a, A, a_hat), (model_b, B, b_hat)):
+            try:
+                fold_model = clone(model)
+            except TypeError:
+                fold_model = model
+            fold_model.fit(X[train_idx], target[train_idx])
+            out[test_idx] = fold_model.predict(X[test_idx])
+
+    return A - a_hat, B - b_hat
+
+
+# =============================================================================
 # walk_forward_evaluate Function
 # =============================================================================
 
@@ -1940,4 +2047,5 @@ __all__ = [
     "CrossFitCV",
     "NestedWalkForwardCV",
     "walk_forward_evaluate",
+    "cross_fit_residualize",
 ]

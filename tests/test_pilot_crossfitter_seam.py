@@ -1,0 +1,300 @@
+"""Tests for the v2.0 CrossFitter-seam pilot.
+
+Covers the vertical slice introduced by the v2.0 seam pilot:
+- ``Splitter`` / ``CrossFitter`` static Protocols (structural typing seam).
+- ``cross_fit_residualize`` dual-variable out-of-fold residualization.
+- The executable conformance suite (``check_temporal_splitter`` /
+  ``check_temporal_estimator``), positive and negative.
+
+See ``docs/adr/0001-v2-seams-and-layout.md`` and ``STYLE.md``.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterator
+
+import numpy as np
+import pytest
+from sklearn.base import clone
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression
+
+from temporalcv import (
+    CrossFitCV,
+    CrossFitter,
+    Splitter,
+    WalkForwardCV,
+    check_temporal_estimator,
+    check_temporal_splitter,
+    cross_fit_residualize,
+)
+
+# =============================================================================
+# Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def linear_dgp() -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
+    """Linear partially-linear DGP: y = theta*d + g(X) + eps, d = m(X) + v."""
+    rng = np.random.default_rng(7)
+    n = 400
+    theta = 2.0
+    X = rng.standard_normal((n, 3))
+    d = X[:, 0] + 0.5 * X[:, 1] + rng.standard_normal(n) * 0.1
+    y = theta * d + X[:, 1] + rng.standard_normal(n) * 0.1
+    return X, y, d, theta
+
+
+# =============================================================================
+# Static Protocol seam (structural typing)
+# =============================================================================
+
+
+class TestProtocolSeam:
+    """The Protocol seam must discriminate capability levels by member presence."""
+
+    def test_crossfitcv_is_splitter_and_crossfitter(self) -> None:
+        cf = CrossFitCV(n_splits=3)
+        assert isinstance(cf, Splitter)
+        assert isinstance(cf, CrossFitter)
+
+    def test_walkforwardcv_is_splitter_not_crossfitter(self) -> None:
+        # WalkForwardCV has split/get_n_splits but no fit_predict -> Splitter only.
+        wf = WalkForwardCV(n_splits=3)
+        assert isinstance(wf, Splitter)
+        assert not isinstance(wf, CrossFitter)
+
+    def test_non_splitter_is_not_splitter(self) -> None:
+        assert not isinstance(object(), Splitter)
+
+
+# =============================================================================
+# cross_fit_residualize
+# =============================================================================
+
+
+class TestCrossFitResidualize:
+    """Dual-variable out-of-fold residualization."""
+
+    def test_shapes_and_shared_nan_mask(
+        self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
+    ) -> None:
+        X, y, d, _ = linear_dgp
+        cv = CrossFitCV(n_splits=5)
+        y_res, d_res = cross_fit_residualize(LinearRegression(), LinearRegression(), X, y, d, cv)
+
+        assert y_res.shape == (X.shape[0],)
+        assert d_res.shape == (X.shape[0],)
+        # The defining guarantee: both residual vectors share one NaN mask.
+        np.testing.assert_array_equal(np.isnan(y_res), np.isnan(d_res))
+
+    def test_uncovered_rows_are_fold_zero(
+        self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
+    ) -> None:
+        X, y, d, _ = linear_dgp
+        cv = CrossFitCV(n_splits=5)
+        y_res, _ = cross_fit_residualize(LinearRegression(), LinearRegression(), X, y, d, cv)
+
+        covered = np.unique(np.concatenate([te for _, te in cv.split(X)]))
+        uncovered = np.setdiff1d(np.arange(X.shape[0]), covered)
+        assert np.all(np.isnan(y_res[uncovered]))
+        assert np.all(np.isfinite(y_res[covered]))
+        # Forward-only CrossFitCV: the uncovered block is the leading fold 0.
+        assert uncovered.min() == 0
+
+    def test_recovers_theta(
+        self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
+    ) -> None:
+        X, y, d, theta = linear_dgp
+        cv = CrossFitCV(n_splits=5)
+        y_res, d_res = cross_fit_residualize(LinearRegression(), LinearRegression(), X, y, d, cv)
+        mask = ~np.isnan(y_res)
+        theta_hat = float(np.polyfit(d_res[mask], y_res[mask], 1)[0])
+        assert abs(theta_hat - theta) < 0.1
+
+    def test_parity_with_single_target_fit_predict(
+        self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
+    ) -> None:
+        """Joint residualization must equal two single-target fit_predict calls.
+
+        For a deterministic learner the per-fold fits are identical, so
+        ``cross_fit_residualize`` is exactly ``A - fit_predict(A)`` and
+        ``B - fit_predict(B)`` on covered rows.
+        """
+        X, y, d, _ = linear_dgp
+        cv = CrossFitCV(n_splits=5)
+        y_res, d_res = cross_fit_residualize(LinearRegression(), LinearRegression(), X, y, d, cv)
+
+        y_ref = y - cv.fit_predict(LinearRegression(), X, y)
+        d_ref = d - cv.fit_predict(LinearRegression(), X, d)
+        mask = ~np.isnan(y_res)
+        np.testing.assert_allclose(y_res[mask], y_ref[mask], atol=1e-10)
+        np.testing.assert_allclose(d_res[mask], d_ref[mask], atol=1e-10)
+
+    def test_accepts_any_splitter_not_just_crossfitcv(
+        self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
+    ) -> None:
+        """Typed against ``Splitter`` — must work with WalkForwardCV too."""
+        X, y, d, _ = linear_dgp
+        wf = WalkForwardCV(n_splits=5, test_size=20)
+        y_res, d_res = cross_fit_residualize(LinearRegression(), LinearRegression(), X, y, d, wf)
+        np.testing.assert_array_equal(np.isnan(y_res), np.isnan(d_res))
+        assert np.isfinite(y_res).any()
+
+    def test_length_mismatch_raises(self) -> None:
+        X = np.zeros((50, 2))
+        with pytest.raises(ValueError, match="first-axis length"):
+            cross_fit_residualize(
+                LinearRegression(),
+                LinearRegression(),
+                X,
+                np.zeros(50),
+                np.zeros(49),
+                CrossFitCV(n_splits=3),
+            )
+
+
+# =============================================================================
+# Golden-parity reference: dml_ts consumer
+# =============================================================================
+
+
+def _dmlts_reference_residualize(
+    model_y: object,
+    model_t: object,
+    X: np.ndarray,
+    Y: np.ndarray,
+    T: np.ndarray,
+    cv: object,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Verbatim port of dml_ts's ``_cross_fit_nuisance_time_series`` + residualization.
+
+    This is the golden reference the consumer (``dml_ts``) currently runs
+    (``dml_ts/dml/temporal_plr_dml.py``): NaN-filled OOF prediction arrays, per-fold
+    clone-fit-predict for both nuisances, uncovered rows left NaN; the DML estimator
+    then forms residuals ``Y - Y_hat`` / ``T - T_hat``. Kept dependency-free here so the
+    parity contract is enforced in temporalcv CI without importing dml_ts. A throwaway
+    spike confirmed this matches the live dml_ts function to 1e-10 on its own splitters.
+    """
+    n = len(Y)
+    y_hat = np.full(n, np.nan)
+    t_hat = np.full(n, np.nan)
+    for train_idx, test_idx in cv.split(X):  # type: ignore[attr-defined]
+        ym = clone(model_y)
+        ym.fit(X[train_idx], Y[train_idx])
+        y_hat[test_idx] = ym.predict(X[test_idx])
+        tm = clone(model_t)
+        tm.fit(X[train_idx], T[train_idx])
+        t_hat[test_idx] = tm.predict(X[test_idx])
+    return Y - y_hat, T - t_hat
+
+
+class TestDmlTsGoldenParity:
+    """``cross_fit_residualize`` must match the dml_ts cross-fitting algorithm exactly.
+
+    This gates the Track-B migration: dml_ts's bespoke ``_cross_fit_nuisance_time_series``
+    is exactly ``cross_fit_residualize`` over the same splitter, so it can be retired in
+    favor of the upstream seam without changing any estimate.
+    """
+
+    @pytest.mark.parametrize("n_splits", [3, 5, 6])
+    def test_matches_reference_on_crossfitcv(
+        self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float], n_splits: int
+    ) -> None:
+        X, y, d, _ = linear_dgp
+        cv = CrossFitCV(n_splits=n_splits)
+        y_ref, d_ref = _dmlts_reference_residualize(
+            LinearRegression(), LinearRegression(), X, y, d, cv
+        )
+        y_new, d_new = cross_fit_residualize(LinearRegression(), LinearRegression(), X, y, d, cv)
+        np.testing.assert_array_equal(np.isnan(y_ref), np.isnan(y_new))
+        mask = ~np.isnan(y_new)
+        np.testing.assert_allclose(y_new[mask], y_ref[mask], atol=1e-10)
+        np.testing.assert_allclose(d_new[mask], d_ref[mask], atol=1e-10)
+
+    def test_matches_reference_on_walkforward(
+        self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
+    ) -> None:
+        X, y, d, _ = linear_dgp
+        cv = WalkForwardCV(n_splits=5, test_size=20)
+        y_ref, d_ref = _dmlts_reference_residualize(
+            LinearRegression(), LinearRegression(), X, y, d, cv
+        )
+        y_new, d_new = cross_fit_residualize(LinearRegression(), LinearRegression(), X, y, d, cv)
+        np.testing.assert_array_equal(np.isnan(y_ref), np.isnan(y_new))
+        mask = ~np.isnan(y_new)
+        np.testing.assert_allclose(y_new[mask], y_ref[mask], atol=1e-10)
+        np.testing.assert_allclose(d_new[mask], d_ref[mask], atol=1e-10)
+
+
+# =============================================================================
+# Conformance suite — positive
+# =============================================================================
+
+
+class TestConformancePositive:
+    """Library-provided splitters/estimators must pass their own contract."""
+
+    def test_crossfitcv_conforms(self) -> None:
+        check_temporal_splitter(CrossFitCV(n_splits=5))
+
+    def test_walkforwardcv_conforms(self) -> None:
+        check_temporal_splitter(WalkForwardCV(n_splits=5))
+
+    @pytest.mark.parametrize(
+        "estimator",
+        [LinearRegression(), RandomForestRegressor(n_estimators=15, random_state=0)],
+    )
+    def test_estimators_conform(self, estimator: object) -> None:
+        check_temporal_estimator(estimator)
+
+
+# =============================================================================
+# Conformance suite — negative (the checker must catch violations)
+# =============================================================================
+
+
+class _LookaheadSplitter:
+    """A deliberately broken splitter: test precedes train (lookahead)."""
+
+    def split(
+        self, X: object, y: object = None, groups: object = None
+    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        n = len(X)  # type: ignore[arg-type]
+        half = n // 2
+        # test BEFORE train -> violates max(train) < min(test)
+        yield np.arange(half, n, dtype=np.intp), np.arange(0, half, dtype=np.intp)
+
+    def get_n_splits(self, X: object = None, y: object = None, groups: object = None) -> int:
+        return 1
+
+
+class _MiscountSplitter:
+    """get_n_splits disagrees with the number of folds actually yielded."""
+
+    def split(
+        self, X: object, y: object = None, groups: object = None
+    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        n = len(X)  # type: ignore[arg-type]
+        third = n // 3
+        yield np.arange(0, third, dtype=np.intp), np.arange(third, 2 * third, dtype=np.intp)
+
+    def get_n_splits(self, X: object = None, y: object = None, groups: object = None) -> int:
+        return 5  # lies: only 1 fold is produced
+
+
+class TestConformanceNegative:
+    """The checker must reject contract violations with AssertionError."""
+
+    def test_lookahead_splitter_rejected(self) -> None:
+        with pytest.raises(AssertionError, match="lookahead"):
+            check_temporal_splitter(_LookaheadSplitter())
+
+    def test_miscount_splitter_rejected(self) -> None:
+        with pytest.raises(AssertionError, match="get_n_splits"):
+            check_temporal_splitter(_MiscountSplitter())
+
+    def test_non_estimator_rejected(self) -> None:
+        with pytest.raises(AssertionError, match="fit"):
+            check_temporal_estimator(object())
