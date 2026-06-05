@@ -318,6 +318,10 @@ class ForecastAdapter(ABC):
     Adapters wrap different forecasting packages (statsforecast, sktime, etc.)
     to provide a unified interface for comparison.
 
+    The typed accept-seam consumers annotate against is the
+    :class:`~temporalcv.SupportsForecast` Protocol; this ABC is the owned shared-impl base that
+    supplies the default ``get_params`` and instantiation fail-fast.
+
     Example
     -------
     >>> class MyAdapter(ForecastAdapter):

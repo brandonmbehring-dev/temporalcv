@@ -19,7 +19,13 @@ from typing import Any, Protocol, runtime_checkable
 import numpy as np
 from numpy.typing import ArrayLike
 
-__all__ = ["Splitter", "CrossFitter", "SupportsFitPredict"]
+__all__ = [
+    "Splitter",
+    "CrossFitter",
+    "SupportsFitPredict",
+    "SupportsBootstrap",
+    "SupportsForecast",
+]
 
 
 @runtime_checkable
@@ -94,4 +100,72 @@ class SupportsFitPredict(Protocol):
 
     def predict(self, X: ArrayLike) -> np.ndarray:
         """Predict targets for ``X``."""
+        ...
+
+
+@runtime_checkable
+class SupportsBootstrap(Protocol):
+    """A time-series bootstrap resampling strategy — the accept-seam for
+    :class:`~temporalcv.TimeSeriesBagger`.
+
+    This Protocol is the typed seam consumers annotate against. Our own strategies additionally
+    subclass the owned shared-impl base :class:`~temporalcv.BootstrapStrategy` (which supplies the
+    default :meth:`transform_for_predict` and instantiation fail-fast); a third party may instead
+    satisfy this Protocol structurally, without importing temporalcv.
+
+    Inputs are concrete ``np.ndarray`` because this is an **internal** seam: ``TimeSeriesBagger``
+    normalizes its public ``ArrayLike`` input via ``np.asarray`` *before* delegating to the
+    strategy, so a strategy always receives a materialized array. The ``ArrayLike`` boundary lives
+    on the bagger, not here. Use :func:`~temporalcv.check_bootstrap_strategy` for the behavioral
+    contract (``@runtime_checkable`` verifies member *presence* only).
+    """
+
+    def generate_samples(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        n_samples: int,
+        rng: np.random.Generator,
+    ) -> list[tuple[np.ndarray, np.ndarray]]:
+        """Generate ``n_samples`` ``(X_boot, y_boot)`` samples preserving time-series structure."""
+        ...
+
+    def transform_for_predict(self, X: np.ndarray, estimator_idx: int, /) -> np.ndarray:
+        """Transform ``X`` for the ``estimator_idx``-th estimator at predict time (default: identity).
+
+        The index is **positional-only**: the contract is the argument position, not its name (the
+        shared base names it ``_estimator_idx``; :class:`~temporalcv.FeatureBagging` names it
+        ``estimator_idx``).
+        """
+        ...
+
+
+@runtime_checkable
+class SupportsForecast(Protocol):
+    """A forecasting-package adapter — the accept-seam for the model-comparison runner
+    (:func:`~temporalcv.run_comparison` and friends).
+
+    This Protocol is the typed seam consumers annotate against. Our own adapters additionally
+    subclass the owned shared-impl base :class:`~temporalcv.ForecastAdapter` (which supplies the
+    default :meth:`get_params` and instantiation fail-fast); a third party may instead satisfy this
+    Protocol structurally. Use :func:`~temporalcv.check_forecast_adapter` for the behavioral
+    contract (``@runtime_checkable`` verifies member *presence* only).
+    """
+
+    @property
+    def model_name(self) -> str:
+        """Human-readable model name (e.g. ``"AutoARIMA"``)."""
+        ...
+
+    @property
+    def package_name(self) -> str:
+        """Originating package (e.g. ``"statsforecast"``)."""
+        ...
+
+    def fit_predict(self, train_values: np.ndarray, test_size: int, horizon: int) -> np.ndarray:
+        """Fit on ``train_values`` and return predictions of length ``test_size``."""
+        ...
+
+    def get_params(self) -> dict[str, Any]:
+        """Model hyperparameters (default: empty mapping)."""
         ...

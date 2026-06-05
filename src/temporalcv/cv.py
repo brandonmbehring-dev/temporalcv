@@ -54,6 +54,7 @@ from sklearn.base import clone
 from sklearn.model_selection import BaseCrossValidator
 
 from temporalcv._serialization import date_to_json
+from temporalcv.tags import TemporalTags
 
 if TYPE_CHECKING:
     from temporalcv.protocols import Splitter, SupportsFitPredict
@@ -907,6 +908,15 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
 
         return infos
 
+    def temporal_tags(self) -> TemporalTags:
+        """Declared capabilities (see :class:`~temporalcv.TemporalTags`)."""
+        return TemporalTags(
+            forward_only=True,
+            deterministic=True,
+            produces_oof=False,
+            requires_groups=False,
+        )
+
     def __repr__(self) -> str:
         """Return string representation."""
         return (
@@ -1114,6 +1124,15 @@ class TimeSeriesCrossValidator(BaseCrossValidator):  # type: ignore[misc]
             )
         return infos
 
+    def temporal_tags(self) -> TemporalTags:
+        """Declared capabilities (see :class:`~temporalcv.TemporalTags`)."""
+        return TemporalTags(
+            forward_only=True,
+            deterministic=True,
+            produces_oof=False,
+            requires_groups=False,
+        )
+
     def __repr__(self) -> str:
         """Return string representation."""
         return (
@@ -1269,6 +1288,15 @@ class BlockedTimeSeriesCV(BaseCrossValidator):  # type: ignore[misc]
     ) -> int:
         """Return the number of folds."""
         return self.n_splits
+
+    def temporal_tags(self) -> TemporalTags:
+        """Declared capabilities (see :class:`~temporalcv.TemporalTags`)."""
+        return TemporalTags(
+            forward_only=True,
+            deterministic=True,
+            produces_oof=False,
+            requires_groups=False,
+        )
 
     def __repr__(self) -> str:
         """Return string representation."""
@@ -1576,6 +1604,18 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
         """
         n_samples = len(cast(Sized, X)) if not hasattr(X, "shape") else X.shape[0]
         return self._calculate_fold_indices(n_samples)
+
+    def temporal_tags(self) -> TemporalTags:
+        """Declared capabilities (see :class:`~temporalcv.TemporalTags`).
+
+        ``produces_oof=True``: ``CrossFitCV`` is a :class:`~temporalcv.CrossFitter`.
+        """
+        return TemporalTags(
+            forward_only=True,
+            deterministic=True,
+            produces_oof=True,
+            requires_groups=False,
+        )
 
     def __repr__(self) -> str:
         """Return string representation."""

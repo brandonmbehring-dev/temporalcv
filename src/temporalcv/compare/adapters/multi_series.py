@@ -22,6 +22,7 @@ from typing import Any, cast
 import numpy as np
 
 from temporalcv.compare.base import ForecastAdapter
+from temporalcv.protocols import SupportsForecast
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ class MultiSeriesAdapter(ForecastAdapter):
 
     Parameters
     ----------
-    base_adapter : ForecastAdapter
+    base_adapter : SupportsForecast
         Single-series adapter to wrap
     n_jobs : int, default=1
         Number of parallel jobs (requires joblib if n_jobs != 1)
@@ -68,13 +69,13 @@ class MultiSeriesAdapter(ForecastAdapter):
     >>> print(preds.shape)  # (100, 10)
     """
 
-    def __init__(self, base_adapter: ForecastAdapter, n_jobs: int = 1):
+    def __init__(self, base_adapter: SupportsForecast, n_jobs: int = 1):
         """
         Initialize multi-series wrapper.
 
         Parameters
         ----------
-        base_adapter : ForecastAdapter
+        base_adapter : SupportsForecast
             Single-series adapter to wrap
         n_jobs : int, default=1
             Number of parallel jobs
@@ -215,7 +216,7 @@ class ProgressAdapter(ForecastAdapter):
 
     Parameters
     ----------
-    base_adapter : ForecastAdapter
+    base_adapter : SupportsForecast
         Adapter to wrap
     progress_callback : callable
         Callback with signature ``callback(series_idx: int, n_series: int)``
@@ -230,7 +231,7 @@ class ProgressAdapter(ForecastAdapter):
 
     def __init__(
         self,
-        base_adapter: ForecastAdapter,
+        base_adapter: SupportsForecast,
         progress_callback: Callable[[int, int], None] | None = None,
     ):
         """Initialize progress wrapper."""

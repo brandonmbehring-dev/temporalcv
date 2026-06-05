@@ -87,7 +87,12 @@ from temporalcv.conformal import (
 )
 
 # Conformance suite (the seam contract, executable — see conformance.py / STYLE.md)
-from temporalcv.conformance import check_temporal_estimator, check_temporal_splitter
+from temporalcv.conformance import (
+    check_bootstrap_strategy,
+    check_forecast_adapter,
+    check_temporal_estimator,
+    check_temporal_splitter,
+)
 
 # Cross-validation exports
 from temporalcv.cv import (
@@ -221,7 +226,13 @@ from temporalcv.persistence import (
 )
 
 # Typed seams (static @runtime_checkable Protocols — see protocols.py / STYLE.md)
-from temporalcv.protocols import CrossFitter, Splitter, SupportsFitPredict
+from temporalcv.protocols import (
+    CrossFitter,
+    Splitter,
+    SupportsBootstrap,
+    SupportsFitPredict,
+    SupportsForecast,
+)
 
 # Regime classification exports
 from temporalcv.regimes import (
@@ -272,6 +283,7 @@ from temporalcv.statistical_tests import (
     reality_check_test,
     spa_test,
 )
+from temporalcv.tags import TemporalTags
 
 # Validators exports (theoretical bounds)
 from temporalcv.validators import (
@@ -338,9 +350,15 @@ __all__ = [
     "Splitter",
     "CrossFitter",
     "SupportsFitPredict",
+    "SupportsBootstrap",
+    "SupportsForecast",
+    # Capability tags
+    "TemporalTags",
     # Conformance suite
     "check_temporal_splitter",
     "check_temporal_estimator",
+    "check_bootstrap_strategy",
+    "check_forecast_adapter",
     # Regime classification
     "classify_volatility_regime",
     "classify_direction_regime",

@@ -29,7 +29,7 @@ from typing import Literal
 
 import numpy as np
 
-from temporalcv.protocols import SupportsFitPredict
+from temporalcv.protocols import SupportsBootstrap, SupportsFitPredict
 
 
 class BootstrapStrategy(ABC):
@@ -41,6 +41,10 @@ class BootstrapStrategy(ABC):
 
     The transform_for_predict() method allows strategies to transform X
     during prediction (critical for feature bagging).
+
+    The typed accept-seam consumers annotate against is the
+    :class:`~temporalcv.SupportsBootstrap` Protocol; this ABC is the owned shared-impl base that
+    supplies the default ``transform_for_predict`` (identity) and instantiation fail-fast.
     """
 
     @abstractmethod
@@ -141,7 +145,7 @@ class TimeSeriesBagger:
     ----------
     base_model : SupportsFitPredict
         Any model implementing fit(X, y) and predict(X)
-    strategy : BootstrapStrategy
+    strategy : SupportsBootstrap
         Resampling strategy (MBB, Stationary, Feature)
     n_estimators : int, default=20
         Number of bootstrap samples/estimators
@@ -185,7 +189,7 @@ class TimeSeriesBagger:
     def __init__(
         self,
         base_model: SupportsFitPredict,
-        strategy: BootstrapStrategy,
+        strategy: SupportsBootstrap,
         n_estimators: int = 20,
         aggregation: Literal["mean", "median"] = "mean",
         random_state: int | None = None,
