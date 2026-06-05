@@ -7,7 +7,9 @@ because `dml_ts` is the sole consumer, migrated in lockstep — see
 GitHub issue.
 
 ## Capability
-- [ ] #7  `BlockedTimeSeriesCV` (whole-block-preserving CV) — port from dml_ts.
+- [x] #7  `BlockedTimeSeriesCV` (whole-block-preserving CV) — **ported (A2)** into
+  `cv.py`, now **fail-loud** (raises on an under-provisioned config instead of silently
+  dropping a fold); golden-parity vs dml_ts on skip-free configs.
 - [x] #8  dual-model `cross_fit_residualize(model_a, model_b, X, A, B, cv) -> (A_resid, B_resid)` with fold-0 NaN-mask. **Done (pilot)** — `src/temporalcv/cv.py`, typed `cv: Splitter`, identical shared NaN mask; exported top-level.
 - [ ] #9  standalone HAC residual covariance (Bartlett/Parzen/QS + optimal bandwidth + Newey-West), **matrix-accepting** (panel-ready).
 - [ ] #10 numeric/stat output validators (`finite_se`, `psd`, `ci_ordered`, `coverage_in_unit`).
@@ -22,10 +24,29 @@ GitHub issue.
 
 ## Follow-up
 - [ ] #17 eval-toolkit ↔ temporalcv purged-splitter overlap (keep separate per hub `universal-vs-unique.md`).
-- [ ] (to file, surfaced by pilot) port `TimeSeriesCrossValidator` (expanding, test-from-end, gap/purge/
-  sliding) into temporalcv as a universal splitter — the primary dml_ts DML cross-fitter.
-- [ ] (to file, surfaced by pilot) port `PurgedGroupTimeSeriesCV` (embargo/purge) into temporalcv, or
-  reconcile with existing `cv_financial.PurgedKFold`/`PurgedWalkForward` (check for genuine overlap).
+- [x] #22 port `TimeSeriesCrossValidator` (expanding, test-from-end, gap/purge/sliding) into
+  temporalcv — the primary dml_ts DML cross-fitter. **Ported (A2)** into `cv.py`;
+  `get_fold_info`/`CVFold` reconciled to `get_split_info() -> list[SplitInfo]`; golden-parity
+  vs dml_ts across an (n_splits × gap × purge × expanding × test_size) grid.
+- [x] #23 reconcile `PurgedGroupTimeSeriesCV` — **resolved: do not port.** It is a
+  *bidirectional* purged K-fold (trains both sides of the test block → violates the forward-only
+  `check_temporal_splitter` no-lookahead invariant) and redundant in *mechanism* with the richer
+  `cv_financial.PurgedKFold` (+ `CombinatorialPurgedCV`); the forward-only purged analog is
+  `PurgedWalkForward`. **#23 stays OPEN** as the Track-B tracker: migrate dml_ts
+  `cv_strategy="purged_cv"` → `PurgedWalkForward` with an explicit before/after estimate
+  re-validation (consumer-owned, not a silent swap).
+
+## A2 — ✅ complete (`feat/v2-port-splitters`)
+Ported the two **forward-only** splitters into `temporalcv/cv.py` and reconciled the
+bidirectional one:
+- `TimeSeriesCrossValidator` (#22) + `BlockedTimeSeriesCV` (#7), top-level exported, each
+  passing `check_temporal_splitter` and a **dependency-free dml_ts golden-parity** suite
+  (`tests/test_cv_splitters_ported.py`) — verbatim-reference parity confirmed bit-exact against
+  the *live* dml_ts package (48 TSCV + 18 Blocked configs, 0 mismatches) at dev time.
+- Reused the existing `SplitInfo` (no new `SCHEMA_VERSION` result object; `CVFold` dropped).
+- `BlockedTimeSeriesCV` hardened to fail loud on degenerate configs.
+- `PurgedGroupTimeSeriesCV` reconciled, not ported (#23 → Track B). `create_time_series_cv`
+  not ported (string-factory; temporalcv favors explicit classes).
 
 ## Pilot — ✅ complete
 The **CrossFitter seam** (the #8 / #12 slice) was the vertical pilot validating the approach
