@@ -35,10 +35,10 @@ from enum import Enum
 from typing import Any, ClassVar, Literal
 
 import numpy as np
-from numpy.typing import ArrayLike
 from statsmodels.tsa.stattools import adfuller, kpss
 
 from temporalcv._serialization import result_to_dict
+from temporalcv._typing import ArrayLike
 
 
 class StationarityConclusion(Enum):

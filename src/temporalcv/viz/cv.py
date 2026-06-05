@@ -22,6 +22,7 @@ from typing import Any
 import numpy as np
 from matplotlib.axes import Axes
 
+from .._typing import ArrayLike, as_array
 from ._base import BaseDisplay
 from ._style import (
     COLORS,
@@ -110,10 +111,10 @@ class CVFoldsDisplay(BaseDisplay):
     def from_cv(
         cls,
         cv: Any,
-        X: np.ndarray,
-        y: np.ndarray | None = None,
+        X: ArrayLike,
+        y: ArrayLike | None = None,
         *,
-        groups: np.ndarray | None = None,
+        groups: ArrayLike | None = None,
     ) -> CVFoldsDisplay:
         """
         Create display from a cross-validator object.
@@ -166,7 +167,7 @@ class CVFoldsDisplay(BaseDisplay):
             trains,
             tests,
             gap_indices=gaps if has_gaps else None,
-            n_samples=len(X),
+            n_samples=len(as_array(X)),
         )
 
     @classmethod

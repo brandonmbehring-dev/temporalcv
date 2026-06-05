@@ -23,6 +23,7 @@ from typing import Any
 import numpy as np
 from matplotlib.axes import Axes
 
+from .._typing import ArrayLike, as_array
 from ._base import BaseDisplay
 from ._style import (
     COLORS,
@@ -87,20 +88,20 @@ class PredictionIntervalDisplay(BaseDisplay):
 
     def __init__(
         self,
-        predictions: np.ndarray,
-        lower: np.ndarray,
-        upper: np.ndarray,
+        predictions: ArrayLike,
+        lower: ArrayLike,
+        upper: ArrayLike,
         *,
-        actuals: np.ndarray | None = None,
+        actuals: ArrayLike | None = None,
         confidence: float = 0.90,
-        x: np.ndarray | None = None,
+        x: ArrayLike | None = None,
     ):
         self.predictions = np.asarray(predictions)
         self.lower = np.asarray(lower)
         self.upper = np.asarray(upper)
         self.actuals = np.asarray(actuals) if actuals is not None else None
         self.confidence = confidence
-        self.x = x if x is not None else np.arange(len(predictions))
+        self.x = as_array(x) if x is not None else np.arange(len(self.predictions))
 
         # Compute coverage if actuals provided
         if self.actuals is not None:
@@ -115,9 +116,9 @@ class PredictionIntervalDisplay(BaseDisplay):
     def from_conformal(
         cls,
         intervals: Any,
-        actuals: np.ndarray | None = None,
+        actuals: ArrayLike | None = None,
         *,
-        x: np.ndarray | None = None,
+        x: ArrayLike | None = None,
     ) -> PredictionIntervalDisplay:
         """
         Create display from a PredictionInterval object.
@@ -153,13 +154,13 @@ class PredictionIntervalDisplay(BaseDisplay):
     @classmethod
     def from_predictions(
         cls,
-        predictions: np.ndarray,
-        lower: np.ndarray,
-        upper: np.ndarray,
+        predictions: ArrayLike,
+        lower: ArrayLike,
+        upper: ArrayLike,
         *,
-        actuals: np.ndarray | None = None,
+        actuals: ArrayLike | None = None,
         confidence: float = 0.90,
-        x: np.ndarray | None = None,
+        x: ArrayLike | None = None,
     ) -> PredictionIntervalDisplay:
         """
         Create display from arrays.

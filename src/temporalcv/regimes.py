@@ -51,10 +51,11 @@ from typing import Any, ClassVar, Literal
 import numpy as np
 
 from temporalcv._serialization import result_to_dict
+from temporalcv._typing import ArrayLike
 
 
 def classify_volatility_regime(
-    values: np.ndarray,
+    values: ArrayLike,
     window: int = 13,
     basis: Literal["changes", "levels"] = "changes",
     low_percentile: float = 33.0,
@@ -173,7 +174,7 @@ def classify_volatility_regime(
 
 
 def classify_direction_regime(
-    values: np.ndarray,
+    values: ArrayLike,
     threshold: float,
 ) -> np.ndarray:
     """
@@ -235,8 +236,8 @@ def classify_direction_regime(
 
 
 def get_combined_regimes(
-    vol_regimes: np.ndarray,
-    dir_regimes: np.ndarray,
+    vol_regimes: ArrayLike,
+    dir_regimes: ArrayLike,
 ) -> np.ndarray:
     """
     Combine volatility and direction into single label.
@@ -283,7 +284,7 @@ def get_combined_regimes(
     return result
 
 
-def get_regime_counts(regimes: np.ndarray) -> dict[str, int]:
+def get_regime_counts(regimes: ArrayLike) -> dict[str, int]:
     """
     Get sample counts per regime.
 
@@ -312,7 +313,7 @@ def get_regime_counts(regimes: np.ndarray) -> dict[str, int]:
 
 
 def mask_low_n_regimes(
-    regimes: np.ndarray,
+    regimes: ArrayLike,
     min_n: int = 10,
     mask_value: str = "MASKED",
 ) -> np.ndarray:
@@ -438,9 +439,9 @@ class StratifiedMetricsResult:
 
 
 def compute_stratified_metrics(
-    predictions: np.ndarray,
-    actuals: np.ndarray,
-    regimes: np.ndarray,
+    predictions: ArrayLike,
+    actuals: ArrayLike,
+    regimes: ArrayLike,
     min_n: int = 10,
 ) -> StratifiedMetricsResult:
     """

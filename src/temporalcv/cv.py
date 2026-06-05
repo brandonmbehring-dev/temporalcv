@@ -49,11 +49,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 import numpy as np
-from numpy.typing import ArrayLike
 from sklearn.base import clone
 from sklearn.model_selection import BaseCrossValidator
 
 from temporalcv._serialization import date_to_json
+from temporalcv._typing import ArrayLike
 from temporalcv.tags import TemporalTags
 
 if TYPE_CHECKING:

@@ -23,6 +23,7 @@ from typing import Any, ClassVar, Literal
 import numpy as np
 
 from temporalcv._serialization import result_to_dict
+from temporalcv._typing import ArrayLike
 from temporalcv.statistical_tests import compute_hac_variance
 
 
@@ -80,8 +81,8 @@ class InfluenceDiagnostic:
 
 
 def compute_dm_influence(
-    errors1: np.ndarray,
-    errors2: np.ndarray,
+    errors1: ArrayLike,
+    errors2: ArrayLike,
     h: int = 1,
     loss: Literal["squared", "absolute"] = "squared",
     influence_threshold: float = 2.0,

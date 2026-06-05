@@ -42,6 +42,7 @@ from typing import Any, ClassVar
 import numpy as np
 
 from temporalcv._serialization import result_to_dict
+from temporalcv._typing import ArrayLike
 
 
 @dataclass(frozen=True, slots=True, eq=False)
@@ -420,7 +421,7 @@ def check_forecast_horizon_consistency(
 
 
 def check_residual_autocorrelation(
-    residuals: np.ndarray,
+    residuals: ArrayLike,
     max_lag: int = 5,
     threshold: float = 0.2,
 ) -> GuardrailResult:
@@ -451,6 +452,7 @@ def check_residual_autocorrelation(
 
     Knowledge Tier: [T1] Residual diagnostics (standard time series practice).
     """
+    residuals = np.asarray(residuals)
     if len(residuals) < max_lag + 10:
         return GuardrailResult(
             passed=True,
@@ -458,8 +460,7 @@ def check_residual_autocorrelation(
         )
 
     # Compute autocorrelations
-    residuals = np.asarray(residuals)
-    residuals = residuals - np.mean(residuals)
+    residuals = np.asarray(residuals - np.mean(residuals))
     n = len(residuals)
 
     autocorrs = []
@@ -502,7 +503,7 @@ def run_all_guardrails(
     n_up: int | None = None,
     n_down: int | None = None,
     horizon_metrics: list[float] | None = None,
-    residuals: np.ndarray | None = None,
+    residuals: ArrayLike | None = None,
     improvement_threshold: float = 0.20,
     min_sample_size: int = 50,
     min_stratum_size: int = 10,

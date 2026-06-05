@@ -57,6 +57,8 @@ from typing import ClassVar, Literal
 
 import numpy as np
 
+from temporalcv._typing import ArrayLike
+
 # Type alias for target mode
 TargetMode = Literal["change", "level"]
 
@@ -156,7 +158,7 @@ class MoveConditionalResult:
 
 
 def compute_move_threshold(
-    actuals: np.ndarray,
+    actuals: ArrayLike,
     percentile: float = 70.0,
     target_mode: TargetMode = "change",
 ) -> float:
@@ -231,7 +233,7 @@ def compute_move_threshold(
 
 
 def classify_moves(
-    values: np.ndarray,
+    values: ArrayLike,
     threshold: float,
 ) -> np.ndarray:
     """
@@ -311,8 +313,8 @@ def _get_scale_aware_epsilon(values: np.ndarray) -> float:
 
 
 def compute_move_conditional_metrics(
-    predictions: np.ndarray,
-    actuals: np.ndarray,
+    predictions: ArrayLike,
+    actuals: ArrayLike,
     threshold: float | None = None,
     threshold_percentile: float = 70.0,
     target_mode: TargetMode = "change",
@@ -521,8 +523,8 @@ def compute_move_conditional_metrics(
 
 
 def compute_direction_accuracy(
-    predictions: np.ndarray,
-    actuals: np.ndarray,
+    predictions: ArrayLike,
+    actuals: ArrayLike,
     move_threshold: float | None = None,
 ) -> float:
     """
@@ -610,8 +612,8 @@ def compute_direction_accuracy(
 
 
 def compute_move_only_mae(
-    predictions: np.ndarray,
-    actuals: np.ndarray,
+    predictions: ArrayLike,
+    actuals: ArrayLike,
     threshold: float,
 ) -> tuple[float, int]:
     """
@@ -666,7 +668,7 @@ def compute_move_only_mae(
 
 
 def compute_persistence_mae(
-    actuals: np.ndarray,
+    actuals: ArrayLike,
     threshold: float | None = None,
 ) -> float:
     """
