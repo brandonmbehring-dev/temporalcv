@@ -53,15 +53,12 @@ from numpy.typing import ArrayLike
 from sklearn.base import clone
 from sklearn.model_selection import BaseCrossValidator
 
+from temporalcv._serialization import date_to_json
+
 if TYPE_CHECKING:
     from temporalcv.protocols import Splitter, SupportsFitPredict
 
 logger = logging.getLogger(__name__)
-
-
-def _date_to_json(value: Any) -> Any:
-    """Serialize an optional datetime-like field to an ISO string (else pass through)."""
-    return value.isoformat() if hasattr(value, "isoformat") else value
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,10 +152,10 @@ class SplitInfo:
             "train_size": self.train_size,
             "test_size": self.test_size,
             "gap": self.gap,
-            "train_start_date": _date_to_json(self.train_start_date),
-            "train_end_date": _date_to_json(self.train_end_date),
-            "test_start_date": _date_to_json(self.test_start_date),
-            "test_end_date": _date_to_json(self.test_end_date),
+            "train_start_date": date_to_json(self.train_start_date),
+            "train_end_date": date_to_json(self.train_end_date),
+            "test_start_date": date_to_json(self.test_start_date),
+            "test_end_date": date_to_json(self.test_end_date),
         }
 
 
@@ -292,10 +289,10 @@ class SplitResult:
             "test_end": self.test_end,
             "predictions": np.asarray(self.predictions).tolist(),
             "actuals": np.asarray(self.actuals).tolist(),
-            "train_start_date": _date_to_json(self.train_start_date),
-            "train_end_date": _date_to_json(self.train_end_date),
-            "test_start_date": _date_to_json(self.test_start_date),
-            "test_end_date": _date_to_json(self.test_end_date),
+            "train_start_date": date_to_json(self.train_start_date),
+            "train_end_date": date_to_json(self.train_end_date),
+            "test_start_date": date_to_json(self.test_start_date),
+            "test_end_date": date_to_json(self.test_end_date),
             "mae": self.mae,
             "rmse": self.rmse,
             "bias": self.bias,
