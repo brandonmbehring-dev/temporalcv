@@ -161,7 +161,7 @@ class SplitInfo:
         }
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class SplitResult:
     """
     Result from a single walk-forward split.
@@ -301,7 +301,7 @@ class SplitResult:
         }
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class WalkForwardResults:
     """
     Aggregated walk-forward cross-validation results.
@@ -488,7 +488,7 @@ class WalkForwardResults:
         }
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class NestedCVResult:
     """
     Result from nested walk-forward cross-validation.
