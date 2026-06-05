@@ -126,8 +126,13 @@ class SupportsBootstrap(Protocol):
         y: np.ndarray,
         n_samples: int,
         rng: np.random.Generator,
+        /,
     ) -> list[tuple[np.ndarray, np.ndarray]]:
-        """Generate ``n_samples`` ``(X_boot, y_boot)`` samples preserving time-series structure."""
+        """Generate ``n_samples`` ``(X_boot, y_boot)`` samples preserving time-series structure.
+
+        Positional-only: this internal seam is always called positionally, so the contract is the
+        argument *position*, not the parameter name — a structural implementer may name them freely.
+        """
         ...
 
     def transform_for_predict(self, X: np.ndarray, estimator_idx: int, /) -> np.ndarray:
@@ -162,8 +167,12 @@ class SupportsForecast(Protocol):
         """Originating package (e.g. ``"statsforecast"``)."""
         ...
 
-    def fit_predict(self, train_values: np.ndarray, test_size: int, horizon: int) -> np.ndarray:
-        """Fit on ``train_values`` and return predictions of length ``test_size``."""
+    def fit_predict(self, train_values: np.ndarray, test_size: int, horizon: int, /) -> np.ndarray:
+        """Fit on ``train_values`` and return predictions of length ``test_size``.
+
+        Positional-only: the runner and conformance suite call this positionally, so a structural
+        implementer may name the parameters freely.
+        """
         ...
 
     def get_params(self) -> dict[str, Any]:

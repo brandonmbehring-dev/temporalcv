@@ -41,7 +41,7 @@ from temporalcv import (
     check_temporal_splitter,
 )
 from temporalcv.bagging.base import BootstrapStrategy
-from temporalcv.compare.adapters.multi_series import MultiSeriesAdapter
+from temporalcv.compare.adapters.multi_series import MultiSeriesAdapter, ProgressAdapter
 from temporalcv.compare.base import ForecastAdapter, NaiveAdapter, SeasonalNaiveAdapter
 
 ALL_STRATEGIES = [
@@ -54,6 +54,7 @@ ALL_ADAPTERS = [
     NaiveAdapter(),
     SeasonalNaiveAdapter(season_length=12),
     MultiSeriesAdapter(NaiveAdapter()),
+    ProgressAdapter(NaiveAdapter()),
 ]
 TAGGED_SPLITTERS = [
     WalkForwardCV(n_splits=3),
@@ -306,3 +307,186 @@ def test_lying_requires_groups_tag_is_caught() -> None:
     splitter = _wfcv_with_tags(TemporalTags(True, True, False, True))
     with pytest.raises(AssertionError, match="requires_groups"):
         check_temporal_splitter(splitter)
+
+
+# =============================================================================
+# Review remediation — fail-loud tag declarations (#14 / SF-1)
+# =============================================================================
+
+
+def test_temporal_tags_as_property_is_cross_checked() -> None:
+    """A splitter exposing temporal_tags as a PROPERTY is still cross-checked, not silently skipped."""
+
+    class _PropTagCV(WalkForwardCV):
+        @property
+        def temporal_tags(self) -> TemporalTags:  # type: ignore[override]
+            return TemporalTags(True, True, True, False)  # lies: produces_oof
+
+    with pytest.raises(AssertionError, match="produces_oof"):
+        check_temporal_splitter(_PropTagCV(n_splits=3))
+
+
+def test_temporal_tags_malformed_raises() -> None:
+    """temporal_tags yielding a non-TemporalTags fails loud (not silently skipped)."""
+
+    class _BadTagCV(WalkForwardCV):
+        def temporal_tags(self) -> Any:
+            return {"forward_only": True}  # not a TemporalTags
+
+    with pytest.raises(AssertionError, match="must be a TemporalTags"):
+        check_temporal_splitter(_BadTagCV(n_splits=3))
+
+
+# =============================================================================
+# Review remediation — un-guarded conformance invariants (negative tests)
+# =============================================================================
+
+
+def test_check_forecast_adapter_negative_nonfinite() -> None:
+    class _NaNAdapter(ForecastAdapter):
+        @property
+        def model_name(self) -> str:
+            return "NaN"
+
+        @property
+        def package_name(self) -> str:
+            return "test"
+
+        def fit_predict(self, train_values: np.ndarray, test_size: int, horizon: int) -> np.ndarray:
+            out = np.zeros(test_size)
+            out[0] = np.nan
+            return out
+
+    with pytest.raises(AssertionError, match="non-finite"):
+        check_forecast_adapter(_NaNAdapter())
+
+
+def test_check_forecast_adapter_negative_scalar_return() -> None:
+    class _ScalarAdapter(ForecastAdapter):
+        @property
+        def model_name(self) -> str:
+            return "Scalar"
+
+        @property
+        def package_name(self) -> str:
+            return "test"
+
+        def fit_predict(self, train_values: np.ndarray, test_size: int, horizon: int) -> np.ndarray:
+            return np.asarray(3.0)  # 0-d scalar
+
+    with pytest.raises(AssertionError, match="0-d/scalar"):
+        check_forecast_adapter(_ScalarAdapter())
+
+
+def test_check_forecast_adapter_negative_get_params_not_dict() -> None:
+    class _BadParams(ForecastAdapter):
+        @property
+        def model_name(self) -> str:
+            return "BadParams"
+
+        @property
+        def package_name(self) -> str:
+            return "test"
+
+        def fit_predict(self, train_values: np.ndarray, test_size: int, horizon: int) -> np.ndarray:
+            return np.zeros(test_size)
+
+        def get_params(self) -> dict[str, Any]:
+            return ["not", "a", "dict"]  # type: ignore[return-value]
+
+    with pytest.raises(AssertionError, match="must return a dict"):
+        check_forecast_adapter(_BadParams())
+
+
+def test_check_forecast_adapter_negative_empty_model_name() -> None:
+    class _EmptyName(ForecastAdapter):
+        @property
+        def model_name(self) -> str:
+            return ""
+
+        @property
+        def package_name(self) -> str:
+            return "test"
+
+        def fit_predict(self, train_values: np.ndarray, test_size: int, horizon: int) -> np.ndarray:
+            return np.zeros(test_size)
+
+    with pytest.raises(AssertionError, match="non-empty"):
+        check_forecast_adapter(_EmptyName())
+
+
+def test_check_forecast_adapter_panel_2d() -> None:
+    """The advertised panel (n_series, test_size) output path is exercised."""
+    rng = np.random.default_rng(0)
+    panel = rng.standard_normal((3, 60))  # (n_series, T)
+    check_forecast_adapter(MultiSeriesAdapter(NaiveAdapter()), train_values=panel)
+
+
+def test_check_bootstrap_strategy_negative_1d_xboot() -> None:
+    class _OneDX(BootstrapStrategy):
+        def generate_samples(
+            self, X: np.ndarray, y: np.ndarray, n_samples: int, rng: np.random.Generator
+        ) -> list[tuple[np.ndarray, np.ndarray]]:
+            # First column only -> 1-D X_boot, but length still matches y (so the 2-D check, not
+            # the length check, is what fires).
+            return [(np.asarray(X)[:, 0], np.asarray(y)) for _ in range(n_samples)]
+
+    with pytest.raises(AssertionError, match="2-D"):
+        check_bootstrap_strategy(_OneDX())
+
+
+def test_check_bootstrap_strategy_negative_pair_shape() -> None:
+    class _NotPairs(BootstrapStrategy):
+        def generate_samples(
+            self, X: np.ndarray, y: np.ndarray, n_samples: int, rng: np.random.Generator
+        ) -> list[tuple[np.ndarray, np.ndarray]]:
+            return [np.asarray(X) for _ in range(n_samples)]  # type: ignore[misc]
+
+    with pytest.raises(AssertionError, match="pair"):
+        check_bootstrap_strategy(_NotPairs())
+
+
+def test_check_bootstrap_strategy_negative_transform_changes_rows() -> None:
+    class _DropsRow(BootstrapStrategy):
+        def generate_samples(
+            self, X: np.ndarray, y: np.ndarray, n_samples: int, rng: np.random.Generator
+        ) -> list[tuple[np.ndarray, np.ndarray]]:
+            X, y = np.asarray(X), np.asarray(y)
+            idx = rng.integers(0, len(X), len(X))
+            return [(X[idx], y[idx]) for _ in range(n_samples)]
+
+        def transform_for_predict(self, X: np.ndarray, estimator_idx: int) -> np.ndarray:
+            return np.asarray(X)[:-1]  # drops a row
+
+    with pytest.raises(AssertionError, match="row count"):
+        check_bootstrap_strategy(_DropsRow())
+
+
+def test_check_bootstrap_strategy_negative_ignores_rng() -> None:
+    """A strategy that ignores the supplied rng (constant output) is caught by the rng probe."""
+
+    class _ConstantStrategy(BootstrapStrategy):
+        def generate_samples(
+            self, X: np.ndarray, y: np.ndarray, n_samples: int, rng: np.random.Generator
+        ) -> list[tuple[np.ndarray, np.ndarray]]:
+            X, y = np.asarray(X), np.asarray(y)
+            return [(X.copy(), y.copy()) for _ in range(n_samples)]  # ignores rng
+
+    with pytest.raises(AssertionError, match="ignores the supplied Generator"):
+        check_bootstrap_strategy(_ConstantStrategy())
+
+
+def test_supports_forecast_negative_missing_property() -> None:
+    class _NoModelName:
+        @property
+        def package_name(self) -> str:
+            return "y"
+
+        def fit_predict(self, train_values: np.ndarray, test_size: int, horizon: int) -> np.ndarray:
+            return np.zeros(test_size)
+
+        def get_params(self) -> dict[str, Any]:
+            return {}
+
+    # Missing the model_name property -> not a SupportsForecast.
+    assert not isinstance(_NoModelName(), SupportsForecast)

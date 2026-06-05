@@ -125,11 +125,7 @@ def run_comparison(
         start_time = time.perf_counter()
 
         try:
-            predictions = adapter.fit_predict(
-                train_values=train,
-                test_size=test_size,
-                horizon=horizon,
-            )
+            predictions = adapter.fit_predict(train, test_size, horizon)
         except Exception as e:
             # Log error but continue with other models
             logger.warning("%s failed: %s", adapter.model_name, e)

@@ -80,6 +80,11 @@ class MultiSeriesAdapter(ForecastAdapter):
         n_jobs : int, default=1
             Number of parallel jobs
         """
+        if not isinstance(base_adapter, SupportsForecast):
+            raise TypeError(
+                f"base_adapter must satisfy SupportsForecast (model_name, package_name, "
+                f"fit_predict, get_params); got {type(base_adapter).__name__}."
+            )
         self._base = base_adapter
         self._n_jobs = n_jobs
 
@@ -235,6 +240,11 @@ class ProgressAdapter(ForecastAdapter):
         progress_callback: Callable[[int, int], None] | None = None,
     ):
         """Initialize progress wrapper."""
+        if not isinstance(base_adapter, SupportsForecast):
+            raise TypeError(
+                f"base_adapter must satisfy SupportsForecast (model_name, package_name, "
+                f"fit_predict, get_params); got {type(base_adapter).__name__}."
+            )
         self._base = base_adapter
         self._callback = progress_callback
 

@@ -3,9 +3,14 @@
 Capabilities are declared as *data* — a frozen :class:`TemporalTags` descriptor — rather than
 encoded in a class hierarchy. Declaring capabilities as data is the lever for non-breaking
 evolution (hub ``library-design-playbook.md``): a new capability is a new field, not a new
-subclass level. A splitter exposes its tags via a ``temporal_tags()`` method, and the conformance
-suite (:func:`~temporalcv.check_temporal_splitter`) cross-validates the *declared* tags against the
-splitter's *observed* behavior, so a tag cannot silently drift from reality.
+subclass level. A splitter exposes its tags via a ``temporal_tags()`` method (or property), and the
+conformance suite (:func:`~temporalcv.check_temporal_splitter`) checks each declared tag for
+consistency with the splitter's *observed* behavior: ``produces_oof`` is cross-validated
+bidirectionally against :class:`~temporalcv.CrossFitter` membership, while ``forward_only`` /
+``deterministic`` / ``requires_groups`` are checked against the standard conformance profile (which
+exercises a forward-only, deterministic, group-free split) — a tag that contradicts that observed
+profile is rejected. The suite catches a tag that lies about that profile; it does not, by itself,
+exercise group-dependent or stochastic code paths.
 
 :class:`TemporalTags` is a capability **descriptor**, deliberately **not** a versioned result
 object: it carries no ``SCHEMA_VERSION`` and is intentionally excluded from the result-object
@@ -25,8 +30,11 @@ __all__ = ["TemporalTags"]
 class TemporalTags:
     """Declared capabilities of a temporal cross-validation splitter.
 
-    Every field is conformance-verifiable: :func:`~temporalcv.check_temporal_splitter` checks each
-    declaration against the splitter's observed behavior.
+    :func:`~temporalcv.check_temporal_splitter` checks each declared field for consistency with the
+    splitter's observed behavior — ``produces_oof`` bidirectionally against
+    :class:`~temporalcv.CrossFitter` membership; ``forward_only`` / ``deterministic`` /
+    ``requires_groups`` against the standard forward-only, deterministic, group-free harness
+    profile (a tag that contradicts that profile is rejected).
 
     Attributes
     ----------

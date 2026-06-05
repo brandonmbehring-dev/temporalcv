@@ -22,6 +22,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from temporalcv.protocols import CrossFitter, Splitter, SupportsBootstrap, SupportsForecast
+from temporalcv.tags import TemporalTags
 
 __all__ = [
     "check_temporal_splitter",
@@ -129,24 +130,35 @@ def check_temporal_splitter(
     if isinstance(splitter, CrossFitter):
         _check_cross_fitter(splitter, X_arr, folds)
 
-    # Capabilities-as-tags cross-check (#14): if the splitter declares temporal_tags(), each
-    # declaration must agree with observed behavior — a tag cannot silently drift from reality.
-    tags_method = getattr(splitter, "temporal_tags", None)
-    if callable(tags_method):
-        tags = tags_method()
+    # Capabilities-as-tags cross-check (#14): if the splitter declares temporal_tags, each
+    # declaration must be consistent with the behavior observed above. Only the *absence* of
+    # temporal_tags is optional — a present-but-malformed declaration (e.g. exposed as a property
+    # returning a non-TemporalTags, or a non-callable attribute) must fail loud, never be silently
+    # skipped. Accept either a method or a property/attribute that yields a TemporalTags.
+    tags_attr = getattr(splitter, "temporal_tags", None)
+    if tags_attr is not None:
+        tags = tags_attr() if callable(tags_attr) else tags_attr
+        assert isinstance(tags, TemporalTags), (
+            f"{name}.temporal_tags must be a TemporalTags (or a callable returning one); "
+            f"got {type(tags).__name__}."
+        )
+        # produces_oof is cross-validated bidirectionally against CrossFitter membership. The
+        # other three are consistency checks against the standard harness profile (which exercises
+        # a forward-only, deterministic, group-free split): a tag that contradicts that observed
+        # profile is rejected.
         assert tags.forward_only, (
-            f"{name}.temporal_tags declares forward_only=False, but every fold satisfied the "
-            f"no-lookahead invariant."
+            f"{name}.temporal_tags declares forward_only=False, yet every fold satisfied the "
+            f"no-lookahead invariant under the conformance harness."
         )
         assert tags.deterministic, (
-            f"{name}.temporal_tags declares deterministic=False, but split(X) was reproducible."
+            f"{name}.temporal_tags declares deterministic=False, yet split(X) was reproducible."
         )
         assert tags.produces_oof == isinstance(splitter, CrossFitter), (
             f"{name}.temporal_tags declares produces_oof={tags.produces_oof}, but "
             f"isinstance(splitter, CrossFitter)={isinstance(splitter, CrossFitter)}."
         )
         assert not tags.requires_groups, (
-            f"{name}.temporal_tags declares requires_groups=True, but split(X) produced folds "
+            f"{name}.temporal_tags declares requires_groups=True, yet split(X) produced folds "
             f"without a groups argument."
         )
 
@@ -318,6 +330,22 @@ def check_bootstrap_strategy(
             np.asarray(y1), np.asarray(y2)
         ), f"{name}.generate_samples is non-deterministic at sample {k} (uses non-rng randomness?)."
 
+    # rng-consumption: the strategy must draw from the *supplied* Generator, not global/fixed
+    # state. Two DIFFERENT generators must yield at least one differing sample — otherwise the
+    # strategy ignores its rng and would silently defeat TimeSeriesBagger's per-estimator seeding
+    # (every estimator trained on the same resample -> ~zero ensemble variance).
+    other = strategy.generate_samples(X_arr, y_arr, n_boot, np.random.default_rng(999))
+    all_identical = all(
+        np.array_equal(np.asarray(a[0]), np.asarray(b[0]))
+        and np.array_equal(np.asarray(a[1]), np.asarray(b[1]))
+        for a, b in zip(samples, other, strict=True)
+    )
+    assert not all_identical, (
+        f"{name}.generate_samples produced identical samples under two different rngs — it "
+        f"ignores the supplied Generator (global or fixed RNG?), which would defeat per-estimator "
+        f"seeding in TimeSeriesBagger."
+    )
+
     transformed = np.asarray(strategy.transform_for_predict(X_arr, 0))
     assert transformed.shape[0] == n, (
         f"{name}.transform_for_predict changed the row count ({transformed.shape[0]} != {n})."
@@ -351,6 +379,7 @@ def check_forecast_adapter(
     test_size, horizon : int, default=5
         Forecast length / horizon passed to ``fit_predict``.
     """
+    assert test_size >= 1, f"check_forecast_adapter requires test_size >= 1, got {test_size}."
     name = type(adapter).__name__
     assert isinstance(adapter, SupportsForecast), (
         f"{name} does not satisfy the SupportsForecast Protocol "
@@ -366,6 +395,10 @@ def check_forecast_adapter(
 
     train = np.linspace(0.0, 1.0, 60) if train_values is None else np.asarray(train_values)
     preds = np.asarray(adapter.fit_predict(train, test_size, horizon))
+    assert preds.ndim >= 1, (
+        f"{name}.fit_predict returned a 0-d/scalar result (shape {preds.shape}); expected a "
+        f"1-D array of length test_size={test_size} (or 2-D (n_series, test_size))."
+    )
     assert preds.shape[-1] == test_size, (
         f"{name}.fit_predict returned {preds.shape[-1]} predictions on its trailing axis, "
         f"expected test_size={test_size}."
