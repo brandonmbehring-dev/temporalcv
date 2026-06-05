@@ -66,9 +66,9 @@ def check_temporal_splitter(
         Number of rows when ``X`` is generated.
     """
     name = type(splitter).__name__
-    assert isinstance(
-        splitter, Splitter
-    ), f"{name} does not satisfy the Splitter Protocol (needs split + get_n_splits)."
+    assert isinstance(splitter, Splitter), (
+        f"{name} does not satisfy the Splitter Protocol (needs split + get_n_splits)."
+    )
 
     X_arr = _default_X(n_samples) if X is None else np.asarray(X)
     n = X_arr.shape[0]
@@ -77,23 +77,23 @@ def check_temporal_splitter(
     assert len(folds) > 0, f"{name}.split yielded no folds for n_samples={n}."
 
     for k, fold in enumerate(folds):
-        assert (
-            isinstance(fold, tuple) and len(fold) == 2
-        ), f"{name}.split fold {k} is not a (train_idx, test_idx) pair."
+        assert isinstance(fold, tuple) and len(fold) == 2, (
+            f"{name}.split fold {k} is not a (train_idx, test_idx) pair."
+        )
         train_idx, test_idx = fold
         for label, idx in (("train", train_idx), ("test", test_idx)):
             arr = np.asarray(idx)
             assert arr.ndim == 1, f"{name} fold {k} {label}_idx is not 1-D."
-            assert np.issubdtype(
-                arr.dtype, np.integer
-            ), f"{name} fold {k} {label}_idx is not integer-typed (got {arr.dtype})."
+            assert np.issubdtype(arr.dtype, np.integer), (
+                f"{name} fold {k} {label}_idx is not integer-typed (got {arr.dtype})."
+            )
             assert arr.size > 0, f"{name} fold {k} {label}_idx is empty."
-            assert (
-                arr.min() >= 0 and arr.max() < n
-            ), f"{name} fold {k} {label}_idx out of range [0, {n})."
-        assert (
-            np.intersect1d(train_idx, test_idx).size == 0
-        ), f"{name} fold {k}: train and test indices overlap."
+            assert arr.min() >= 0 and arr.max() < n, (
+                f"{name} fold {k} {label}_idx out of range [0, {n})."
+            )
+        assert np.intersect1d(train_idx, test_idx).size == 0, (
+            f"{name} fold {k}: train and test indices overlap."
+        )
         assert int(np.max(train_idx)) < int(np.min(test_idx)), (
             f"{name} fold {k}: lookahead — max(train)={int(np.max(train_idx))} "
             f">= min(test)={int(np.min(test_idx))}."
@@ -103,9 +103,9 @@ def check_temporal_splitter(
     folds2 = list(splitter.split(X_arr))
     assert len(folds2) == len(folds), f"{name}.split is non-deterministic (fold count)."
     for k, ((tr1, te1), (tr2, te2)) in enumerate(zip(folds, folds2, strict=True)):
-        assert np.array_equal(tr1, tr2) and np.array_equal(
-            te1, te2
-        ), f"{name}.split is non-deterministic at fold {k}."
+        assert np.array_equal(tr1, tr2) and np.array_equal(te1, te2), (
+            f"{name}.split is non-deterministic at fold {k}."
+        )
 
     # get_n_splits consistency (None allowed for lazy splitters per the contract).
     try:
@@ -113,9 +113,9 @@ def check_temporal_splitter(
     except TypeError:
         n_splits = splitter.get_n_splits()
     if n_splits is not None:
-        assert int(n_splits) == len(
-            folds
-        ), f"{name}.get_n_splits(X)={n_splits} != folds yielded={len(folds)}."
+        assert int(n_splits) == len(folds), (
+            f"{name}.get_n_splits(X)={n_splits} != folds yielded={len(folds)}."
+        )
 
     if isinstance(splitter, CrossFitter):
         _check_cross_fitter(splitter, X_arr, folds)
@@ -139,19 +139,19 @@ def _check_cross_fitter(
 
     covered = np.unique(np.concatenate([te for _, te in folds]))
     uncovered = np.setdiff1d(np.arange(n), covered)
-    assert np.all(
-        np.isfinite(preds[covered])
-    ), f"{name}.fit_predict left non-finite values on covered rows."
+    assert np.all(np.isfinite(preds[covered])), (
+        f"{name}.fit_predict left non-finite values on covered rows."
+    )
     if uncovered.size:
-        assert np.all(
-            np.isnan(preds[uncovered])
-        ), f"{name}.fit_predict produced predictions on uncovered rows (must be NaN)."
+        assert np.all(np.isnan(preds[uncovered])), (
+            f"{name}.fit_predict produced predictions on uncovered rows (must be NaN)."
+        )
 
     resid = np.asarray(cf.fit_predict_residuals(LinearRegression(), X, y))
     assert resid.shape == (n,), f"{name}.fit_predict_residuals shape {resid.shape} != ({n},)."
-    assert np.allclose(
-        resid[covered], (y - preds)[covered], atol=1e-8
-    ), f"{name}.fit_predict_residuals != y - fit_predict on covered rows."
+    assert np.allclose(resid[covered], (y - preds)[covered], atol=1e-8), (
+        f"{name}.fit_predict_residuals != y - fit_predict on covered rows."
+    )
 
 
 def check_temporal_estimator(
@@ -210,6 +210,6 @@ def check_temporal_estimator(
     oof = np.asarray(cv.fit_predict(estimator, X_arr, y_arr))
     assert oof.shape == (n,), f"{name} cross-fit OOF shape {oof.shape} != ({n},)."
     covered = np.unique(np.concatenate([te for _, te in cv.split(X_arr)]))
-    assert np.all(
-        np.isfinite(oof[covered])
-    ), f"{name} produced non-finite OOF predictions on covered rows."
+    assert np.all(np.isfinite(oof[covered])), (
+        f"{name} produced non-finite OOF predictions on covered rows."
+    )
