@@ -7,10 +7,11 @@
 **Implementation status (2026-06-04):** this ADR records the *decision*; build status lives in
 `docs/plans/v2_roadmap.md`. **In place:** the CrossFitter seam
 (`Splitter`/`CrossFitter`/`SupportsFitPredict` static Protocols + sklearn base + the executable
-conformance suite), cv.py frozen+`SCHEMA_VERSION` result objects, `ArrayLike` on the seam surface, and
-the lazy `get_n_splits() -> int | None` contract. **Planned (not yet built):** capabilities-as-tags
-(#14), unifying the `BootstrapStrategy`/`ForecastAdapter` ABCs (#12), repo-wide result-object migration
-(#13), uniform `ArrayLike` across bagging/compare (#15), and the public-API stability test (#16).
+conformance suite), frozen+`SCHEMA_VERSION` result objects across all modules (#13, enforced by
+`tests/test_result_objects.py`), `ArrayLike` on the seam surface, and the lazy
+`get_n_splits() -> int | None` contract. **Planned (not yet built):** capabilities-as-tags
+(#14), unifying the `BootstrapStrategy`/`ForecastAdapter` ABCs (#12), uniform `ArrayLike` across
+bagging/compare (#15), and the public-API stability test (#16).
 
 ## Decision
 1. **Seam strategy:** static `@runtime_checkable` Protocols (typed seam) + sklearn base inheritance
