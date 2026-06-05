@@ -45,7 +45,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Generator, Sized
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -58,7 +58,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
+def _date_to_json(value: Any) -> Any:
+    """Serialize an optional datetime-like field to an ISO string (else pass through)."""
+    return value.isoformat() if hasattr(value, "isoformat") else value
+
+
+@dataclass(frozen=True, slots=True)
 class SplitInfo:
     """
     Metadata for a single CV split.
@@ -96,6 +101,8 @@ class SplitInfo:
     ... )
     >>> print(f"Gap: {info.gap}, Train size: {info.train_size}")
     """
+
+    SCHEMA_VERSION: ClassVar[int] = 1
 
     split_idx: int
     train_start: int
@@ -135,8 +142,26 @@ class SplitInfo:
                 f"Temporal leakage: train_end ({self.train_end}) >= test_start ({self.test_start})"
             )
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this split's metadata."""
+        return {
+            "schema_version": self.SCHEMA_VERSION,
+            "split_idx": self.split_idx,
+            "train_start": self.train_start,
+            "train_end": self.train_end,
+            "test_start": self.test_start,
+            "test_end": self.test_end,
+            "train_size": self.train_size,
+            "test_size": self.test_size,
+            "gap": self.gap,
+            "train_start_date": _date_to_json(self.train_start_date),
+            "train_end_date": _date_to_json(self.train_end_date),
+            "test_start_date": _date_to_json(self.test_start_date),
+            "test_end_date": _date_to_json(self.test_end_date),
+        }
 
-@dataclass
+
+@dataclass(frozen=True, slots=True)
 class SplitResult:
     """
     Result from a single walk-forward split.
@@ -180,6 +205,8 @@ class SplitResult:
     ... )
     >>> print(f"Split {result.split_idx}: MAE={result.mae:.4f}")
     """
+
+    SCHEMA_VERSION: ClassVar[int] = 1
 
     split_idx: int
     train_start: int
@@ -253,8 +280,28 @@ class SplitResult:
             test_end_date=self.test_end_date,
         )
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this split (arrays become lists)."""
+        return {
+            "schema_version": self.SCHEMA_VERSION,
+            "split_idx": self.split_idx,
+            "train_start": self.train_start,
+            "train_end": self.train_end,
+            "test_start": self.test_start,
+            "test_end": self.test_end,
+            "predictions": np.asarray(self.predictions).tolist(),
+            "actuals": np.asarray(self.actuals).tolist(),
+            "train_start_date": _date_to_json(self.train_start_date),
+            "train_end_date": _date_to_json(self.train_end_date),
+            "test_start_date": _date_to_json(self.test_start_date),
+            "test_end_date": _date_to_json(self.test_end_date),
+            "mae": self.mae,
+            "rmse": self.rmse,
+            "bias": self.bias,
+        }
 
-@dataclass
+
+@dataclass(frozen=True, slots=True)
 class WalkForwardResults:
     """
     Aggregated walk-forward cross-validation results.
@@ -292,6 +339,8 @@ class WalkForwardResults:
     >>> for split in results.splits:
     ...     print(f"  Split {split.split_idx}: MAE={split.mae:.4f}")
     """
+
+    SCHEMA_VERSION: ClassVar[int] = 1
 
     splits: list[SplitResult]
     cv_config: dict[str, Any] | None = None
@@ -424,8 +473,22 @@ class WalkForwardResults:
 
         return "\n".join(lines)
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping: aggregate metrics + per-split dicts."""
+        return {
+            "schema_version": self.SCHEMA_VERSION,
+            "n_splits": self.n_splits,
+            "total_samples": self.total_samples,
+            "mae": self.mae,
+            "rmse": self.rmse,
+            "mse": self.mse,
+            "bias": self.bias,
+            "cv_config": self.cv_config,
+            "splits": [s.to_dict() for s in self.splits],
+        }
 
-@dataclass
+
+@dataclass(frozen=True, slots=True)
 class NestedCVResult:
     """
     Result from nested walk-forward cross-validation.
@@ -477,6 +540,8 @@ class NestedCVResult:
     WalkForwardCV : Single-level CV for model evaluation.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     best_params: dict[str, Any]
     outer_scores: np.ndarray
     mean_outer_score: float
@@ -487,6 +552,22 @@ class NestedCVResult:
     scoring: str
     best_params_per_fold: list[dict[str, Any]]
     params_stability: float
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping (outer_scores becomes a list)."""
+        return {
+            "schema_version": self.SCHEMA_VERSION,
+            "best_params": self.best_params,
+            "outer_scores": np.asarray(self.outer_scores).tolist(),
+            "mean_outer_score": self.mean_outer_score,
+            "std_outer_score": self.std_outer_score,
+            "inner_cv_results": self.inner_cv_results,
+            "n_outer_splits": self.n_outer_splits,
+            "n_inner_splits": self.n_inner_splits,
+            "scoring": self.scoring,
+            "best_params_per_fold": self.best_params_per_fold,
+            "params_stability": self.params_stability,
+        }
 
 
 class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]

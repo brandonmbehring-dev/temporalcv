@@ -18,8 +18,12 @@ rather than restating them.
    interop. Shared implementation lives in mixins/ABCs we own; capabilities are **tags (data)**,
    not subclass levels.
 2. **Results = frozen value objects.** `@dataclass(frozen=True, slots=True)` + `__post_init__` +
-   explicit `to_dict()` + a versioned JSON schema. A point estimate is the degenerate case of a
-   distributional/interval result.
+   explicit `to_dict()` + a versioned JSON schema: each result declares
+   `SCHEMA_VERSION: ClassVar[int]`, surfaced in `to_dict()` as `schema_version` (arrays → lists, dates →
+   ISO strings, so `to_dict()` is `json.dumps`-able). A point estimate is the degenerate case of a
+   distributional/interval result. (Caveat: on CPython `frozen+slots` raises `TypeError`, not
+   `FrozenInstanceError`, when assigning an *undeclared* attribute — declared-field immutability is
+   unaffected and is the guarantee we rely on.)
 3. **Contract is backend-agnostic.** Public params typed `ArrayLike` (not `np.ndarray`); an internal
    `xp` array-namespace seam and a narwhals dataframe boundary are reserved. numpy/batch impls run
    under the hood. The splitter seam is a **lazy iterator**; `get_n_splits()` may return `None`.
