@@ -37,12 +37,14 @@ See temporalcv.gates for underlying gate implementations and academic references
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 
+from temporalcv._serialization import result_to_dict
 
-@dataclass
+
+@dataclass(frozen=True, slots=True, eq=False)
 class GuardrailResult:
     """
     Result from guardrail validation.
@@ -63,12 +65,18 @@ class GuardrailResult:
         Actionable recommendations based on results
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     passed: bool
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     details: dict[str, Any] = field(default_factory=dict)
     skipped: list[str] = field(default_factory=list)
     recommendations: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this guardrail result."""
+        return result_to_dict(self)
 
     def __bool__(self) -> bool:
         """Allow using result in boolean context."""

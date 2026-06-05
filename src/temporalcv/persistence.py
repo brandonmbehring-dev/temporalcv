@@ -53,7 +53,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from enum import Enum
-from typing import Literal
+from typing import ClassVar, Literal
 
 import numpy as np
 
@@ -69,7 +69,7 @@ class MoveDirection(Enum):
     FLAT = "flat"
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class MoveConditionalResult:
     """
     Move-conditional evaluation results.
@@ -98,6 +98,8 @@ class MoveConditionalResult:
     move_threshold : float
         Threshold used for classification
     """
+
+    SCHEMA_VERSION: ClassVar[int] = 1
 
     mae_up: float
     mae_down: float
@@ -137,6 +139,7 @@ class MoveConditionalResult:
     def to_dict(self) -> dict[str, object]:
         """Convert to dictionary."""
         return {
+            "schema_version": self.SCHEMA_VERSION,
             "mae_up": self.mae_up,
             "mae_down": self.mae_down,
             "mae_flat": self.mae_flat,

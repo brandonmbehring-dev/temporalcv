@@ -21,6 +21,8 @@ from collections.abc import Callable
 import numpy as np
 import pytest
 
+from temporalcv.compare.base import ModelResult
+from temporalcv.conformal import PredictionInterval
 from temporalcv.cv import NestedCVResult, SplitResult, WalkForwardResults
 from temporalcv.cv_financial import PurgedSplit
 from temporalcv.diagnostics.influence import InfluenceDiagnostic
@@ -122,6 +124,26 @@ def _wild_bootstrap_result() -> WildBootstrapResult:
     )
 
 
+def _prediction_interval() -> PredictionInterval:
+    return PredictionInterval(
+        point=np.array([1.0, 2.0]),
+        lower=np.array([0.5, 1.5]),
+        upper=np.array([1.5, 2.5]),
+        confidence=0.95,
+        method="split_conformal",
+    )
+
+
+def _model_result() -> ModelResult:
+    return ModelResult(
+        model_name="A",
+        package="p",
+        metrics={"mae": 0.5},
+        predictions=np.array([1.0, 2.0]),
+        runtime_seconds=1.0,
+    )
+
+
 # Every array-bearing result object in the library. Add new ones here.
 RESULT_FACTORIES: list[tuple[str, Callable[[], object]]] = [
     ("SplitResult", _split_result),
@@ -132,6 +154,8 @@ RESULT_FACTORIES: list[tuple[str, Callable[[], object]]] = [
     ("GapSensitivityResult", _gap_sensitivity_result),
     ("BlockBootstrapResult", _block_bootstrap_result),
     ("WildBootstrapResult", _wild_bootstrap_result),
+    ("PredictionInterval", _prediction_interval),
+    ("ModelResult", _model_result),
 ]
 
 

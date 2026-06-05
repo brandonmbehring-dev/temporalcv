@@ -30,12 +30,15 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 from itertools import combinations
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
 
+from temporalcv._serialization import result_to_dict
 
-@dataclass(frozen=True, eq=False)
+
+@dataclass(frozen=True, slots=True, eq=False)
 class PurgedSplit:
     """A single train/test split with purging information.
 
@@ -51,10 +54,16 @@ class PurgedSplit:
         Number of samples embargoed after test set.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     train_indices: np.ndarray
     test_indices: np.ndarray
     n_purged: int
     n_embargoed: int
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this split."""
+        return result_to_dict(self)
 
 
 def compute_label_overlap(

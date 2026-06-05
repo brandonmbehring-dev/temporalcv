@@ -37,13 +37,15 @@ Example
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
 
+from temporalcv._serialization import result_to_dict
 
-@dataclass(frozen=True, eq=False)
+
+@dataclass(frozen=True, slots=True, eq=False)
 class WildBootstrapResult:
     """
     Result of wild cluster bootstrap inference.
@@ -75,6 +77,8 @@ class WildBootstrapResult:
     For one-sided tests, divide p_value by 2.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     estimate: float
     se: float
     ci_lower: float
@@ -84,6 +88,10 @@ class WildBootstrapResult:
     n_clusters: int
     weight_type: str
     bootstrap_distribution: np.ndarray
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this bootstrap result."""
+        return result_to_dict(self)
 
 
 def _rademacher_weights(n: int, rng: np.random.Generator) -> np.ndarray:

@@ -32,11 +32,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
 from statsmodels.tsa.stattools import adfuller, kpss
+
+from temporalcv._serialization import result_to_dict
 
 
 class StationarityConclusion(Enum):
@@ -48,7 +50,7 @@ class StationarityConclusion(Enum):
     INSUFFICIENT_EVIDENCE = "insufficient_evidence"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class StationarityTestResult:
     """Result of a unit root or stationarity test.
 
@@ -72,6 +74,8 @@ class StationarityTestResult:
         Critical values at standard significance levels.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     statistic: float
     pvalue: float
     is_stationary: bool
@@ -80,8 +84,12 @@ class StationarityTestResult:
     regression: str
     critical_values: dict[str, float]
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this stationarity test result."""
+        return result_to_dict(self)
 
-@dataclass(frozen=True)
+
+@dataclass(frozen=True, slots=True)
 class JointStationarityResult:
     """Result of joint ADF + KPSS stationarity check.
 
@@ -97,10 +105,16 @@ class JointStationarityResult:
         Suggested next step based on conclusion.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     adf_result: StationarityTestResult
     kpss_result: StationarityTestResult
     conclusion: StationarityConclusion
     recommended_action: str
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping (nests the ADF + KPSS results)."""
+        return result_to_dict(self)
 
 
 def adf_test(

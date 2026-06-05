@@ -35,7 +35,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
-from typing import Literal
+from typing import ClassVar, Literal
 
 import numpy as np
 
@@ -52,7 +52,7 @@ class UndefinedMetricWarning(UserWarning):
     pass
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class BrierScoreResult:
     """
     Result from Brier score computation.
@@ -72,6 +72,8 @@ class BrierScoreResult:
     n_classes : int
         Number of classes (2 or 3)
     """
+
+    SCHEMA_VERSION: ClassVar[int] = 1
 
     brier_score: float
     reliability: float
@@ -98,6 +100,7 @@ class BrierScoreResult:
     def to_dict(self) -> dict[str, object]:
         """Convert to dictionary."""
         return {
+            "schema_version": self.SCHEMA_VERSION,
             "brier_score": self.brier_score,
             "reliability": self.reliability,
             "resolution": self.resolution,
@@ -108,7 +111,7 @@ class BrierScoreResult:
         }
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class PRAUCResult:
     """
     Result from PR-AUC computation.
@@ -126,6 +129,8 @@ class PRAUCResult:
     n_negative : int
         Number of negative samples
     """
+
+    SCHEMA_VERSION: ClassVar[int] = 1
 
     pr_auc: float
     baseline: float
@@ -169,6 +174,7 @@ class PRAUCResult:
     def to_dict(self) -> dict[str, object]:
         """Convert to dictionary."""
         return {
+            "schema_version": self.SCHEMA_VERSION,
             "pr_auc": self.pr_auc,
             "baseline": self.baseline,
             "lift_over_baseline": self.lift_over_baseline,

@@ -45,10 +45,12 @@ References
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Protocol, runtime_checkable
+from typing import Any, ClassVar, Literal, Protocol, runtime_checkable
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
+
+from temporalcv._serialization import result_to_dict
 
 # =============================================================================
 # Volatility Estimator Protocol
@@ -474,7 +476,7 @@ def compute_volatility_weighted_mae(
 # =============================================================================
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class VolatilityStratifiedResult:
     """Result container for volatility-stratified metrics.
 
@@ -500,6 +502,8 @@ class VolatilityStratifiedResult:
         (low_upper, high_lower) volatility boundaries.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     overall_mae: float
     low_vol_mae: float
     med_vol_mae: float
@@ -509,6 +513,10 @@ class VolatilityStratifiedResult:
     n_med: int
     n_high: int
     vol_thresholds: tuple[float, float]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of these stratified metrics."""
+        return result_to_dict(self)
 
     def summary(self) -> str:
         """Generate human-readable summary."""

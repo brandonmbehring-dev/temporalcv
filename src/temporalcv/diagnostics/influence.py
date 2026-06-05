@@ -18,14 +18,15 @@ References
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 
+from temporalcv._serialization import result_to_dict
 from temporalcv.statistical_tests import compute_hac_variance
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True, slots=True, eq=False)
 class InfluenceDiagnostic:
     """
     Result of influence analysis on DM test statistic.
@@ -62,6 +63,8 @@ class InfluenceDiagnostic:
     for exploratory analysis to identify specific problematic points.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     observation_influence: np.ndarray
     observation_high_mask: np.ndarray
     block_influence: np.ndarray
@@ -70,6 +73,10 @@ class InfluenceDiagnostic:
     n_high_influence_obs: int
     n_high_influence_blocks: int
     influence_threshold: float
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this diagnostic."""
+        return result_to_dict(self)
 
 
 def compute_dm_influence(

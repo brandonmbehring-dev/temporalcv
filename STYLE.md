@@ -28,8 +28,12 @@ for what is built; items below say so explicitly so this contract never overclai
 2. **Results = frozen value objects.** `@dataclass(frozen=True, slots=True)` + `__post_init__` +
    explicit `to_dict()` + a version-stamped, `json.dumps`-able dict: each result declares
    `SCHEMA_VERSION: ClassVar[int]`, surfaced in `to_dict()` as `schema_version` (arrays → lists, dates →
-   ISO strings). **✅ on the cv.py result objects** (`SplitInfo`/`SplitResult`/`WalkForwardResults`/
-   `NestedCVResult`); other modules' results (`GateResult`, conformal, stats) migrate under **◷ #13**.
+   ISO strings). **✅ across every result object** — cv, statistical_tests, gates, conformal, metrics,
+   regimes, persistence, compare, diagnostics, inference, lag_selection, guardrails, stationarity, and
+   changepoint — most delegating to a shared `result_to_dict` reflective helper (#13).
+   `tests/test_result_objects.py` enforces the contract **and** the registry's exhaustiveness (it fails if
+   any `SCHEMA_VERSION` dataclass is unregistered). Sole exclusion: the benchmarks dataset *holders*
+   (`TimeSeriesDataset`/`DatasetMetadata`) — inputs, not results.
    "Point estimate = degenerate case of a distributional/interval result" is design intent, not yet a
    property of these objects. (Caveat: on CPython `frozen+slots` raises `TypeError`, not
    `FrozenInstanceError`, when assigning an *undeclared* attribute — declared-field immutability is
