@@ -69,6 +69,7 @@ import numpy as np
 from scipy import stats
 
 from temporalcv._serialization import result_to_dict
+from temporalcv._typing import ArrayLike, as_array
 
 # =============================================================================
 # Result dataclasses
@@ -431,7 +432,7 @@ def _bartlett_kernel(j: int, bandwidth: int) -> float:
 
 
 def compute_hac_variance(
-    d: np.ndarray,
+    d: ArrayLike,
     bandwidth: int | None = None,
 ) -> float:
     """
@@ -463,6 +464,7 @@ def compute_hac_variance(
     --------
     dm_test : Primary consumer of HAC variance estimation.
     """
+    d = as_array(d)
     n = len(d)
     d_demeaned = d - np.mean(d)
 
@@ -506,7 +508,7 @@ _SN_CRITICAL_VALUES = {
 }
 
 
-def compute_self_normalized_variance(d: np.ndarray) -> float:
+def compute_self_normalized_variance(d: ArrayLike) -> float:
     """
     Compute self-normalized variance using partial sums.
 
@@ -554,6 +556,7 @@ def compute_self_normalized_variance(d: np.ndarray) -> float:
     compute_hac_variance : HAC variance estimator (bandwidth-dependent).
     dm_test : Primary consumer of variance estimation.
     """
+    d = as_array(d)
     n = len(d)
     if n == 0:
         return 0.0
@@ -635,8 +638,8 @@ def _sn_pvalue(statistic: float, alternative: str) -> float:
 
 
 def dm_test(
-    errors_1: np.ndarray,
-    errors_2: np.ndarray,
+    errors_1: ArrayLike,
+    errors_2: ArrayLike,
     h: int = 1,
     loss: Literal["squared", "absolute"] = "squared",
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
@@ -940,8 +943,8 @@ def dm_test(
 
 
 def gw_test(
-    errors_1: np.ndarray,
-    errors_2: np.ndarray,
+    errors_1: ArrayLike,
+    errors_2: ArrayLike,
     n_lags: int = 1,
     loss: Literal["squared", "absolute"] = "squared",
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
@@ -1220,10 +1223,10 @@ def gw_test(
 
 
 def cw_test(
-    errors_unrestricted: np.ndarray,
-    errors_restricted: np.ndarray,
-    predictions_unrestricted: np.ndarray,
-    predictions_restricted: np.ndarray,
+    errors_unrestricted: ArrayLike,
+    errors_restricted: ArrayLike,
+    predictions_unrestricted: ArrayLike,
+    predictions_restricted: ArrayLike,
     h: int = 1,
     loss: Literal["squared", "absolute"] = "squared",
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
@@ -1495,8 +1498,8 @@ def cw_test(
 
 
 def pt_test(
-    actual: np.ndarray,
-    predicted: np.ndarray,
+    actual: ArrayLike,
+    predicted: ArrayLike,
     move_threshold: float | None = None,
 ) -> PTTestResult:
     """
@@ -2254,8 +2257,8 @@ class MultiModelHorizonResult:
 
 
 def compare_horizons(
-    errors_1: np.ndarray,
-    errors_2: np.ndarray,
+    errors_1: ArrayLike,
+    errors_2: ArrayLike,
     horizons: Sequence[int] = (1, 2, 3, 4),
     *,
     loss: Literal["squared", "absolute"] = "squared",
@@ -2565,9 +2568,9 @@ class BidirectionalEncompassingResult:
 
 
 def forecast_encompassing_test(
-    actual: np.ndarray,
-    forecast_a: np.ndarray,
-    forecast_b: np.ndarray,
+    actual: ArrayLike,
+    forecast_a: ArrayLike,
+    forecast_b: ArrayLike,
     h: int = 1,
     alpha: float = 0.05,
     alternative: Literal["two-sided", "a-encompasses-b"] = "two-sided",
@@ -2696,9 +2699,9 @@ def forecast_encompassing_test(
 
 
 def forecast_encompassing_bidirectional(
-    actual: np.ndarray,
-    forecast_a: np.ndarray,
-    forecast_b: np.ndarray,
+    actual: ArrayLike,
+    forecast_a: ArrayLike,
+    forecast_b: ArrayLike,
     h: int = 1,
     alpha: float = 0.05,
 ) -> BidirectionalEncompassingResult:
@@ -2940,7 +2943,7 @@ def _stationary_bootstrap_indices(
 
 
 def reality_check_test(
-    benchmark_errors: np.ndarray,
+    benchmark_errors: ArrayLike,
     model_errors_dict: dict[str, np.ndarray],
     h: int = 1,
     loss: Literal["squared", "absolute"] = "squared",
@@ -3088,7 +3091,7 @@ def reality_check_test(
 
 
 def spa_test(
-    benchmark_errors: np.ndarray,
+    benchmark_errors: ArrayLike,
     model_errors_dict: dict[str, np.ndarray],
     h: int = 1,
     loss: Literal["squared", "absolute"] = "squared",

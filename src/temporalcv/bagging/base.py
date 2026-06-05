@@ -29,6 +29,7 @@ from typing import Literal
 
 import numpy as np
 
+from temporalcv._typing import ArrayLike
 from temporalcv.protocols import SupportsBootstrap, SupportsFitPredict
 
 
@@ -212,7 +213,7 @@ class TimeSeriesBagger:
         """Whether the bagger has been fitted."""
         return self._fitted
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> TimeSeriesBagger:
+    def fit(self, X: ArrayLike, y: ArrayLike) -> TimeSeriesBagger:
         """
         Fit n_estimators on bootstrap samples.
 
@@ -264,7 +265,7 @@ class TimeSeriesBagger:
         if not self._fitted:
             raise RuntimeError("TimeSeriesBagger must be fitted before predict. Call fit() first.")
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def predict(self, X: ArrayLike) -> np.ndarray:
         """
         Aggregate predictions across all estimators.
 
@@ -296,7 +297,7 @@ class TimeSeriesBagger:
         result_median: np.ndarray = np.median(predictions, axis=0)
         return result_median
 
-    def _get_all_predictions(self, X: np.ndarray) -> np.ndarray:
+    def _get_all_predictions(self, X: ArrayLike) -> np.ndarray:
         """
         Get predictions from all estimators.
 
@@ -320,7 +321,7 @@ class TimeSeriesBagger:
         )
         return all_preds
 
-    def predict_with_uncertainty(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def predict_with_uncertainty(self, X: ArrayLike) -> tuple[np.ndarray, np.ndarray]:
         """
         Return (mean, std) across estimators for uncertainty quantification.
 
@@ -338,7 +339,7 @@ class TimeSeriesBagger:
         return np.mean(predictions, axis=0), np.std(predictions, axis=0)
 
     def predict_interval(
-        self, X: np.ndarray, alpha: float = 0.05
+        self, X: ArrayLike, alpha: float = 0.05
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Return (mean, lower, upper) prediction interval.

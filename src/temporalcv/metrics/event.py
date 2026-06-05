@@ -39,6 +39,8 @@ from typing import ClassVar, Literal
 
 import numpy as np
 
+from temporalcv._typing import ArrayLike
+
 
 class UndefinedMetricWarning(UserWarning):
     """
@@ -267,8 +269,8 @@ def _compute_brier_decomposition(
 
 
 def compute_direction_brier(
-    pred_probs: np.ndarray,
-    actual_directions: np.ndarray,
+    pred_probs: ArrayLike,
+    actual_directions: ArrayLike,
     n_classes: Literal[2, 3] = 2,
 ) -> BrierScoreResult:
     """
@@ -419,8 +421,8 @@ def compute_direction_brier(
 
 
 def compute_pr_auc(
-    pred_probs: np.ndarray,
-    actual_binary: np.ndarray,
+    pred_probs: ArrayLike,
+    actual_binary: ArrayLike,
 ) -> PRAUCResult:
     """
     Compute Area Under Precision-Recall Curve.
@@ -553,8 +555,8 @@ def compute_pr_auc(
 
 
 def compute_calibrated_direction_brier(
-    pred_probs: np.ndarray,
-    actual_directions: np.ndarray,
+    pred_probs: ArrayLike,
+    actual_directions: ArrayLike,
     n_bins: int = 10,
 ) -> tuple[float, np.ndarray, np.ndarray]:
     """
@@ -638,8 +640,8 @@ def compute_calibrated_direction_brier(
 
 
 def convert_predictions_to_direction_probs(
-    point_predictions: np.ndarray,
-    prediction_std: np.ndarray,
+    point_predictions: ArrayLike,
+    prediction_std: ArrayLike,
     threshold: float = 0.0,
 ) -> np.ndarray:
     """

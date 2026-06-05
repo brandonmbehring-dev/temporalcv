@@ -56,6 +56,7 @@ from typing import Any, ClassVar, cast
 import numpy as np
 
 from temporalcv._serialization import result_to_dict
+from temporalcv._typing import ArrayLike
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,7 @@ class PredictionInterval:
         """Mean interval width."""
         return float(np.mean(self.width))
 
-    def coverage(self, actuals: np.ndarray) -> float:
+    def coverage(self, actuals: ArrayLike) -> float:
         """
         Compute empirical coverage.
 
@@ -201,8 +202,8 @@ class SplitConformalPredictor:
 
     def calibrate(
         self,
-        predictions: np.ndarray,
-        actuals: np.ndarray,
+        predictions: ArrayLike,
+        actuals: ArrayLike,
     ) -> SplitConformalPredictor:
         """
         Calibrate conformal predictor on held-out data.
@@ -308,7 +309,7 @@ class SplitConformalPredictor:
 
     def predict_interval(
         self,
-        predictions: np.ndarray,
+        predictions: ArrayLike,
     ) -> PredictionInterval:
         """
         Construct prediction intervals.
@@ -422,8 +423,8 @@ class AdaptiveConformalPredictor:
 
     def initialize(
         self,
-        initial_predictions: np.ndarray,
-        initial_actuals: np.ndarray,
+        initial_predictions: ArrayLike,
+        initial_actuals: ArrayLike,
     ) -> AdaptiveConformalPredictor:
         """
         Initialize with calibration data.
@@ -671,8 +672,8 @@ class BellmanConformalPredictor:
 
     def initialize(
         self,
-        predictions: np.ndarray,
-        actuals: np.ndarray,
+        predictions: ArrayLike,
+        actuals: ArrayLike,
     ) -> BellmanConformalPredictor:
         """
         Initialize with calibration data and solve initial DP.
@@ -932,7 +933,7 @@ class BellmanConformalPredictor:
 
     def solve_optimal_sequence(
         self,
-        predictions: np.ndarray,
+        predictions: ArrayLike,
         n_steps: int | None = None,
     ) -> np.ndarray:
         """
@@ -984,7 +985,7 @@ class BellmanConformalPredictor:
 
     def predict_intervals_batch(
         self,
-        predictions: np.ndarray,
+        predictions: ArrayLike,
     ) -> PredictionInterval:
         """
         Construct prediction intervals for a batch of predictions.
@@ -1084,8 +1085,8 @@ class BootstrapUncertainty:
 
     def fit(
         self,
-        predictions: np.ndarray,
-        actuals: np.ndarray,
+        predictions: ArrayLike,
+        actuals: ArrayLike,
     ) -> BootstrapUncertainty:
         """
         Fit bootstrap estimator.
@@ -1116,7 +1117,7 @@ class BootstrapUncertainty:
 
     def predict_interval(
         self,
-        predictions: np.ndarray,
+        predictions: ArrayLike,
     ) -> PredictionInterval:
         """
         Construct bootstrap prediction intervals.
@@ -1164,7 +1165,7 @@ class BootstrapUncertainty:
 
 def evaluate_interval_quality(
     intervals: PredictionInterval,
-    actuals: np.ndarray,
+    actuals: ArrayLike,
 ) -> dict[str, object]:
     """
     Evaluate prediction interval quality.
@@ -1263,8 +1264,8 @@ def evaluate_interval_quality(
 
 
 def walk_forward_conformal(
-    predictions: np.ndarray,
-    actuals: np.ndarray,
+    predictions: ArrayLike,
+    actuals: ArrayLike,
     calibration_fraction: float = 0.3,
     alpha: float = 0.05,
 ) -> tuple[PredictionInterval, dict[str, object]]:
@@ -1406,11 +1407,11 @@ class CoverageDiagnostics:
 
 def compute_coverage_diagnostics(
     intervals: PredictionInterval,
-    actuals: np.ndarray,
+    actuals: ArrayLike,
     *,
     target_coverage: float | None = None,
     window_size: int = 50,
-    regimes: np.ndarray | None = None,
+    regimes: ArrayLike | None = None,
     undercoverage_threshold: float = 0.05,
 ) -> CoverageDiagnostics:
     """

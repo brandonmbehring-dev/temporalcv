@@ -23,8 +23,9 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
 from matplotlib.axes import Axes
+
+from temporalcv._typing import ArrayLike
 
 from .comparison import MetricComparisonDisplay
 from .cv import CVFoldsDisplay
@@ -40,10 +41,10 @@ __all__ = [
 
 def plot_cv_folds(
     cv: Any,
-    X: np.ndarray,
-    y: np.ndarray | None = None,
+    X: ArrayLike,
+    y: ArrayLike | None = None,
     *,
-    groups: np.ndarray | None = None,
+    groups: ArrayLike | None = None,
     ax: Axes | None = None,
     tufte: bool = True,
     title: str | None = None,
@@ -95,9 +96,9 @@ def plot_cv_folds(
 
 def plot_prediction_intervals(
     intervals: Any,
-    actuals: np.ndarray | None = None,
+    actuals: ArrayLike | None = None,
     *,
-    x: np.ndarray | None = None,
+    x: ArrayLike | None = None,
     ax: Axes | None = None,
     tufte: bool = True,
     show_coverage: bool = True,
@@ -154,7 +155,7 @@ def plot_prediction_intervals(
 def plot_interval_width(
     intervals: Any,
     *,
-    x: np.ndarray | None = None,
+    x: ArrayLike | None = None,
     ax: Axes | None = None,
     tufte: bool = True,
     title: str | None = None,

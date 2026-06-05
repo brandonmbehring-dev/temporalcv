@@ -33,9 +33,9 @@ from itertools import combinations
 from typing import Any, ClassVar
 
 import numpy as np
-from numpy.typing import ArrayLike
 
 from temporalcv._serialization import result_to_dict
+from temporalcv._typing import ArrayLike
 
 
 @dataclass(frozen=True, slots=True, eq=False)

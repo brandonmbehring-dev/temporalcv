@@ -48,9 +48,10 @@ from dataclasses import dataclass
 from typing import Any, ClassVar, Literal, Protocol, runtime_checkable
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import NDArray
 
 from temporalcv._serialization import result_to_dict
+from temporalcv._typing import ArrayLike
 
 # =============================================================================
 # Volatility Estimator Protocol
@@ -65,7 +66,7 @@ class VolatilityEstimator(Protocol):
     the built-in rolling_std and EWMA methods.
     """
 
-    def estimate(self, values: NDArray[np.float64]) -> NDArray[np.float64]:
+    def estimate(self, values: ArrayLike) -> NDArray[np.float64]:
         """Estimate local volatility.
 
         Parameters
@@ -104,7 +105,7 @@ class RollingVolatility:
         self.window = window
         self.min_periods = min_periods if min_periods is not None else window // 2
 
-    def estimate(self, values: NDArray[np.float64]) -> NDArray[np.float64]:
+    def estimate(self, values: ArrayLike) -> NDArray[np.float64]:
         """Compute rolling standard deviation."""
         values = np.asarray(values, dtype=np.float64)
         n = len(values)
@@ -150,7 +151,7 @@ class EWMAVolatility:
         self.adjust = adjust
         self.alpha = 2.0 / (span + 1)
 
-    def estimate(self, values: NDArray[np.float64]) -> NDArray[np.float64]:
+    def estimate(self, values: ArrayLike) -> NDArray[np.float64]:
         """Compute EWMA volatility (of squared deviations from mean)."""
         values = np.asarray(values, dtype=np.float64)
         n = len(values)
@@ -202,7 +203,7 @@ class GARCHVolatility:
         self.p = p
         self.q = q
 
-    def estimate(self, values: NDArray[np.float64]) -> NDArray[np.float64]:
+    def estimate(self, values: ArrayLike) -> NDArray[np.float64]:
         """Estimate GARCH volatility using the arch package."""
         from arch import arch_model
 

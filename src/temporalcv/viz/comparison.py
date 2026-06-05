@@ -21,6 +21,7 @@ from __future__ import annotations
 import numpy as np
 from matplotlib.axes import Axes
 
+from .._typing import ArrayLike
 from ._base import BaseDisplay
 from ._style import (
     COLORS,
@@ -85,7 +86,7 @@ class MetricComparisonDisplay(BaseDisplay):
         self,
         model_names: list[str],
         metric_names: list[str],
-        values: np.ndarray,
+        values: ArrayLike,
         *,
         lower_is_better: dict[str, bool] | None = None,
         baseline_idx: int | None = None,
@@ -156,7 +157,7 @@ class MetricComparisonDisplay(BaseDisplay):
         cls,
         model_names: list[str],
         metric_names: list[str],
-        values: np.ndarray,
+        values: ArrayLike,
         *,
         lower_is_better: dict[str, bool] | None = None,
         baseline_idx: int | None = None,

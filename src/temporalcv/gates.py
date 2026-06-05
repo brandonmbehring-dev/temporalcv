@@ -65,9 +65,9 @@ from enum import Enum
 from typing import Any, ClassVar, Literal, cast
 
 import numpy as np
-from numpy.typing import ArrayLike
 
 from temporalcv._serialization import result_to_dict
+from temporalcv._typing import ArrayLike
 from temporalcv.cv import WalkForwardCV
 from temporalcv.protocols import SupportsFitPredict
 
