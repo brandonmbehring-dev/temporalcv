@@ -43,7 +43,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class WildBootstrapResult:
     """
     Result of wild cluster bootstrap inference.

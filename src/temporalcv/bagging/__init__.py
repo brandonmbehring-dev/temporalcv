@@ -37,7 +37,7 @@ References
 
 from temporalcv.bagging.base import (
     BootstrapStrategy,
-    SupportsPredict,
+    SupportsFitPredict,
     TimeSeriesBagger,
 )
 from temporalcv.bagging.strategies import (
@@ -50,7 +50,7 @@ from temporalcv.bagging.strategies import (
 
 
 def create_block_bagger(
-    base_model: SupportsPredict,
+    base_model: SupportsFitPredict,
     n_estimators: int = 20,
     block_length: int | None = None,
     aggregation: str = "mean",
@@ -61,7 +61,7 @@ def create_block_bagger(
 
     Parameters
     ----------
-    base_model : SupportsPredict
+    base_model : SupportsFitPredict
         Model to bag (e.g., Ridge, ElasticNet)
     n_estimators : int, default=20
         Number of bootstrap estimators
@@ -100,7 +100,7 @@ def create_block_bagger(
 
 
 def create_stationary_bagger(
-    base_model: SupportsPredict,
+    base_model: SupportsFitPredict,
     n_estimators: int = 20,
     expected_block_length: float | None = None,
     aggregation: str = "mean",
@@ -111,7 +111,7 @@ def create_stationary_bagger(
 
     Parameters
     ----------
-    base_model : SupportsPredict
+    base_model : SupportsFitPredict
         Model to bag (e.g., Ridge, ElasticNet)
     n_estimators : int, default=20
         Number of bootstrap estimators
@@ -148,7 +148,7 @@ def create_stationary_bagger(
 
 
 def create_feature_bagger(
-    base_model: SupportsPredict,
+    base_model: SupportsFitPredict,
     n_estimators: int = 20,
     max_features: float = 0.7,
     aggregation: str = "mean",
@@ -159,7 +159,7 @@ def create_feature_bagger(
 
     Parameters
     ----------
-    base_model : SupportsPredict
+    base_model : SupportsFitPredict
         Model to bag (e.g., Ridge, ElasticNet)
     n_estimators : int, default=20
         Number of bootstrap estimators
@@ -197,7 +197,7 @@ def create_feature_bagger(
 
 __all__ = [
     # Core classes
-    "SupportsPredict",
+    "SupportsFitPredict",
     "BootstrapStrategy",
     "TimeSeriesBagger",
     # Strategies

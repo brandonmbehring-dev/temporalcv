@@ -35,7 +35,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class PurgedSplit:
     """A single train/test split with purging information.
 

@@ -86,6 +86,9 @@ from temporalcv.conformal import (
     walk_forward_conformal,
 )
 
+# Conformance suite (the seam contract, executable — see conformance.py / STYLE.md)
+from temporalcv.conformance import check_temporal_estimator, check_temporal_splitter
+
 # Cross-validation exports
 from temporalcv.cv import (
     CrossFitCV,
@@ -95,6 +98,7 @@ from temporalcv.cv import (
     SplitResult,
     WalkForwardCV,
     WalkForwardResults,
+    cross_fit_residualize,
     walk_forward_evaluate,
 )
 
@@ -214,6 +218,9 @@ from temporalcv.persistence import (
     compute_persistence_mae,
 )
 
+# Typed seams (static @runtime_checkable Protocols — see protocols.py / STYLE.md)
+from temporalcv.protocols import CrossFitter, Splitter, SupportsFitPredict
+
 # Regime classification exports
 from temporalcv.regimes import (
     StratifiedMetricsResult,
@@ -322,6 +329,14 @@ __all__ = [
     "CrossFitCV",
     "NestedWalkForwardCV",
     "walk_forward_evaluate",
+    "cross_fit_residualize",
+    # Typed seams (static Protocols)
+    "Splitter",
+    "CrossFitter",
+    "SupportsFitPredict",
+    # Conformance suite
+    "check_temporal_splitter",
+    "check_temporal_estimator",
     # Regime classification
     "classify_volatility_regime",
     "classify_direction_regime",

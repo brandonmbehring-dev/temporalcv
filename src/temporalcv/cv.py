@@ -44,18 +44,27 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Generator, Sized
+from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
 from sklearn.base import clone
 from sklearn.model_selection import BaseCrossValidator
 
+if TYPE_CHECKING:
+    from temporalcv.protocols import Splitter, SupportsFitPredict
+
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
+def _date_to_json(value: Any) -> Any:
+    """Serialize an optional datetime-like field to an ISO string (else pass through)."""
+    return value.isoformat() if hasattr(value, "isoformat") else value
+
+
+@dataclass(frozen=True, slots=True)
 class SplitInfo:
     """
     Metadata for a single CV split.
@@ -93,6 +102,8 @@ class SplitInfo:
     ... )
     >>> print(f"Gap: {info.gap}, Train size: {info.train_size}")
     """
+
+    SCHEMA_VERSION: ClassVar[int] = 1
 
     split_idx: int
     train_start: int
@@ -132,8 +143,26 @@ class SplitInfo:
                 f"Temporal leakage: train_end ({self.train_end}) >= test_start ({self.test_start})"
             )
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this split's metadata."""
+        return {
+            "schema_version": self.SCHEMA_VERSION,
+            "split_idx": self.split_idx,
+            "train_start": self.train_start,
+            "train_end": self.train_end,
+            "test_start": self.test_start,
+            "test_end": self.test_end,
+            "train_size": self.train_size,
+            "test_size": self.test_size,
+            "gap": self.gap,
+            "train_start_date": _date_to_json(self.train_start_date),
+            "train_end_date": _date_to_json(self.train_end_date),
+            "test_start_date": _date_to_json(self.test_start_date),
+            "test_end_date": _date_to_json(self.test_end_date),
+        }
 
-@dataclass
+
+@dataclass(frozen=True, slots=True, eq=False)
 class SplitResult:
     """
     Result from a single walk-forward split.
@@ -177,6 +206,8 @@ class SplitResult:
     ... )
     >>> print(f"Split {result.split_idx}: MAE={result.mae:.4f}")
     """
+
+    SCHEMA_VERSION: ClassVar[int] = 1
 
     split_idx: int
     train_start: int
@@ -250,8 +281,28 @@ class SplitResult:
             test_end_date=self.test_end_date,
         )
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this split (arrays become lists)."""
+        return {
+            "schema_version": self.SCHEMA_VERSION,
+            "split_idx": self.split_idx,
+            "train_start": self.train_start,
+            "train_end": self.train_end,
+            "test_start": self.test_start,
+            "test_end": self.test_end,
+            "predictions": np.asarray(self.predictions).tolist(),
+            "actuals": np.asarray(self.actuals).tolist(),
+            "train_start_date": _date_to_json(self.train_start_date),
+            "train_end_date": _date_to_json(self.train_end_date),
+            "test_start_date": _date_to_json(self.test_start_date),
+            "test_end_date": _date_to_json(self.test_end_date),
+            "mae": self.mae,
+            "rmse": self.rmse,
+            "bias": self.bias,
+        }
 
-@dataclass
+
+@dataclass(frozen=True, slots=True, eq=False)
 class WalkForwardResults:
     """
     Aggregated walk-forward cross-validation results.
@@ -289,6 +340,8 @@ class WalkForwardResults:
     >>> for split in results.splits:
     ...     print(f"  Split {split.split_idx}: MAE={split.mae:.4f}")
     """
+
+    SCHEMA_VERSION: ClassVar[int] = 1
 
     splits: list[SplitResult]
     cv_config: dict[str, Any] | None = None
@@ -421,8 +474,22 @@ class WalkForwardResults:
 
         return "\n".join(lines)
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping: aggregate metrics + per-split dicts."""
+        return {
+            "schema_version": self.SCHEMA_VERSION,
+            "n_splits": self.n_splits,
+            "total_samples": self.total_samples,
+            "mae": self.mae,
+            "rmse": self.rmse,
+            "mse": self.mse,
+            "bias": self.bias,
+            "cv_config": self.cv_config,
+            "splits": [s.to_dict() for s in self.splits],
+        }
 
-@dataclass
+
+@dataclass(frozen=True, slots=True, eq=False)
 class NestedCVResult:
     """
     Result from nested walk-forward cross-validation.
@@ -462,10 +529,11 @@ class NestedCVResult:
 
     Example
     -------
-    >>> result = nested_cv.fit(X, y)
-    >>> print(f"Best params: {result.best_params_}")
-    >>> print(f"Score: {result.mean_outer_score_:.4f} ± {result.std_outer_score_:.4f}")
-    >>> if result.params_stability_ < 0.6:
+    >>> nested_cv.fit(X, y)  # fit() returns the estimator (self), not the result
+    >>> result = nested_cv.get_result()  # NestedCVResult
+    >>> print(f"Best params: {result.best_params}")
+    >>> print(f"Score: {result.mean_outer_score:.4f} ± {result.std_outer_score:.4f}")
+    >>> if result.params_stability < 0.6:
     ...     print("Warning: High hyperparameter instability across folds")
 
     See Also
@@ -473,6 +541,8 @@ class NestedCVResult:
     NestedWalkForwardCV : Class that produces this result.
     WalkForwardCV : Single-level CV for model evaluation.
     """
+
+    SCHEMA_VERSION: ClassVar[int] = 1
 
     best_params: dict[str, Any]
     outer_scores: np.ndarray
@@ -484,6 +554,22 @@ class NestedCVResult:
     scoring: str
     best_params_per_fold: list[dict[str, Any]]
     params_stability: float
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping (outer_scores becomes a list)."""
+        return {
+            "schema_version": self.SCHEMA_VERSION,
+            "best_params": self.best_params,
+            "outer_scores": np.asarray(self.outer_scores).tolist(),
+            "mean_outer_score": self.mean_outer_score,
+            "std_outer_score": self.std_outer_score,
+            "inner_cv_results": self.inner_cv_results,
+            "n_outer_splits": self.n_outer_splits,
+            "n_inner_splits": self.n_inner_splits,
+            "scoring": self.scoring,
+            "best_params_per_fold": self.best_params_per_fold,
+            "params_stability": self.params_stability,
+        }
 
 
 class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
@@ -1047,7 +1133,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
     def fit_predict(
         self,
-        model: Any,
+        model: SupportsFitPredict,
         X: ArrayLike,
         y: ArrayLike,
     ) -> np.ndarray:
@@ -1082,7 +1168,9 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
             try:
                 model_clone = clone(model)
             except TypeError:
-                model_clone = model
+                # Not an sklearn estimator: deep-copy for a fresh per-fold instance
+                # (avoids cross-fold state leakage for stateful learners).
+                model_clone = deepcopy(model)
 
             model_clone.fit(X[train_idx], y[train_idx])
             predictions[test_idx] = model_clone.predict(X[test_idx])
@@ -1091,7 +1179,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
     def fit_predict_residuals(
         self,
-        model: Any,
+        model: SupportsFitPredict,
         X: ArrayLike,
         y: ArrayLike,
     ) -> np.ndarray:
@@ -1142,12 +1230,135 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
 
 # =============================================================================
+# cross_fit_residualize - Dual-variable Out-of-Fold Residualization
+# =============================================================================
+
+
+def cross_fit_residualize(
+    model_a: SupportsFitPredict,
+    model_b: SupportsFitPredict,
+    X: ArrayLike,
+    A: ArrayLike,
+    B: ArrayLike,
+    cv: Splitter,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Residualize two targets on shared controls out-of-fold (partialling-out seam).
+
+    Estimates ``A_resid = A - E[A | X]`` and ``B_resid = B - E[B | X]`` using
+    out-of-fold predictions over the *same* temporal fold sequence, so the two residual
+    vectors are mutually aligned. This is the residual-on-residual seam that
+    Frisch-Waugh-Lovell partialling-out and Double ML build on: regressing ``A_resid``
+    on ``B_resid`` recovers the orthogonalized (Neyman-orthogonal) parameter, with the
+    nuisance estimation bias cross-fitted away.
+
+    Parameters
+    ----------
+    model_a, model_b : sklearn estimator
+        Nuisance learners for ``A`` and ``B`` respectively. Each must implement
+        ``fit(X, y)`` and ``predict(X)``; both are cloned per fold via
+        :func:`sklearn.base.clone` (falling back to the original object if it is not
+        cloneable, matching :meth:`CrossFitCV.fit_predict`).
+    X : ArrayLike of shape (n_samples, n_features)
+        Shared controls / conditioning set both targets are residualized on.
+    A, B : ArrayLike of shape (n_samples,)
+        The two targets to residualize (e.g. outcome and treatment).
+    cv : Splitter
+        Any temporal splitter yielding ``(train_idx, test_idx)`` index pairs
+        (e.g. :class:`CrossFitCV`, :class:`WalkForwardCV`). Only :meth:`split` is used,
+        so the residualization inherits the splitter's leakage guarantees.
+
+    Returns
+    -------
+    A_resid, B_resid : np.ndarray of shape (n_samples,)
+        Out-of-fold residuals. Rows never covered by any test fold (e.g. fold 0 of a
+        forward-only :class:`CrossFitCV`, which has no history to train on) are ``NaN``
+        in **both** outputs, identically — a single ``~np.isnan`` mask drops them while
+        keeping the two vectors aligned.
+
+    Raises
+    ------
+    ValueError
+        If ``X``, ``A`` and ``B`` do not share their first-axis length, or if
+        ``cv.split(X)`` yields no folds (returning all-NaN would silently propagate NaN
+        estimates downstream under partialling-out, so an empty splitter is rejected).
+
+    Notes
+    -----
+    The fold loop runs **once**: for each ``(train_idx, test_idx)`` both models are fit
+    on ``X[train_idx]`` (against ``A`` / ``B``) and predict on ``X[test_idx]``. Iterating
+    the splitter a single time guarantees the shared coverage mask and is safe for
+    single-use generator splitters.
+
+    Knowledge Tier: [T1] - Cross-fitted partialling-out / orthogonal residual-on-residual
+    estimation (Robinson 1988; Chernozhukov et al. 2018).
+
+    Example
+    -------
+    >>> from sklearn.linear_model import LinearRegression
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> X = rng.standard_normal((200, 3))
+    >>> d = X[:, 0] + rng.standard_normal(200) * 0.1
+    >>> y = 2.0 * d + X[:, 1] + rng.standard_normal(200) * 0.1
+    >>> cv = CrossFitCV(n_splits=5)
+    >>> y_res, d_res = cross_fit_residualize(
+    ...     LinearRegression(), LinearRegression(), X, y, d, cv
+    ... )
+    >>> mask = ~np.isnan(y_res)  # identical mask applies to d_res
+    >>> theta = float(np.polyfit(d_res[mask], y_res[mask], 1)[0])  # ~2.0 (true effect)
+
+    Note: use a nuisance learner matched to the data-generating process; an underfitting
+    learner biases the partialled-out estimate. The seam does not validate fit quality.
+
+    See Also
+    --------
+    CrossFitCV.fit_predict : Single-target out-of-fold predictions.
+    CrossFitCV.fit_predict_residuals : Single-target out-of-fold residuals.
+    """
+    X = np.asarray(X)
+    A = np.asarray(A, dtype=float)
+    B = np.asarray(B, dtype=float)
+    n_samples = A.shape[0]
+
+    if X.shape[0] != n_samples or B.shape[0] != n_samples:
+        raise ValueError(
+            "X, A, B must share the first-axis length; got "
+            f"X={X.shape[0]}, A={n_samples}, B={B.shape[0]}."
+        )
+
+    folds = list(cv.split(X))
+    if not folds:
+        raise ValueError(
+            f"{type(cv).__name__}.split yielded no folds for n_samples={n_samples}; "
+            "cannot residualize (an all-NaN result would silently produce NaN estimates "
+            "downstream). Use more observations, fewer splits, or a smaller gap."
+        )
+
+    a_hat = np.full(n_samples, np.nan)
+    b_hat = np.full(n_samples, np.nan)
+
+    for train_idx, test_idx in folds:
+        for model, target, out in ((model_a, A, a_hat), (model_b, B, b_hat)):
+            try:
+                fold_model = clone(model)
+            except TypeError:
+                # Not an sklearn estimator: deep-copy so each fold trains a fresh,
+                # independent instance (no state leakage across folds for stateful
+                # learners). Raises if the object is genuinely un-copyable.
+                fold_model = deepcopy(model)
+            fold_model.fit(X[train_idx], target[train_idx])
+            out[test_idx] = fold_model.predict(X[test_idx])
+
+    return A - a_hat, B - b_hat
+
+
+# =============================================================================
 # walk_forward_evaluate Function
 # =============================================================================
 
 
 def walk_forward_evaluate(
-    model: Any,
+    model: SupportsFitPredict,
     X: ArrayLike,
     y: ArrayLike,
     cv: WalkForwardCV | None = None,
@@ -1940,4 +2151,5 @@ __all__ = [
     "CrossFitCV",
     "NestedWalkForwardCV",
     "walk_forward_evaluate",
+    "cross_fit_residualize",
 ]
