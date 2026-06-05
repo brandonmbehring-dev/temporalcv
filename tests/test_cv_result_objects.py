@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from datetime import datetime
 
 import numpy as np
 import pytest
@@ -140,6 +141,23 @@ class TestToDict:
         d = _nested_result().to_dict()
         assert isinstance(d["outer_scores"], list)
         assert d["best_params"] == {"alpha": 1.0}
+
+    def test_dates_serialize_to_iso(self) -> None:
+        # The datetime -> ISO branch of _date_to_json (review R3: previously 0 coverage).
+        info = SplitInfo(
+            split_idx=0,
+            train_start=0,
+            train_end=9,
+            test_start=11,
+            test_end=15,
+            train_start_date=datetime(2020, 1, 1),
+            test_end_date=datetime(2020, 3, 1),
+        )
+        d = info.to_dict()
+        assert d["train_start_date"] == "2020-01-01T00:00:00"
+        assert d["test_end_date"] == "2020-03-01T00:00:00"
+        assert d["train_end_date"] is None  # passthrough for unset dates
+        json.dumps(d)  # must remain JSON-serializable with dates present
 
 
 class TestValuePreservation:

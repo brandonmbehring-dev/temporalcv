@@ -298,3 +298,222 @@ class TestConformanceNegative:
     def test_non_estimator_rejected(self) -> None:
         with pytest.raises(AssertionError, match="fit"):
             check_temporal_estimator(object())
+
+
+class _OverlapSplitter:
+    """train and test indices overlap -> fails disjointness."""
+
+    def split(
+        self, X: object, y: object = None, groups: object = None
+    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        n = len(X)  # type: ignore[arg-type]
+        # train [0, 0.6n) and test [0.5n, 0.8n) share [0.5n, 0.6n)
+        yield np.arange(0, 3 * n // 5, dtype=np.intp), np.arange(n // 2, 4 * n // 5, dtype=np.intp)
+
+    def get_n_splits(self, X: object = None, y: object = None, groups: object = None) -> int:
+        return 1
+
+
+class _NonDeterministicSplitter:
+    """Yields different (individually valid) folds on each split() call -> fails determinism."""
+
+    def __init__(self) -> None:
+        self._calls = 0
+
+    def split(
+        self, X: object, y: object = None, groups: object = None
+    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        n = len(X)  # type: ignore[arg-type]
+        self._calls += 1
+        train_end = n // 2
+        test_start = train_end + self._calls  # shifts between calls
+        yield np.arange(0, train_end, dtype=np.intp), np.arange(test_start, n, dtype=np.intp)
+
+    def get_n_splits(self, X: object = None, y: object = None, groups: object = None) -> int:
+        return 1
+
+
+class _EmptyFoldSplitter:
+    """Yields an empty test fold -> fails non-emptiness."""
+
+    def split(
+        self, X: object, y: object = None, groups: object = None
+    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        n = len(X)  # type: ignore[arg-type]
+        yield np.arange(0, n // 2, dtype=np.intp), np.array([], dtype=np.intp)
+
+    def get_n_splits(self, X: object = None, y: object = None, groups: object = None) -> int:
+        return 1
+
+
+class _FloatIndexSplitter:
+    """Yields float (non-integer) indices -> fails dtype check."""
+
+    def split(
+        self, X: object, y: object = None, groups: object = None
+    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        n = len(X)  # type: ignore[arg-type]
+        yield np.arange(0, n // 2, dtype=np.intp), np.arange(n // 2, n, dtype=float)
+
+    def get_n_splits(self, X: object = None, y: object = None, groups: object = None) -> int:
+        return 1
+
+
+class _OutOfRangeSplitter:
+    """Yields a test index >= n -> fails range check."""
+
+    def split(
+        self, X: object, y: object = None, groups: object = None
+    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        n = len(X)  # type: ignore[arg-type]
+        yield np.arange(0, n // 2, dtype=np.intp), np.arange(n // 2, n + 5, dtype=np.intp)
+
+    def get_n_splits(self, X: object = None, y: object = None, groups: object = None) -> int:
+        return 1
+
+
+class _NaNEstimator:
+    """fit/predict present, but predict returns NaN -> fails finite-OOF check."""
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> _NaNEstimator:
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return np.full(len(X), np.nan)
+
+
+class _WrongShapeEstimator:
+    """predict returns a 2-D array -> fails shape check."""
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> _WrongShapeEstimator:
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return np.zeros((len(X), 2))
+
+
+class TestConformanceNegativeExtended:
+    """Each currently-unguarded splitter/estimator invariant must be rejected (review R3)."""
+
+    def test_overlap_rejected(self) -> None:
+        with pytest.raises(AssertionError, match="overlap"):
+            check_temporal_splitter(_OverlapSplitter())
+
+    def test_nondeterministic_rejected(self) -> None:
+        with pytest.raises(AssertionError, match="non-deterministic"):
+            check_temporal_splitter(_NonDeterministicSplitter())
+
+    def test_empty_fold_rejected(self) -> None:
+        with pytest.raises(AssertionError, match="empty"):
+            check_temporal_splitter(_EmptyFoldSplitter())
+
+    def test_float_index_rejected(self) -> None:
+        with pytest.raises(AssertionError, match="integer-typed"):
+            check_temporal_splitter(_FloatIndexSplitter())
+
+    def test_out_of_range_rejected(self) -> None:
+        with pytest.raises(AssertionError, match="out of range"):
+            check_temporal_splitter(_OutOfRangeSplitter())
+
+    def test_nan_estimator_rejected(self) -> None:
+        with pytest.raises(AssertionError, match="non-finite"):
+            check_temporal_estimator(_NaNEstimator())
+
+    def test_wrong_shape_estimator_rejected(self) -> None:
+        with pytest.raises(AssertionError, match="shape"):
+            check_temporal_estimator(_WrongShapeEstimator())
+
+
+# =============================================================================
+# cross_fit_residualize — edge cases (review R3)
+# =============================================================================
+
+
+class _ZeroFoldSplitter:
+    """Yields no folds at all."""
+
+    def split(
+        self, X: object, y: object = None, groups: object = None
+    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        return iter(())
+
+    def get_n_splits(self, X: object = None, y: object = None, groups: object = None) -> int:
+        return 0
+
+
+class _GappySplitter:
+    """Forward, valid, but leaves a non-contiguous interior region uncovered."""
+
+    def split(
+        self, X: object, y: object = None, groups: object = None
+    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        n = len(X)  # type: ignore[arg-type]
+        a, b, c, d = n // 5, 2 * n // 5, 3 * n // 5, 4 * n // 5
+        yield np.arange(0, a, dtype=np.intp), np.arange(a, b, dtype=np.intp)
+        yield np.arange(0, c, dtype=np.intp), np.arange(c, d, dtype=np.intp)
+
+    def get_n_splits(self, X: object = None, y: object = None, groups: object = None) -> int:
+        return 2
+
+
+class _NonCloneableModel:
+    """Has fit/predict but no get_params, so sklearn.clone raises TypeError (fallback path)."""
+
+    def __init__(self) -> None:
+        self.coef_: np.ndarray | None = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> _NonCloneableModel:
+        self.coef_, *_ = np.linalg.lstsq(np.asarray(X), np.asarray(y), rcond=None)
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return np.asarray(np.asarray(X) @ self.coef_)
+
+
+class TestCrossFitResidualizeEdgeCases:
+    """Behaviour of cross_fit_residualize on the irregular paths (review R3)."""
+
+    def test_zero_folds_returns_all_nan_shared_mask(
+        self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
+    ) -> None:
+        X, y, d, _ = linear_dgp
+        y_res, d_res = cross_fit_residualize(
+            LinearRegression(), LinearRegression(), X, y, d, _ZeroFoldSplitter()
+        )
+        # documented contract: uncovered rows are NaN; zero folds -> all NaN, both identical.
+        assert np.all(np.isnan(y_res))
+        assert np.all(np.isnan(d_res))
+        np.testing.assert_array_equal(np.isnan(y_res), np.isnan(d_res))
+
+    def test_noncontiguous_coverage_shares_mask(
+        self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
+    ) -> None:
+        X, y, d, _ = linear_dgp
+        cv = _GappySplitter()
+        y_res, d_res = cross_fit_residualize(LinearRegression(), LinearRegression(), X, y, d, cv)
+        # the shared-mask guarantee must hold even when uncovered rows are non-contiguous
+        np.testing.assert_array_equal(np.isnan(y_res), np.isnan(d_res))
+        covered = np.unique(np.concatenate([te for _, te in cv.split(X)]))
+        np.testing.assert_array_equal(np.flatnonzero(~np.isnan(y_res)), covered)
+
+    def test_noncloneable_model_fallback(
+        self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
+    ) -> None:
+        X, y, d, _ = linear_dgp
+        # exercises the `except TypeError: fold_model = model` clone-fallback branch
+        y_res, d_res = cross_fit_residualize(
+            _NonCloneableModel(), _NonCloneableModel(), X, y, d, CrossFitCV(n_splits=5)
+        )
+        np.testing.assert_array_equal(np.isnan(y_res), np.isnan(d_res))
+        assert np.isfinite(y_res[~np.isnan(y_res)]).all()
+
+    def test_nan_in_target_fails_loud(
+        self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
+    ) -> None:
+        X, y, d, _ = linear_dgp
+        y_bad = y.copy()
+        y_bad[3] = np.nan  # row 3 lands in fold 0 -> training fold for later folds
+        with pytest.raises(ValueError):
+            cross_fit_residualize(
+                LinearRegression(), LinearRegression(), X, y_bad, d, CrossFitCV(n_splits=5)
+            )
