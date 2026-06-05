@@ -59,11 +59,13 @@ class CrossFitter(Splitter, Protocol):
     debiased/orthogonalized consumer (Double ML, partialling-out) builds on.
     """
 
-    def fit_predict(self, model: object, X: ArrayLike, y: ArrayLike) -> np.ndarray:
+    def fit_predict(self, model: SupportsFitPredict, X: ArrayLike, y: ArrayLike) -> np.ndarray:
         """Out-of-fold predictions aligned to ``y`` (uncovered rows are ``NaN``)."""
         ...
 
-    def fit_predict_residuals(self, model: object, X: ArrayLike, y: ArrayLike) -> np.ndarray:
+    def fit_predict_residuals(
+        self, model: SupportsFitPredict, X: ArrayLike, y: ArrayLike
+    ) -> np.ndarray:
         """Out-of-fold residuals ``y - y_hat`` (uncovered rows are ``NaN``)."""
         ...
 

@@ -53,7 +53,7 @@ from sklearn.base import clone
 from sklearn.model_selection import BaseCrossValidator
 
 if TYPE_CHECKING:
-    from temporalcv.protocols import Splitter
+    from temporalcv.protocols import Splitter, SupportsFitPredict
 
 logger = logging.getLogger(__name__)
 
@@ -1131,7 +1131,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
     def fit_predict(
         self,
-        model: Any,
+        model: SupportsFitPredict,
         X: ArrayLike,
         y: ArrayLike,
     ) -> np.ndarray:
@@ -1175,7 +1175,7 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
     def fit_predict_residuals(
         self,
-        model: Any,
+        model: SupportsFitPredict,
         X: ArrayLike,
         y: ArrayLike,
     ) -> np.ndarray:
@@ -1231,8 +1231,8 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
 
 def cross_fit_residualize(
-    model_a: Any,
-    model_b: Any,
+    model_a: SupportsFitPredict,
+    model_b: SupportsFitPredict,
     X: ArrayLike,
     A: ArrayLike,
     B: ArrayLike,
@@ -1335,7 +1335,7 @@ def cross_fit_residualize(
 
 
 def walk_forward_evaluate(
-    model: Any,
+    model: SupportsFitPredict,
     X: ArrayLike,
     y: ArrayLike,
     cv: WalkForwardCV | None = None,
