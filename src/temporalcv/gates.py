@@ -62,11 +62,12 @@ import warnings
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Literal, cast
+from typing import Any, ClassVar, Literal, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
 
+from temporalcv._serialization import result_to_dict
 from temporalcv.cv import WalkForwardCV
 from temporalcv.protocols import SupportsFitPredict
 
@@ -80,7 +81,7 @@ class GateStatus(Enum):
     SKIP = "SKIP"  # Insufficient data to run gate
 
 
-@dataclass
+@dataclass(frozen=True, slots=True, eq=False)
 class GateResult:
     """
     Result from a validation gate.
@@ -103,6 +104,8 @@ class GateResult:
         What to do if not PASS
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     name: str
     status: GateStatus
     message: str
@@ -115,8 +118,12 @@ class GateResult:
         """Format as [STATUS] name: message."""
         return f"[{self.status.value}] {self.name}: {self.message}"
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this gate result."""
+        return result_to_dict(self)
 
-@dataclass
+
+@dataclass(frozen=True, slots=True, eq=False)
 class ValidationReport:
     """
     Complete validation report across all gates.
@@ -127,7 +134,13 @@ class ValidationReport:
         Results from all gates run
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     gates: list[GateResult] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping (nests each gate's to_dict())."""
+        return result_to_dict(self)
 
     @property
     def status(self) -> str:
@@ -1502,7 +1515,7 @@ def run_gates(
 # =============================================================================
 
 
-@dataclass
+@dataclass(frozen=True, slots=True, eq=False)
 class StratifiedValidationReport:
     """
     Validation report with regime stratification.
@@ -1530,10 +1543,16 @@ class StratifiedValidationReport:
     synthetic_ar1) are only run overall.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     overall: ValidationReport
     by_regime: dict[str, ValidationReport]
     regime_counts: dict[str, int]
     masked_regimes: list[str]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping (nests overall + per-regime reports)."""
+        return result_to_dict(self)
 
     @property
     def status(self) -> str:

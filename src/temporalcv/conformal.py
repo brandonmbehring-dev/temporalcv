@@ -51,14 +51,16 @@ from __future__ import annotations
 import logging
 import warnings
 from dataclasses import dataclass
-from typing import cast
+from typing import Any, ClassVar, cast
 
 import numpy as np
+
+from temporalcv._serialization import result_to_dict
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True, eq=False)
 class PredictionInterval:
     """
     Container for prediction intervals.
@@ -87,6 +89,8 @@ class PredictionInterval:
     ... )
     >>> print(f"Mean width: {interval.mean_width:.3f}")
     """
+
+    SCHEMA_VERSION: ClassVar[int] = 1
 
     point: np.ndarray
     lower: np.ndarray
@@ -126,6 +130,7 @@ class PredictionInterval:
     def to_dict(self) -> dict[str, object]:
         """Convert to dictionary."""
         return {
+            "schema_version": self.SCHEMA_VERSION,
             "point": self.point.tolist(),
             "lower": self.lower.tolist(),
             "upper": self.upper.tolist(),
@@ -1357,7 +1362,7 @@ def walk_forward_conformal(
 # =============================================================================
 
 
-@dataclass
+@dataclass(frozen=True, slots=True, eq=False)
 class CoverageDiagnostics:
     """
     Detailed coverage diagnostics for conformal prediction intervals.
@@ -1384,6 +1389,8 @@ class CoverageDiagnostics:
     .. versionadded:: 1.0.0
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     overall_coverage: float
     target_coverage: float
     coverage_gap: float
@@ -1391,6 +1398,10 @@ class CoverageDiagnostics:
     coverage_by_window: dict[str, float]
     coverage_by_regime: dict[str, float] | None
     n_observations: int
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of these coverage diagnostics."""
+        return result_to_dict(self)
 
 
 def compute_coverage_diagnostics(

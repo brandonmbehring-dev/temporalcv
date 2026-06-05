@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Mapping
+from enum import Enum
 from typing import Any
 
 import numpy as np
@@ -47,6 +48,8 @@ def _jsonify(value: Any) -> Any:
     """
     if isinstance(value, np.generic):  # numpy scalar (np.float64 is-a float!) -> python scalar
         return value.item()
+    if isinstance(value, Enum):  # serialize enums by value (e.g. GateStatus -> "PASS")
+        return _jsonify(value.value)
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
     if isinstance(value, np.ndarray):
