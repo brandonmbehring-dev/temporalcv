@@ -33,6 +33,7 @@ from temporalcv.compare.base import (
     ComparisonResult,
     ForecastAdapter,
     ModelResult,
+    _best_model_by_metric,
     compute_comparison_metrics,
 )
 
@@ -194,20 +195,18 @@ def run_comparison(
     if not model_results:
         raise ValueError("All adapters failed to produce results")
 
-    # Build comparison result
-    result = ComparisonResult(
+    # Compute DM tests first: the best model is needed before the frozen result is built.
+    statistical_tests = None
+    if include_dm_test and len(model_results) > 1:
+        best_model = _best_model_by_metric(model_results, primary_metric)
+        statistical_tests = _run_dm_tests(model_results, test, best_model, horizon=horizon)
+
+    return ComparisonResult(
         dataset_name=dataset.metadata.name,
         models=model_results,
         primary_metric=primary_metric,
+        statistical_tests=statistical_tests,
     )
-
-    # Add DM test results if requested
-    if include_dm_test and len(model_results) > 1:
-        result.statistical_tests = _run_dm_tests(
-            model_results, test, result.best_model, horizon=horizon
-        )
-
-    return result
 
 
 def _run_dm_tests(

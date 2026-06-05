@@ -19,16 +19,18 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 import numpy as np
+
+from temporalcv._serialization import result_to_dict
 
 # =============================================================================
 # Result Dataclasses
 # =============================================================================
 
 
-@dataclass
+@dataclass(frozen=True, slots=True, eq=False)
 class ModelResult:
     """
     Result from a single model run.
@@ -48,6 +50,8 @@ class ModelResult:
     model_params : dict, optional
         Model hyperparameters used
     """
+
+    SCHEMA_VERSION: ClassVar[int] = 1
 
     model_name: str
     package: str
@@ -97,6 +101,7 @@ class ModelResult:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
+            "schema_version": self.SCHEMA_VERSION,
             "model_name": self.model_name,
             "package": self.package,
             "metrics": self.metrics,
@@ -105,7 +110,31 @@ class ModelResult:
         }
 
 
-@dataclass
+def _best_model_by_metric(models: list[ModelResult], primary_metric: str) -> str:
+    """Return the name of the model with the lowest ``primary_metric`` value.
+
+    Raises
+    ------
+    ValueError
+        If no model carries ``primary_metric``.
+    """
+    best_value = float("inf")
+    best_name = ""
+    for model in models:
+        try:
+            value = model.get_metric(primary_metric)
+        except KeyError:
+            continue
+        if value < best_value:
+            best_value = value
+            best_name = model.model_name
+    if not best_name:
+        available = sorted({name for model in models for name in model.metrics})
+        raise ValueError(f"No model has metric '{primary_metric}'. Available metrics: {available}")
+    return best_name
+
+
+@dataclass(frozen=True, slots=True, eq=False)
 class ComparisonResult:
     """
     Result from comparing multiple models on a single dataset.
@@ -124,6 +153,8 @@ class ComparisonResult:
         Results of statistical tests (DM test, etc.)
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     dataset_name: str
     models: list[ModelResult]
     primary_metric: str
@@ -131,37 +162,14 @@ class ComparisonResult:
     statistical_tests: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
-        """Validate and compute best model."""
+        """Validate inputs and compute best_model (frozen-safe via object.__setattr__)."""
         if not self.models:
             raise ValueError("models list cannot be empty")
         if not self.primary_metric:
             raise ValueError("primary_metric cannot be empty")
-
-        # Compute best model (lowest metric value)
-        best_value = float("inf")
-        best_name = ""
-        for model in self.models:
-            try:
-                value = model.get_metric(self.primary_metric)
-                if value < best_value:
-                    best_value = value
-                    best_name = model.model_name
-            except KeyError:
-                continue
-
-        if not best_name:
-            raise ValueError(
-                f"No model has metric '{self.primary_metric}'. "
-                f"Available metrics: {self._get_all_metrics()}"
-            )
-        self.best_model = best_name
-
-    def _get_all_metrics(self) -> list[str]:
-        """Get all unique metric names across models."""
-        metrics: set[str] = set()
-        for model in self.models:
-            metrics.update(model.metrics.keys())
-        return sorted(metrics)
+        object.__setattr__(
+            self, "best_model", _best_model_by_metric(self.models, self.primary_metric)
+        )
 
     def get_ranking(self, metric: str | None = None) -> list[tuple[str, float]]:
         """
@@ -190,6 +198,7 @@ class ComparisonResult:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
+            "schema_version": self.SCHEMA_VERSION,
             "dataset_name": self.dataset_name,
             "models": [m.to_dict() for m in self.models],
             "primary_metric": self.primary_metric,
@@ -198,7 +207,7 @@ class ComparisonResult:
         }
 
 
-@dataclass
+@dataclass(frozen=True, slots=True, eq=False)
 class ComparisonReport:
     """
     Report from comparing models across multiple datasets.
@@ -211,13 +220,15 @@ class ComparisonReport:
         Aggregate summary statistics
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     results: list[ComparisonResult]
     summary: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        """Compute summary if not provided."""
+        """Compute summary if not provided (frozen-safe via object.__setattr__)."""
         if not self.summary and self.results:
-            self.summary = self._compute_summary()
+            object.__setattr__(self, "summary", self._compute_summary())
 
     def _compute_summary(self) -> dict[str, Any]:
         """Compute aggregate summary."""
@@ -249,6 +260,10 @@ class ComparisonReport:
             "wins_by_model": wins,
             "mean_metrics_by_model": mean_metrics,
         }
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping (nests each ComparisonResult)."""
+        return result_to_dict(self)
 
     def to_markdown(self) -> str:
         """
