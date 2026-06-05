@@ -19,8 +19,16 @@ from numpy.typing import ArrayLike
 
 
 def date_to_json(value: Any) -> Any:
-    """Serialize an optional datetime-like field to an ISO string (else pass through)."""
-    return value.isoformat() if hasattr(value, "isoformat") else value
+    """Serialize an optional datetime-like field to an ISO string (else pass through).
+
+    Handles python ``date``/``datetime`` (``isoformat``) and numpy ``datetime64`` (which has no
+    ``isoformat``); ``None`` and anything else pass through unchanged.
+    """
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    if isinstance(value, np.datetime64):
+        return str(value)
+    return value
 
 
 def array_to_list(value: ArrayLike) -> Any:
@@ -44,10 +52,12 @@ def _jsonify(value: Any) -> Any:
 
     Order matters: numpy scalars are checked *before* the python-scalar shortcut because
     ``np.float64`` is a subclass of ``float`` (and would otherwise pass through unconverted,
-    breaking ``json.dumps``).
+    breaking ``json.dumps``). Raises ``TypeError`` on any value it cannot convert — failing loud
+    at the serializer rather than silently emitting a value that explodes later at ``json.dumps``.
     """
-    if isinstance(value, np.generic):  # numpy scalar (np.float64 is-a float!) -> python scalar
-        return value.item()
+    if isinstance(value, np.generic):
+        # numpy scalar -> python scalar; recurse so datetime64 -> date/datetime -> ISO below.
+        return _jsonify(value.item())
     if isinstance(value, Enum):  # serialize enums by value (e.g. GateStatus -> "PASS")
         return _jsonify(value.value)
     if value is None or isinstance(value, (bool, int, float, str)):
@@ -56,14 +66,17 @@ def _jsonify(value: Any) -> Any:
         return value.tolist()
     if hasattr(value, "isoformat"):  # date / datetime
         return value.isoformat()
-    to_dict = getattr(value, "to_dict", None)
-    if callable(to_dict):  # nested result object
-        return to_dict()
+    # Nested result object: gate on the SCHEMA_VERSION marker so a stray third-party to_dict
+    # (e.g. pandas Series/DataFrame, which have a to_dict) is not silently mis-serialized.
+    if hasattr(type(value), "SCHEMA_VERSION"):
+        to_dict = getattr(value, "to_dict", None)
+        if callable(to_dict):
+            return to_dict()
     if isinstance(value, Mapping):
         return {jsonify_key(k): _jsonify(v) for k, v in value.items()}
     if isinstance(value, (list, tuple, set, frozenset)):
         return [_jsonify(item) for item in value]
-    return value
+    raise TypeError(f"_jsonify: cannot serialize value of type {type(value).__name__!r} to JSON")
 
 
 def result_to_dict(obj: Any) -> dict[str, Any]:
