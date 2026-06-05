@@ -46,9 +46,11 @@ References
 from __future__ import annotations
 
 import warnings
-from typing import Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
+
+from temporalcv._serialization import result_to_dict
 
 
 def classify_volatility_regime(
@@ -367,7 +369,7 @@ def mask_low_n_regimes(
 from dataclasses import dataclass, field
 
 
-@dataclass
+@dataclass(frozen=True, slots=True, eq=False)
 class StratifiedMetricsResult:
     """
     Metrics stratified by regime.
@@ -399,11 +401,17 @@ class StratifiedMetricsResult:
     ...     print(f"{regime}: MAE={metrics['mae']:.4f}, n={metrics['n']}")
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     overall_mae: float
     overall_rmse: float
     n_total: int
     by_regime: dict[str, dict[str, float]] = field(default_factory=dict)
     masked_regimes: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping (overall + per-regime metrics)."""
+        return result_to_dict(self)
 
     def summary(self) -> str:
         """Generate human-readable summary of stratified metrics."""
