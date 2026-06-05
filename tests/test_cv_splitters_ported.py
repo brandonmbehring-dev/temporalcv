@@ -225,12 +225,55 @@ class TestFailLoud:
         with pytest.raises(ValueError, match="Not enough samples"):
             list(cv.split(X))
 
+    def test_tscv_raises_on_degenerate_test_window(self) -> None:
+        # F1: an explicit test_size too large for the early folds drives test_start negative;
+        # the aggregate min_required check passes but the per-fold window is out of bounds.
+        # Without the guard, np.arange wraps negative indices into a temporally-invalid fold.
+        X = np.arange(18).reshape(-1, 1)
+        cv = TimeSeriesCrossValidator(n_splits=6, test_size=4)
+        with pytest.raises(ValueError, match=r"Fold 0 test window .* is invalid"):
+            list(cv.split(X))
+
+    def test_tscv_raises_on_empty_train_window(self) -> None:
+        # F2: a large gap collapses an early fold's train window to empty; raise, don't yield
+        # an empty training fold silently.
+        X = np.arange(40).reshape(-1, 1)
+        cv = TimeSeriesCrossValidator(
+            n_splits=5, gap=30, test_size=2, min_train_size=2, expanding=False
+        )
+        with pytest.raises(ValueError, match=r"Fold 0 has an empty train window"):
+            list(cv.split(X))
+
+    def test_tscv_degenerate_propagates_through_get_split_info(self) -> None:
+        # get_split_info must surface the clean ValueError (not a bare IndexError) since it
+        # iterates split().
+        with pytest.raises(ValueError, match="invalid"):
+            TimeSeriesCrossValidator(n_splits=6, test_size=4).get_split_info(np.arange(18))
+
+    def test_valid_boundary_config_does_not_raise(self) -> None:
+        # No false positives: a tight-but-valid config must still produce folds.
+        assert len(list(TimeSeriesCrossValidator(n_splits=3).split(np.arange(8)))) == 3
+        assert (
+            len(
+                list(
+                    BlockedTimeSeriesCV(n_splits=2, block_size=10, gap_blocks=1).split(
+                        np.arange(60)
+                    )
+                )
+            )
+            == 2
+        )
+
     @pytest.mark.parametrize("bad", [{"n_splits": 0}, {"gap": -1}, {"purge_length": -1}])
     def test_tscv_init_validation(self, bad: dict[str, int]) -> None:
         with pytest.raises(ValueError):
             TimeSeriesCrossValidator(**bad)
 
-    @pytest.mark.parametrize("bad", [{"n_splits": 0}, {"gap_blocks": -1}])
+    # F3 (test_blocks=0 -> empty test folds) and F4 (block_size=0 -> ZeroDivisionError) are now
+    # rejected at construction.
+    @pytest.mark.parametrize(
+        "bad", [{"n_splits": 0}, {"gap_blocks": -1}, {"block_size": 0}, {"test_blocks": 0}]
+    )
     def test_blocked_init_validation(self, bad: dict[str, int]) -> None:
         with pytest.raises(ValueError):
             BlockedTimeSeriesCV(**bad)
@@ -266,12 +309,35 @@ class TestBehavioral:
         for (tr0, _), (tr1, _) in zip(no, yes, strict=True):
             assert len(tr0) - len(tr1) == purge
 
-    def test_expanding_grows_sliding_does_not_grow_faster(self) -> None:
+    def test_sliding_window_bounded_and_distinct_from_expanding(self) -> None:
+        # The sliding branch only diverges from expanding once min_train_size bites (otherwise
+        # the min-train clamp pulls train_start back to 0). Pick a config where it does, so this
+        # actually exercises window_size = min_train_size + fold_idx * test_size.
+        X = np.arange(300).reshape(-1, 1)
+        exp = list(
+            TimeSeriesCrossValidator(
+                n_splits=5, test_size=20, min_train_size=10, expanding=True
+            ).split(X)
+        )
+        slid = list(
+            TimeSeriesCrossValidator(
+                n_splits=5, test_size=20, min_train_size=10, expanding=False
+            ).split(X)
+        )
+        exp_lens = [len(tr) for tr, _ in exp]
+        slid_lens = [len(tr) for tr, _ in slid]
+        # expanding starts at 0 and grows to (almost) the whole series; sliding is a rolling
+        # window anchored away from 0 with strictly smaller, bounded train sets.
+        assert int(exp[0][0][0]) == 0
+        assert int(slid[0][0][0]) > 0
+        assert exp_lens != slid_lens  # the two modes genuinely diverge here
+        assert max(slid_lens) < max(exp_lens)
+        assert slid_lens == [10, 30, 50, 70, 90]  # rolling window grows by test_size per fold
+
+    def test_expanding_window_grows(self) -> None:
         X = np.arange(150).reshape(-1, 1)
         exp = [len(tr) for tr, _ in TimeSeriesCrossValidator(n_splits=3, expanding=True).split(X)]
-        slid = [len(tr) for tr, _ in TimeSeriesCrossValidator(n_splits=3, expanding=False).split(X)]
-        assert exp[-1] > exp[0]  # expanding grows
-        assert (slid[-1] - slid[0]) <= (exp[-1] - exp[0])  # sliding grows no faster
+        assert exp[-1] > exp[0]
 
     def test_test_sets_sequential(self) -> None:
         X = np.arange(200).reshape(-1, 1)
@@ -283,6 +349,14 @@ class TestBehavioral:
         X = np.arange(100).reshape(-1, 1)
         for _tr, te in BlockedTimeSeriesCV(n_splits=2, block_size=bs, gap_blocks=0).split(X):
             assert int(te[0]) % bs == 0  # test starts on a block boundary
+
+    def test_blocked_explicit_test_blocks(self) -> None:
+        # exercise the non-default test_blocks path: each test fold spans test_blocks*block_size.
+        bs, tb = 10, 3
+        X = np.arange(300).reshape(-1, 1)
+        cv = BlockedTimeSeriesCV(n_splits=2, block_size=bs, gap_blocks=1, test_blocks=tb)
+        for _, te in cv.split(X):
+            assert len(te) == tb * bs
 
     def test_custom_test_size(self) -> None:
         X = np.arange(200).reshape(-1, 1)
@@ -311,3 +385,48 @@ class TestBehavioral:
     def test_repr_roundtrips_key_params(self) -> None:
         assert "n_splits=3" in repr(TimeSeriesCrossValidator(n_splits=3, gap=5))
         assert "gap_blocks=2" in repr(BlockedTimeSeriesCV(n_splits=2, gap_blocks=2))
+
+
+# =============================================================================
+# Independent oracle — hand-computed expected folds (not derived from the impl formula)
+# =============================================================================
+
+
+class TestIndependentOracle:
+    """Small fold expectations derived by hand from the documented semantics.
+
+    The golden-parity grid pins behaviour to a *verbatim copy* of dml_ts's index math, so it
+    cannot catch a bug living in that shared formula (it asserts impl == copy-of-impl). These
+    literals are computed by hand from the spec — test sets tiled from the end, gap/purge
+    separation, whole 5-row blocks — giving an oracle the implementation could not satisfy by
+    construction. A wrong-but-self-consistent index convention would fail here.
+    """
+
+    def test_tscv_expanding_gap0_literal(self) -> None:
+        folds = list(TimeSeriesCrossValidator(n_splits=3).split(np.arange(12)))
+        expected = [
+            ([0, 1, 2], [3, 4, 5]),
+            ([0, 1, 2, 3, 4, 5], [6, 7, 8]),
+            ([0, 1, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11]),
+        ]
+        assert [(tr.tolist(), te.tolist()) for tr, te in folds] == expected
+
+    def test_tscv_gap_literal(self) -> None:
+        # gap=1 leaves exactly index 5 between train (ends at 4) and test (starts at 6).
+        folds = list(TimeSeriesCrossValidator(n_splits=2, gap=1, test_size=3).split(np.arange(12)))
+        expected = [
+            ([0, 1, 2, 3, 4], [6, 7, 8]),
+            ([0, 1, 2, 3, 4, 5, 6, 7], [9, 10, 11]),
+        ]
+        assert [(tr.tolist(), te.tolist()) for tr, te in folds] == expected
+
+    def test_blocked_literal(self) -> None:
+        # 6 blocks of 5; test_blocks=2, gap_blocks=1: fold0 trains block 0, tests blocks 2-3.
+        folds = list(
+            BlockedTimeSeriesCV(n_splits=2, block_size=5, gap_blocks=1).split(np.arange(30))
+        )
+        expected = [
+            (list(range(0, 5)), list(range(10, 20))),
+            (list(range(0, 15)), list(range(20, 30))),
+        ]
+        assert [(tr.tolist(), te.tolist()) for tr, te in folds] == expected

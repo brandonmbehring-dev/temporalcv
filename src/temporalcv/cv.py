@@ -1009,7 +1009,9 @@ class TimeSeriesCrossValidator(BaseCrossValidator):  # type: ignore[misc]
         Raises
         ------
         ValueError
-            If ``n_samples`` is too small for the requested configuration.
+            If ``n_samples`` is too small for the requested configuration, or if any
+            individual fold is degenerate (test window out of bounds/empty, or an empty
+            train window) — raised rather than silently yielding an invalid fold.
         """
         X_arr = np.asarray(X)
         n_samples = X_arr.shape[0]
@@ -1057,6 +1059,26 @@ class TimeSeriesCrossValidator(BaseCrossValidator):  # type: ignore[misc]
 
         if train_end - train_start < min_train_size:
             train_start = max(0, train_end - min_train_size)
+
+        # Fail loud on a degenerate fold. The up-front min_required check in split() bounds only
+        # the aggregate; a per-fold window can still be out of bounds or empty (e.g. an explicit
+        # test_size too large for the early folds, or a large gap/purge collapsing the train
+        # window). Without this, np.arange would silently yield a negative-index (wrap-around) or
+        # empty fold — temporally invalid, with no diagnostic signal downstream.
+        if test_start < 0 or test_end > n_samples or test_end <= test_start:
+            raise ValueError(
+                f"Fold {fold_idx} test window [{test_start}, {test_end}) is invalid for "
+                f"n_samples={n_samples} (n_splits={self.n_splits}, gap={self.gap}, "
+                f"purge_length={self.purge_length}, test_size={test_size}). Reduce "
+                f"n_splits/test_size/gap or provide more samples."
+            )
+        if train_end <= train_start:
+            raise ValueError(
+                f"Fold {fold_idx} has an empty train window [{train_start}, {train_end}) "
+                f"(gap={self.gap}, purge_length={self.purge_length}, "
+                f"min_train_size={min_train_size}). The aggregate size check passed but this "
+                f"fold is under-provisioned; reduce gap/purge_length/n_splits or add samples."
+            )
 
         train_idx = np.arange(train_start, train_end, dtype=np.intp)
         test_idx = np.arange(test_start, test_end, dtype=np.intp)
@@ -1116,7 +1138,9 @@ class BlockedTimeSeriesCV(BaseCrossValidator):  # type: ignore[misc]
 
     Unlike dml_ts's original, an under-provisioned configuration (a fold left with no
     training blocks) raises ``ValueError`` rather than silently dropping the fold, so
-    ``split`` always yields exactly ``n_splits`` folds on a valid configuration.
+    ``split`` always yields exactly ``n_splits`` folds on a valid configuration; and
+    ``block_size``/``test_blocks`` are validated as ``>= 1`` at construction (the original
+    accepted ``0``, which silently produced empty test folds or a ``ZeroDivisionError``).
 
     Parameters
     ----------
@@ -1151,6 +1175,10 @@ class BlockedTimeSeriesCV(BaseCrossValidator):  # type: ignore[misc]
             raise ValueError(f"n_splits must be >= 1, got {n_splits}")
         if gap_blocks < 0:
             raise ValueError(f"gap_blocks must be >= 0, got {gap_blocks}")
+        if block_size is not None and block_size < 1:
+            raise ValueError(f"block_size must be >= 1, got {block_size}")
+        if test_blocks is not None and test_blocks < 1:
+            raise ValueError(f"test_blocks must be >= 1, got {test_blocks}")
 
         self.n_splits = n_splits
         self.block_size = block_size
