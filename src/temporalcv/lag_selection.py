@@ -21,15 +21,17 @@ References
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.stattools import pacf
 
+from temporalcv._serialization import result_to_dict
 
-@dataclass(frozen=True)
+
+@dataclass(frozen=True, slots=True, eq=False)
 class LagSelectionResult:
     """Result of lag selection procedure.
 
@@ -46,10 +48,16 @@ class LagSelectionResult:
         All lag values that were evaluated.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     optimal_lag: int
     criterion_values: dict[int, float]
     method: str
     all_lags_tested: list[int]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this lag-selection result."""
+        return result_to_dict(self)
 
 
 def _compute_max_lag(n: int, max_lag: int | None) -> int:

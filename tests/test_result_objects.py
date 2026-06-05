@@ -20,6 +20,7 @@ from collections.abc import Callable
 import numpy as np
 import pytest
 
+from temporalcv.changepoint import Changepoint, ChangepointResult
 from temporalcv.compare.base import ComparisonReport, ComparisonResult, ModelResult
 from temporalcv.conformal import CoverageDiagnostics, PredictionInterval
 from temporalcv.cv import NestedCVResult, SplitInfo, SplitResult, WalkForwardResults
@@ -27,12 +28,19 @@ from temporalcv.cv_financial import PurgedSplit
 from temporalcv.diagnostics.influence import InfluenceDiagnostic
 from temporalcv.diagnostics.sensitivity import GapSensitivityResult
 from temporalcv.gates import GateResult, GateStatus, StratifiedValidationReport, ValidationReport
+from temporalcv.guardrails import GuardrailResult
 from temporalcv.inference.block_bootstrap_ci import BlockBootstrapResult
 from temporalcv.inference.wild_bootstrap import WildBootstrapResult
+from temporalcv.lag_selection import LagSelectionResult
 from temporalcv.metrics.event import BrierScoreResult, PRAUCResult
 from temporalcv.metrics.volatility_weighted import VolatilityStratifiedResult
 from temporalcv.persistence import MoveConditionalResult
 from temporalcv.regimes import StratifiedMetricsResult
+from temporalcv.stationarity import (
+    JointStationarityResult,
+    StationarityConclusion,
+    StationarityTestResult,
+)
 from temporalcv.statistical_tests import (
     BidirectionalEncompassingResult,
     CWTestResult,
@@ -128,6 +136,18 @@ def _comparison_result() -> ComparisonResult:
 
 def _validation_report() -> ValidationReport:
     return ValidationReport(gates=[GateResult(name="g", status=GateStatus.PASS, message="ok")])
+
+
+def _stationarity_test() -> StationarityTestResult:
+    return StationarityTestResult(
+        statistic=-3.5,
+        pvalue=0.01,
+        is_stationary=True,
+        test_name="adf",
+        lags_used=1,
+        regression="c",
+        critical_values={"5%": -2.9},
+    )
 
 
 # Every result object in the library. Add new ones here.
@@ -399,6 +419,50 @@ RESULT_FACTORIES: list[tuple[str, Callable[[], object]]] = [
             bootstrap_distribution=np.array([0.9, 1.0]),
         ),
     ),
+    # lag_selection / guardrails / stationarity / changepoint (review remediation)
+    (
+        "LagSelectionResult",
+        lambda: LagSelectionResult(
+            optimal_lag=2,
+            criterion_values={1: 0.5, 2: 0.3},
+            method="aic",
+            all_lags_tested=[1, 2, 3],
+        ),
+    ),
+    (
+        "GuardrailResult",
+        lambda: GuardrailResult(
+            passed=True,
+            warnings=["w"],
+            errors=[],
+            details={"x": 1},
+            skipped=[],
+            recommendations=["r"],
+        ),
+    ),
+    ("StationarityTestResult", _stationarity_test),
+    (
+        "JointStationarityResult",
+        lambda: JointStationarityResult(
+            adf_result=_stationarity_test(),
+            kpss_result=_stationarity_test(),
+            conclusion=next(iter(StationarityConclusion)),
+            recommended_action="none",
+        ),
+    ),
+    (
+        "Changepoint",
+        lambda: Changepoint(index=5, cost_reduction=1.2, regime_before="low", regime_after="high"),
+    ),
+    (
+        "ChangepointResult",
+        lambda: ChangepointResult(
+            changepoints=(Changepoint(index=5, cost_reduction=1.2),),
+            n_segments=2,
+            method="variance",
+            penalty=3.0,
+        ),
+    ),
 ]
 
 _IDS = [name for name, _ in RESULT_FACTORIES]
@@ -430,3 +494,41 @@ class TestResultObjectContract:
     def test_to_dict_is_json_serializable(self, factory: Callable[[], object]) -> None:
         obj = factory()
         json.dumps(obj.to_dict())  # type: ignore[attr-defined]  # must not raise
+
+
+def test_registry_is_exhaustive() -> None:
+    """Every dataclass carrying SCHEMA_VERSION must be registered, so the contract cannot rot.
+
+    This guard fails the moment a result object is added without a `RESULT_FACTORIES` entry — it
+    would have caught the six result objects (`LagSelectionResult`, `GuardrailResult`,
+    `Stationarity*`, `Changepoint*`) initially missed by the migration. The one documented
+    exclusion is the benchmarks dataset *holders* (`TimeSeriesDataset`/`DatasetMetadata`), which are
+    inputs, not result objects (and carry no `SCHEMA_VERSION`, so they are not flagged regardless).
+    """
+    import importlib
+    import inspect
+    import pkgutil
+
+    import temporalcv
+
+    found: set[str] = set()
+    for module_info in pkgutil.walk_packages(
+        temporalcv.__path__, prefix="temporalcv.", onerror=lambda _name: None
+    ):
+        if "benchmarks" in module_info.name:
+            continue
+        try:
+            module = importlib.import_module(module_info.name)
+        except ImportError:
+            continue  # optional-dependency module: its results are unconstructable in this env
+        for name, cls in inspect.getmembers(module, inspect.isclass):
+            if (
+                cls.__module__ == module_info.name
+                and dataclasses.is_dataclass(cls)
+                and hasattr(cls, "SCHEMA_VERSION")
+            ):
+                found.add(name)
+    missing = found - set(_IDS)
+    assert not missing, (
+        f"result objects carrying SCHEMA_VERSION but absent from RESULT_FACTORIES: {sorted(missing)}"
+    )

@@ -23,10 +23,12 @@ References
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
+
+from temporalcv._serialization import result_to_dict
 
 # Optional pandas import
 try:
@@ -47,7 +49,7 @@ except ImportError:
     rpt = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Changepoint:
     """Detected changepoint in time series.
 
@@ -63,13 +65,19 @@ class Changepoint:
         Regime classification after changepoint.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     index: int
     cost_reduction: float
     regime_before: str | None = None
     regime_after: str | None = None
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this changepoint."""
+        return result_to_dict(self)
 
-@dataclass(frozen=True)
+
+@dataclass(frozen=True, slots=True)
 class ChangepointResult:
     """Result of changepoint detection.
 
@@ -85,10 +93,16 @@ class ChangepointResult:
         Penalty parameter used.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     changepoints: tuple[Changepoint, ...]
     n_segments: int
     method: str
     penalty: float
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping (nests each changepoint)."""
+        return result_to_dict(self)
 
 
 def detect_changepoints_variance(
