@@ -8,9 +8,10 @@ restores safe object-identity semantics, so ``==`` and ``hash()`` never raise.
 This is the single canonical home for that invariant. When a new array-bearing result object
 is added to the library, add a factory for it to ``RESULT_FACTORIES`` below.
 
-History: the diagnostics/inference/financial five fixed/tested here in M1. (The cv-result
-trio was first fixed in R1, 5f35882.) Result objects with no array fields — e.g.
-``SplitInfo`` — keep value eq/hash and are covered in ``test_cv_result_objects.py``.
+History: the cv-result trio was first fixed in R1 (5f35882) and its eq/hash test relocated
+here in M1; the diagnostics/inference/financial five were fixed/added in M1. Result objects
+with no array fields — e.g. ``SplitInfo`` — keep value eq/hash and are covered in
+``test_cv_result_objects.py``.
 """
 
 from __future__ import annotations
@@ -20,11 +21,43 @@ from collections.abc import Callable
 import numpy as np
 import pytest
 
+from temporalcv.cv import NestedCVResult, SplitResult, WalkForwardResults
 from temporalcv.cv_financial import PurgedSplit
 from temporalcv.diagnostics.influence import InfluenceDiagnostic
 from temporalcv.diagnostics.sensitivity import GapSensitivityResult
 from temporalcv.inference.block_bootstrap_ci import BlockBootstrapResult
 from temporalcv.inference.wild_bootstrap import WildBootstrapResult
+
+
+def _split_result() -> SplitResult:
+    return SplitResult(
+        split_idx=0,
+        train_start=0,
+        train_end=9,
+        test_start=11,
+        test_end=15,
+        predictions=np.array([1.0, 2.0, 3.0]),
+        actuals=np.array([1.1, 1.9, 3.2]),
+    )
+
+
+def _walkforward_results() -> WalkForwardResults:
+    return WalkForwardResults(splits=[_split_result()])
+
+
+def _nested_cv_result() -> NestedCVResult:
+    return NestedCVResult(
+        best_params={"alpha": 1.0},
+        outer_scores=np.array([0.1, 0.2, 0.15]),
+        mean_outer_score=0.15,
+        std_outer_score=0.04,
+        inner_cv_results=[{"fold": 0}],
+        n_outer_splits=3,
+        n_inner_splits=2,
+        scoring="neg_mae",
+        best_params_per_fold=[{"alpha": 1.0}],
+        params_stability=1.0,
+    )
 
 
 def _purged_split() -> PurgedSplit:
@@ -91,6 +124,9 @@ def _wild_bootstrap_result() -> WildBootstrapResult:
 
 # Every array-bearing result object in the library. Add new ones here.
 RESULT_FACTORIES: list[tuple[str, Callable[[], object]]] = [
+    ("SplitResult", _split_result),
+    ("WalkForwardResults", _walkforward_results),
+    ("NestedCVResult", _nested_cv_result),
     ("PurgedSplit", _purged_split),
     ("InfluenceDiagnostic", _influence_diagnostic),
     ("GapSensitivityResult", _gap_sensitivity_result),

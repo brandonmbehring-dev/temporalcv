@@ -78,40 +78,6 @@ class TestFrozenSlotted:
             obj.some_undeclared_attr = 1  # type: ignore[attr-defined]
 
 
-class TestEqHashSafety:
-    """Array-bearing results use identity eq/hash (eq=False) so == / hash() never raise.
-
-    Regression (plan R1): with the default eq, frozen=True generates __eq__/__hash__ that
-    misbehave on the np.ndarray fields — ``hash()`` raises TypeError (unhashable ndarray)
-    for any array field, and ``==`` raises ValueError (ambiguous truth value) for these
-    multi-field results (the scalar/array field-tuple comparison forces ``bool()`` on an
-    array). eq=False restores safe identity semantics. SplitInfo (no array fields) keeps
-    value eq/hash and is covered elsewhere.
-    """
-
-    def test_split_result(self) -> None:
-        a, b = _split_result(), _split_result()
-        assert a == a
-        assert (a == b) is False  # identity: distinct instances are unequal
-        assert isinstance(hash(a), int)
-        assert len({a, b}) == 2
-
-    def test_walkforward_results(self) -> None:
-        a = WalkForwardResults(splits=[_split_result()])
-        b = WalkForwardResults(splits=[_split_result()])
-        assert a == a
-        assert a != b
-        assert isinstance(hash(a), int)
-        assert len({a, b}) == 2
-
-    def test_nested_cv_result(self) -> None:
-        a, b = _nested_result(), _nested_result()
-        assert a == a
-        assert a != b
-        assert isinstance(hash(a), int)
-        assert len({a, b}) == 2
-
-
 class TestToDict:
     """to_dict() is JSON-serializable and carries a schema_version."""
 
