@@ -31,11 +31,11 @@ logger = logging.getLogger(__name__)
 from temporalcv.compare.base import (
     ComparisonReport,
     ComparisonResult,
-    ForecastAdapter,
     ModelResult,
     _best_model_by_metric,
     compute_comparison_metrics,
 )
+from temporalcv.protocols import SupportsForecast
 
 # =============================================================================
 # Dataset Protocol (for type checking)
@@ -67,7 +67,7 @@ class Dataset(Protocol):
 
 def run_comparison(
     dataset: Dataset,
-    adapters: list[ForecastAdapter],
+    adapters: list[SupportsForecast],
     primary_metric: str = "mae",
     include_dm_test: bool = True,
     aggregation_mode: Literal["flatten", "per_series_mean", "per_series_median"] = "flatten",
@@ -79,7 +79,7 @@ def run_comparison(
     ----------
     dataset : Dataset
         Dataset to evaluate on (must have train/test split)
-    adapters : list[ForecastAdapter]
+    adapters : list[SupportsForecast]
         Model adapters to compare
     primary_metric : str, default="mae"
         Metric to use for ranking models
@@ -125,11 +125,7 @@ def run_comparison(
         start_time = time.perf_counter()
 
         try:
-            predictions = adapter.fit_predict(
-                train_values=train,
-                test_size=test_size,
-                horizon=horizon,
-            )
+            predictions = adapter.fit_predict(train, test_size, horizon)
         except Exception as e:
             # Log error but continue with other models
             logger.warning("%s failed: %s", adapter.model_name, e)
@@ -296,7 +292,7 @@ def _run_dm_tests(
 
 def run_benchmark_suite(
     datasets: list[Dataset],
-    adapters: list[ForecastAdapter],
+    adapters: list[SupportsForecast],
     primary_metric: str = "mae",
     include_dm_test: bool = True,
     aggregation_mode: Literal["flatten", "per_series_mean", "per_series_median"] = "flatten",
@@ -310,7 +306,7 @@ def run_benchmark_suite(
     ----------
     datasets : list[Dataset]
         Datasets to evaluate
-    adapters : list[ForecastAdapter]
+    adapters : list[SupportsForecast]
         Model adapters to compare
     primary_metric : str, default="mae"
         Metric to use for ranking
@@ -412,8 +408,8 @@ def run_benchmark_suite(
 
 def compare_to_baseline(
     dataset: Dataset,
-    adapter: ForecastAdapter,
-    baseline_adapter: ForecastAdapter | None = None,
+    adapter: SupportsForecast,
+    baseline_adapter: SupportsForecast | None = None,
     primary_metric: str = "mae",
 ) -> dict[str, Any]:
     """
@@ -423,9 +419,9 @@ def compare_to_baseline(
     ----------
     dataset : Dataset
         Dataset to evaluate
-    adapter : ForecastAdapter
+    adapter : SupportsForecast
         Model adapter to evaluate
-    baseline_adapter : ForecastAdapter, optional
+    baseline_adapter : SupportsForecast, optional
         Baseline to compare against. Default: NaiveAdapter
     primary_metric : str, default="mae"
         Metric to use for comparison

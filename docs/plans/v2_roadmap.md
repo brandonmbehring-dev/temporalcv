@@ -16,9 +16,20 @@ GitHub issue.
 - [ ] #11 generic AR/ARMA time-series simulators.
 
 ## Design (breaking → v2.0)
-- [ ] #12 unify seam vocabulary → static `@runtime_checkable` Protocols + sklearn base + mixins.
-- [ ] #13 frozen result objects (`frozen`+`slots`+`__post_init__`+`to_dict` + versioned JSON schema).
-- [ ] #14 capabilities-as-tags + executable conformance suite (`check_temporal_splitter`/`check_temporal_estimator`). **Conformance suite done (pilot)** — `src/temporalcv/conformance.py` (positive + negative tests); capabilities-as-tags still pending.
+- [x] #12 unify seam vocabulary → static `@runtime_checkable` Protocols + sklearn base + mixins.
+  **Done (A1, `feat/v2-seam-vocab`):** added `SupportsBootstrap` / `SupportsForecast` accept-seam
+  Protocols (peers of `SupportsFitPredict`); `BootstrapStrategy` / `ForecastAdapter` **kept** as
+  owned shared-impl ABC bases (the ADR's "mixins/ABCs we own"); consumers retyped to the Protocols;
+  `check_bootstrap_strategy` / `check_forecast_adapter` conformance added. The `cv_financial`
+  `BaseCrossValidator` realign was reconciled out of scope → deferred to **#25**.
+- [x] #13 frozen result objects (`frozen`+`slots`+`__post_init__`+`to_dict` + versioned JSON schema).
+  **Done (PR #20).**
+- [x] #14 capabilities-as-tags + executable conformance suite (`check_temporal_splitter`/`check_temporal_estimator`).
+  Conformance suite done (pilot); **tags done (A1):** a frozen `TemporalTags` descriptor
+  (`forward_only`/`deterministic`/`produces_oof`/`requires_groups`; **no** `SCHEMA_VERSION`) exposed
+  via `temporal_tags()` on the 4 forward-only `cv.py` splitters; `check_temporal_splitter`
+  cross-validates declared tags against observed behavior. (`NestedWalkForwardCV` excluded — a
+  tuning meta-estimator, not a splitter.)
 - [ ] #15 backend-agnostic contract (`ArrayLike` sigs + lazy splitter seam; reserve `xp`/narwhals).
 - [ ] #16 governance: layout/public-contract ADR + public-API stability test; fix `pyproject` URLs (→ canonical brandon-behring).
 

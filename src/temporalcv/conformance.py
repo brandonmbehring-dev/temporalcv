@@ -21,9 +21,15 @@ from typing import Any
 import numpy as np
 from numpy.typing import ArrayLike
 
-from temporalcv.protocols import CrossFitter, Splitter
+from temporalcv.protocols import CrossFitter, Splitter, SupportsBootstrap, SupportsForecast
+from temporalcv.tags import TemporalTags
 
-__all__ = ["check_temporal_splitter", "check_temporal_estimator"]
+__all__ = [
+    "check_temporal_splitter",
+    "check_temporal_estimator",
+    "check_bootstrap_strategy",
+    "check_forecast_adapter",
+]
 
 
 def _default_X(n_samples: int, n_features: int = 3) -> np.ndarray:
@@ -124,6 +130,38 @@ def check_temporal_splitter(
     if isinstance(splitter, CrossFitter):
         _check_cross_fitter(splitter, X_arr, folds)
 
+    # Capabilities-as-tags cross-check (#14): if the splitter declares temporal_tags, each
+    # declaration must be consistent with the behavior observed above. Only the *absence* of
+    # temporal_tags is optional — a present-but-malformed declaration (e.g. exposed as a property
+    # returning a non-TemporalTags, or a non-callable attribute) must fail loud, never be silently
+    # skipped. Accept either a method or a property/attribute that yields a TemporalTags.
+    tags_attr = getattr(splitter, "temporal_tags", None)
+    if tags_attr is not None:
+        tags = tags_attr() if callable(tags_attr) else tags_attr
+        assert isinstance(tags, TemporalTags), (
+            f"{name}.temporal_tags must be a TemporalTags (or a callable returning one); "
+            f"got {type(tags).__name__}."
+        )
+        # produces_oof is cross-validated bidirectionally against CrossFitter membership. The
+        # other three are consistency checks against the standard harness profile (which exercises
+        # a forward-only, deterministic, group-free split): a tag that contradicts that observed
+        # profile is rejected.
+        assert tags.forward_only, (
+            f"{name}.temporal_tags declares forward_only=False, yet every fold satisfied the "
+            f"no-lookahead invariant under the conformance harness."
+        )
+        assert tags.deterministic, (
+            f"{name}.temporal_tags declares deterministic=False, yet split(X) was reproducible."
+        )
+        assert tags.produces_oof == isinstance(splitter, CrossFitter), (
+            f"{name}.temporal_tags declares produces_oof={tags.produces_oof}, but "
+            f"isinstance(splitter, CrossFitter)={isinstance(splitter, CrossFitter)}."
+        )
+        assert not tags.requires_groups, (
+            f"{name}.temporal_tags declares requires_groups=True, yet split(X) produced folds "
+            f"without a groups argument."
+        )
+
 
 def _check_cross_fitter(
     cf: CrossFitter,
@@ -217,3 +255,152 @@ def check_temporal_estimator(
     assert np.all(np.isfinite(oof[covered])), (
         f"{name} produced non-finite OOF predictions on covered rows."
     )
+
+
+def check_bootstrap_strategy(
+    strategy: SupportsBootstrap,
+    *,
+    X: ArrayLike | None = None,
+    y: ArrayLike | None = None,
+    n_samples: int = 40,
+    n_boot: int = 5,
+) -> None:
+    """Assert ``strategy`` satisfies the bootstrap-strategy contract for
+    :class:`~temporalcv.TimeSeriesBagger`.
+
+    Invariants (each raises ``AssertionError`` on violation):
+
+    1. **Structural** — satisfies the :class:`~temporalcv.SupportsBootstrap` Protocol
+       (``generate_samples`` + ``transform_for_predict`` present).
+    2. **Sample shape** — ``generate_samples`` returns exactly ``n_boot`` ``(X_boot, y_boot)``
+       pairs; within each pair ``len(X_boot) == len(y_boot)`` and ``X_boot`` is 2-D with at
+       least one feature (feature-subsetting strategies may *reduce* the feature count).
+    3. **Determinism** — two calls under freshly-seeded *identical* generators produce identical
+       samples (the strategy must draw all randomness from the supplied ``rng``, never global
+       state).
+    4. **transform_for_predict** — returns an ndarray whose row count matches its input (the
+       default is identity; feature-subsetting strategies may change the column count).
+
+    Parameters
+    ----------
+    strategy : SupportsBootstrap
+        The resampling strategy under test.
+    X, y : ArrayLike, optional
+        Data to resample; deterministic defaults are generated when omitted.
+    n_samples : int, default=40
+        Number of rows when ``X`` is generated.
+    n_boot : int, default=5
+        Number of bootstrap samples requested from ``generate_samples``.
+    """
+    name = type(strategy).__name__
+    assert isinstance(strategy, SupportsBootstrap), (
+        f"{name} does not satisfy the SupportsBootstrap Protocol "
+        f"(needs generate_samples + transform_for_predict)."
+    )
+
+    X_arr = _default_X(n_samples) if X is None else np.asarray(X)
+    n = X_arr.shape[0]
+    if y is None:
+        y_arr = np.asarray(np.random.default_rng(2).standard_normal(n), dtype=float)
+    else:
+        y_arr = np.asarray(y, dtype=float)
+
+    samples = strategy.generate_samples(X_arr, y_arr, n_boot, np.random.default_rng(123))
+    assert len(samples) == n_boot, (
+        f"{name}.generate_samples returned {len(samples)} samples, expected n_boot={n_boot}."
+    )
+    for k, pair in enumerate(samples):
+        assert isinstance(pair, tuple) and len(pair) == 2, (
+            f"{name}.generate_samples item {k} is not an (X_boot, y_boot) pair."
+        )
+        x_boot, y_boot = np.asarray(pair[0]), np.asarray(pair[1])
+        assert len(x_boot) == len(y_boot), (
+            f"{name}.generate_samples item {k}: X_boot/y_boot length mismatch "
+            f"({len(x_boot)} vs {len(y_boot)})."
+        )
+        assert x_boot.ndim == 2 and x_boot.shape[1] >= 1, (
+            f"{name}.generate_samples item {k}: X_boot must be 2-D with >=1 feature "
+            f"(got shape {x_boot.shape})."
+        )
+
+    # Determinism: identical seed must reproduce the samples exactly.
+    samples2 = strategy.generate_samples(X_arr, y_arr, n_boot, np.random.default_rng(123))
+    for k, ((x1, y1), (x2, y2)) in enumerate(zip(samples, samples2, strict=True)):
+        assert np.array_equal(np.asarray(x1), np.asarray(x2)) and np.array_equal(
+            np.asarray(y1), np.asarray(y2)
+        ), f"{name}.generate_samples is non-deterministic at sample {k} (uses non-rng randomness?)."
+
+    # rng-consumption: the strategy must draw from the *supplied* Generator, not global/fixed
+    # state. Two DIFFERENT generators must yield at least one differing sample — otherwise the
+    # strategy ignores its rng and would silently defeat TimeSeriesBagger's per-estimator seeding
+    # (every estimator trained on the same resample -> ~zero ensemble variance).
+    other = strategy.generate_samples(X_arr, y_arr, n_boot, np.random.default_rng(999))
+    all_identical = all(
+        np.array_equal(np.asarray(a[0]), np.asarray(b[0]))
+        and np.array_equal(np.asarray(a[1]), np.asarray(b[1]))
+        for a, b in zip(samples, other, strict=True)
+    )
+    assert not all_identical, (
+        f"{name}.generate_samples produced identical samples under two different rngs — it "
+        f"ignores the supplied Generator (global or fixed RNG?), which would defeat per-estimator "
+        f"seeding in TimeSeriesBagger."
+    )
+
+    transformed = np.asarray(strategy.transform_for_predict(X_arr, 0))
+    assert transformed.shape[0] == n, (
+        f"{name}.transform_for_predict changed the row count ({transformed.shape[0]} != {n})."
+    )
+
+
+def check_forecast_adapter(
+    adapter: SupportsForecast,
+    *,
+    train_values: ArrayLike | None = None,
+    test_size: int = 5,
+    horizon: int = 5,
+) -> None:
+    """Assert ``adapter`` satisfies the forecast-adapter contract for the comparison runner.
+
+    Invariants (each raises ``AssertionError`` on violation):
+
+    1. **Structural** — satisfies the :class:`~temporalcv.SupportsForecast` Protocol
+       (``model_name`` + ``package_name`` + ``fit_predict`` + ``get_params`` present).
+    2. **Metadata** — ``model_name`` / ``package_name`` are non-empty strings and
+       ``get_params()`` returns a dict.
+    3. **fit_predict** — returns a finite ndarray whose trailing axis has length ``test_size``
+       (shape ``(test_size,)`` for a single series, ``(n_series, test_size)`` for a panel).
+
+    Parameters
+    ----------
+    adapter : SupportsForecast
+        The forecasting adapter under test.
+    train_values : ArrayLike, optional
+        Training series; a deterministic length-60 ramp is generated when omitted.
+    test_size, horizon : int, default=5
+        Forecast length / horizon passed to ``fit_predict``.
+    """
+    assert test_size >= 1, f"check_forecast_adapter requires test_size >= 1, got {test_size}."
+    name = type(adapter).__name__
+    assert isinstance(adapter, SupportsForecast), (
+        f"{name} does not satisfy the SupportsForecast Protocol "
+        f"(needs model_name, package_name, fit_predict, get_params)."
+    )
+    assert isinstance(adapter.model_name, str) and adapter.model_name, (
+        f"{name}.model_name must be a non-empty str."
+    )
+    assert isinstance(adapter.package_name, str) and adapter.package_name, (
+        f"{name}.package_name must be a non-empty str."
+    )
+    assert isinstance(adapter.get_params(), dict), f"{name}.get_params() must return a dict."
+
+    train = np.linspace(0.0, 1.0, 60) if train_values is None else np.asarray(train_values)
+    preds = np.asarray(adapter.fit_predict(train, test_size, horizon))
+    assert preds.ndim >= 1, (
+        f"{name}.fit_predict returned a 0-d/scalar result (shape {preds.shape}); expected a "
+        f"1-D array of length test_size={test_size} (or 2-D (n_series, test_size))."
+    )
+    assert preds.shape[-1] == test_size, (
+        f"{name}.fit_predict returned {preds.shape[-1]} predictions on its trailing axis, "
+        f"expected test_size={test_size}."
+    )
+    assert np.all(np.isfinite(preds)), f"{name}.fit_predict returned non-finite predictions."
