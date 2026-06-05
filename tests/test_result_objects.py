@@ -469,6 +469,27 @@ _IDS = [name for name, _ in RESULT_FACTORIES]
 _FACTORIES = [factory for _, factory in RESULT_FACTORIES]
 
 
+def _assert_json_native(value: object) -> None:
+    """Assert a to_dict() output holds only JSON-native leaves and string keys.
+
+    Stronger than ``json.dumps``, which silently accepts ``np.float64`` (a ``float`` subclass) and
+    so cannot catch a leaked numpy scalar — exactly the gap the PR #20 review flagged.
+    """
+    if value is None or isinstance(value, (bool, int, float, str)):
+        assert not isinstance(value, np.generic), f"leaked numpy scalar in to_dict(): {value!r}"
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            assert isinstance(key, str), f"non-string JSON object key: {key!r}"
+            _assert_json_native(item)
+        return
+    if isinstance(value, list):
+        for item in value:
+            _assert_json_native(item)
+        return
+    raise AssertionError(f"non-JSON-native value of type {type(value).__name__}: {value!r}")
+
+
 @pytest.mark.parametrize("factory", _FACTORIES, ids=_IDS)
 class TestResultObjectContract:
     """Every registered result object satisfies the v2.0 value-object contract."""
@@ -494,6 +515,11 @@ class TestResultObjectContract:
     def test_to_dict_is_json_serializable(self, factory: Callable[[], object]) -> None:
         obj = factory()
         json.dumps(obj.to_dict())  # type: ignore[attr-defined]  # must not raise
+
+    def test_to_dict_values_are_json_native(self, factory: Callable[[], object]) -> None:
+        # Stronger than the json.dumps check: catches a leaked numpy scalar (json.dumps accepts
+        # np.float64 silently) and any non-string mapping key.
+        _assert_json_native(factory().to_dict())  # type: ignore[attr-defined]
 
 
 def test_registry_is_exhaustive() -> None:
@@ -532,3 +558,27 @@ def test_registry_is_exhaustive() -> None:
     assert not missing, (
         f"result objects carrying SCHEMA_VERSION but absent from RESULT_FACTORIES: {sorted(missing)}"
     )
+
+
+def test_multimodel_to_dict_stringifies_tuple_keys_and_nests() -> None:
+    """Tuple-key path: dict[tuple[str, str], DMTestResult] -> {"A,B": {...}}; values preserved."""
+    d = _multi_model().to_dict()
+    assert "A,B" in d["pairwise_results"]  # tuple ("A", "B") -> "A,B"
+    assert d["pairwise_results"]["A,B"]["schema_version"] == DMTestResult.SCHEMA_VERSION
+    assert d["model_rankings"] == [["A", 0.1], ["B", 0.2]]  # tuples -> lists
+
+
+def test_multihorizon_to_dict_stringifies_int_keys_and_preserves_values() -> None:
+    """Int-key path: dict[int, ...] -> {"1": ...}; nested np.float64 preserved as a python float."""
+    d = MultiHorizonResult(
+        horizons=(1, 2),
+        dm_results={1: _dm()},
+        model_1_name="m1",
+        model_2_name="m2",
+        n_per_horizon={1: 100},
+        loss="squared",
+        alternative="two-sided",
+        alpha=0.05,
+    ).to_dict()
+    assert d["n_per_horizon"]["1"] == 100  # int key 1 -> "1"
+    assert d["dm_results"]["1"]["statistic"] == 1.5  # np.float64(1.5) -> python 1.5, nested
