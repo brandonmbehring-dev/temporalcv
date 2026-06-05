@@ -25,7 +25,7 @@ import numpy as np
 from temporalcv.statistical_tests import compute_hac_variance
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class InfluenceDiagnostic:
     """
     Result of influence analysis on DM test statistic.

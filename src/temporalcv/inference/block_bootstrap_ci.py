@@ -47,7 +47,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class BlockBootstrapResult:
     """
     Result of block bootstrap confidence interval estimation.

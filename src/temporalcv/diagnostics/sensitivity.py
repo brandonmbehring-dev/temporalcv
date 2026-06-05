@@ -20,7 +20,7 @@ from numpy.typing import ArrayLike
 from temporalcv.cv import WalkForwardCV
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class GapSensitivityResult:
     """
     Result of gap sensitivity analysis.
