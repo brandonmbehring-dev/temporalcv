@@ -16,9 +16,14 @@ URLs already point at canonical `brandon-behring`.
 ## Decision
 1. **The stable v2.0 surface is the top-level `temporalcv` namespace via `__all__`** (175 names).
    Subpackages (`compare/`, `bagging/`, `metrics/`, `viz/`, `diagnostics/`, `inference/`,
-   `validators/`, `benchmarks/`) are **implementation grouping, not stable import paths** —
-   consumers import `from temporalcv import X`, never `from temporalcv.bagging.base import X`.
-   (Restates ADR 0001 §4 and makes it testable.)
+   `validators/`, `benchmarks/`) are **implementation grouping**: subpackage import paths
+   (`from temporalcv.bagging.base import X`) are **unstable and unsupported** — they may move
+   between versions, and only the top-level surface carries the v2.0 stability guarantee (restates
+   ADR 0001 §4). *Scope note:* the repo's own tests and examples currently import some subpaths for
+   convenience, and `tests/test_public_api.py` enforces the **contents** of the top-level surface
+   (drift / dangling export / private leak), **not** a subpath-import ban; migrating examples to
+   top-level imports and adding an import-surface guard is future work, not an enforced invariant
+   today.
 2. **Enforcement = `tests/test_public_api.py`:** a frozen snapshot of `sorted(__all__)` (any
    addition/removal/rename fails loud and must update the snapshot deliberately), plus a
    no-dangling-export guard (every name resolves on the package) and a no-private-leak guard (no
