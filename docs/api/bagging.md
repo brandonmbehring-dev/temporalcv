@@ -14,7 +14,7 @@ Generic time series bagger.
 class TimeSeriesBagger:
     def __init__(
         self,
-        base_model: SupportsPredict,
+        base_model: SupportsFitPredict,
         strategy: BootstrapStrategy,
         n_estimators: int = 20,
         aggregation: Literal["mean", "median"] = "mean",
@@ -26,7 +26,7 @@ class TimeSeriesBagger:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `base_model` | `SupportsPredict` | required | Model to bag |
+| `base_model` | `SupportsFitPredict` | required | Model to bag |
 | `strategy` | `BootstrapStrategy` | required | Bootstrap strategy |
 | `n_estimators` | `int` | `20` | Number of bootstrap estimators |
 | `aggregation` | `str` | `"mean"` | How to combine predictions |
@@ -141,7 +141,7 @@ Create bagger with Moving Block Bootstrap.
 
 ```python
 def create_block_bagger(
-    base_model: SupportsPredict,
+    base_model: SupportsFitPredict,
     n_estimators: int = 20,
     block_length: Optional[int] = None,
     aggregation: str = "mean",
@@ -174,7 +174,7 @@ Create bagger with Stationary Bootstrap.
 
 ```python
 def create_stationary_bagger(
-    base_model: SupportsPredict,
+    base_model: SupportsFitPredict,
     n_estimators: int = 20,
     expected_block_length: Optional[float] = None,
     aggregation: str = "mean",
@@ -190,7 +190,7 @@ Create bagger with Feature Bagging (Random Subspace).
 
 ```python
 def create_feature_bagger(
-    base_model: SupportsPredict,
+    base_model: SupportsFitPredict,
     n_estimators: int = 20,
     max_features: float = 0.7,
     aggregation: str = "mean",

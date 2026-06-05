@@ -45,8 +45,12 @@ class Splitter(Protocol):
         X: ArrayLike | None = None,
         y: ArrayLike | None = None,
         groups: ArrayLike | None = None,
-    ) -> int:
-        """Number of splits the splitter will produce."""
+    ) -> int | None:
+        """Number of splits the splitter will produce.
+
+        May return ``None`` for a lazy splitter whose split count is not known ahead of
+        iteration; the conformance suite skips the count-consistency check in that case.
+        """
         ...
 
 

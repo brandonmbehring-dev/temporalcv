@@ -529,10 +529,11 @@ class NestedCVResult:
 
     Example
     -------
-    >>> result = nested_cv.fit(X, y)
-    >>> print(f"Best params: {result.best_params_}")
-    >>> print(f"Score: {result.mean_outer_score_:.4f} ± {result.std_outer_score_:.4f}")
-    >>> if result.params_stability_ < 0.6:
+    >>> nested_cv.fit(X, y)  # fit() returns the estimator (self), not the result
+    >>> result = nested_cv.get_result()  # NestedCVResult
+    >>> print(f"Best params: {result.best_params}")
+    >>> print(f"Score: {result.mean_outer_score:.4f} ± {result.std_outer_score:.4f}")
+    >>> if result.params_stability < 0.6:
     ...     print("Warning: High hyperparameter instability across folds")
 
     See Also
@@ -1274,6 +1275,13 @@ def cross_fit_residualize(
         in **both** outputs, identically — a single ``~np.isnan`` mask drops them while
         keeping the two vectors aligned.
 
+    Raises
+    ------
+    ValueError
+        If ``X``, ``A`` and ``B`` do not share their first-axis length, or if
+        ``cv.split(X)`` yields no folds (returning all-NaN would silently propagate NaN
+        estimates downstream under partialling-out, so an empty splitter is rejected).
+
     Notes
     -----
     The fold loop runs **once**: for each ``(train_idx, test_idx)`` both models are fit
@@ -1286,7 +1294,7 @@ def cross_fit_residualize(
 
     Example
     -------
-    >>> from sklearn.ensemble import RandomForestRegressor
+    >>> from sklearn.linear_model import LinearRegression
     >>> import numpy as np
     >>> rng = np.random.default_rng(0)
     >>> X = rng.standard_normal((200, 3))
@@ -1294,12 +1302,13 @@ def cross_fit_residualize(
     >>> y = 2.0 * d + X[:, 1] + rng.standard_normal(200) * 0.1
     >>> cv = CrossFitCV(n_splits=5)
     >>> y_res, d_res = cross_fit_residualize(
-    ...     RandomForestRegressor(random_state=0),
-    ...     RandomForestRegressor(random_state=0),
-    ...     X, y, d, cv,
+    ...     LinearRegression(), LinearRegression(), X, y, d, cv
     ... )
     >>> mask = ~np.isnan(y_res)  # identical mask applies to d_res
-    >>> theta = float(np.polyfit(d_res[mask], y_res[mask], 1)[0])  # ~2.0
+    >>> theta = float(np.polyfit(d_res[mask], y_res[mask], 1)[0])  # ~2.0 (true effect)
+
+    Note: use a nuisance learner matched to the data-generating process; an underfitting
+    learner biases the partialled-out estimate. The seam does not validate fit quality.
 
     See Also
     --------

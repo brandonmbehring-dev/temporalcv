@@ -82,9 +82,11 @@ class TestEqHashSafety:
     """Array-bearing results use identity eq/hash (eq=False) so == / hash() never raise.
 
     Regression (plan R1): with the default eq, frozen=True generates __eq__/__hash__ that
-    raise on the np.ndarray fields — ValueError on ``==`` (ambiguous truth value) and
-    TypeError on ``hash()`` (unhashable ndarray). eq=False restores safe identity
-    semantics. SplitInfo (no array fields) keeps value eq/hash and is covered elsewhere.
+    misbehave on the np.ndarray fields — ``hash()`` raises TypeError (unhashable ndarray)
+    for any array field, and ``==`` raises ValueError (ambiguous truth value) for these
+    multi-field results (the scalar/array field-tuple comparison forces ``bool()`` on an
+    array). eq=False restores safe identity semantics. SplitInfo (no array fields) keeps
+    value eq/hash and is covered elsewhere.
     """
 
     def test_split_result(self) -> None:

@@ -233,6 +233,21 @@ class TestDmlTsGoldenParity:
 # =============================================================================
 
 
+class _LazyNoneSplitter:
+    """A valid splitter whose get_n_splits returns None (lazy, count unknown ahead of
+    iteration). Exercises the contract that ``get_n_splits`` may be ``None``."""
+
+    def split(
+        self, X: object, y: object = None, groups: object = None
+    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        n = len(X)  # type: ignore[arg-type]
+        half = n // 2
+        yield np.arange(0, half, dtype=np.intp), np.arange(half, n, dtype=np.intp)
+
+    def get_n_splits(self, X: object = None, y: object = None, groups: object = None) -> None:
+        return None
+
+
 class TestConformancePositive:
     """Library-provided splitters/estimators must pass their own contract."""
 
@@ -241,6 +256,11 @@ class TestConformancePositive:
 
     def test_walkforwardcv_conforms(self) -> None:
         check_temporal_splitter(WalkForwardCV(n_splits=5))
+
+    def test_lazy_none_get_n_splits_accepted(self) -> None:
+        # the contract permits get_n_splits() -> None for lazy splitters; the suite must
+        # accept it (skipping only the count-consistency check), not reject it.
+        check_temporal_splitter(_LazyNoneSplitter())
 
     @pytest.mark.parametrize(
         "estimator",

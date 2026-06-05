@@ -108,7 +108,7 @@ class ValidationReport:
 
 ```python
 def gate_signal_verification(
-    model: FitPredictModel,
+    model: SupportsFitPredict,
     X: ArrayLike,
     y: ArrayLike,
     n_shuffles: Optional[int] = None,
@@ -133,7 +133,7 @@ def gate_signal_verification(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `model` | `FitPredictModel` | required | Model with `fit(X, y)` and `predict(X)` methods |
+| `model` | `SupportsFitPredict` | required | Model with `fit(X, y)` and `predict(X)` methods |
 | `X` | `ArrayLike` | required | Feature matrix (n_samples, n_features) |
 | `y` | `ArrayLike` | required | Target vector (n_samples,) |
 | `n_shuffles` | `int` | `None` | Number of shuffles. Defaults to 100 for permutation mode, 5 for effect_size mode |
@@ -185,7 +185,7 @@ Test model on synthetic AR(1) where theoretical optimum is known.
 
 ```python
 def gate_synthetic_ar1(
-    model: FitPredictModel,
+    model: SupportsFitPredict,
     phi: float = 0.95,
     sigma: float = 1.0,
     n_samples: int = 500,
@@ -204,7 +204,7 @@ def gate_synthetic_ar1(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `model` | `FitPredictModel` | required | Model to test |
+| `model` | `SupportsFitPredict` | required | Model to test |
 | `phi` | `float` | `0.95` | AR(1) coefficient |
 | `sigma` | `float` | `1.0` | Innovation standard deviation |
 | `n_samples` | `int` | `500` | Samples to generate |

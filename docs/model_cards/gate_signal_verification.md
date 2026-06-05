@@ -44,7 +44,7 @@
 
 | Parameter | Type | Default | Description | Tier |
 |-----------|------|---------|-------------|------|
-| `model` | FitPredictModel | required | sklearn-compatible model | - |
+| `model` | SupportsFitPredict | required | sklearn-compatible model | - |
 | `X` | ArrayLike | required | Feature matrix (n_samples, n_features) | - |
 | `y` | ArrayLike | required | Target vector (n_samples,) | - |
 | `method` | str | "permutation" | "permutation" or "effect_size" | [T1/T3] |
