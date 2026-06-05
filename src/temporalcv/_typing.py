@@ -6,11 +6,12 @@ concrete ``np.ndarray``. The annotation is the contract: *widening* ``np.ndarray
 later would be a breaking change, so the public contract is widened now even though the
 implementation only ever runs on numpy today (hub ``library-design-playbook.md`` §4, ADR 0001 §3).
 
-This module is the single reserved seam for future backends: an array-API (``xp``) namespace and a
-narwhals dataframe boundary would be introduced HERE, without touching call sites. Until then,
-:func:`as_array` is the one normalization boundary — a public function widens its signature to
-``ArrayLike`` and calls :func:`as_array` (or an existing ``np.asarray``) to recover a concrete array
-for the numpy implementation.
+This module is the **reserved** home for a future backend seam: an array-API (``xp``) namespace and
+a narwhals dataframe boundary would be introduced HERE. :func:`as_array` is the normalization
+boundary for code written against it. Note (truth-in-advertising): most existing public functions
+recover their concrete array via a direct ``np.asarray`` call rather than :func:`as_array`, so a
+future backend swap would migrate those sites to :func:`as_array` too — it is the *reserved* seam,
+not yet a single universal chokepoint.
 """
 
 from __future__ import annotations
@@ -24,8 +25,9 @@ __all__ = ["ArrayLike", "as_array"]
 def as_array(x: ArrayLike, dtype: DTypeLike | None = None) -> np.ndarray:
     """Normalize an ``ArrayLike`` input to a concrete ``np.ndarray`` at a public boundary.
 
-    The single reserved seam where a future array-API / narwhals backend would dispatch; today it is
-    a thin :func:`numpy.asarray`. ``dtype=None`` infers the dtype (numpy's default).
+    The reserved seam where a future array-API / narwhals backend would dispatch (most existing call
+    sites currently use ``np.asarray`` directly); today a thin :func:`numpy.asarray`. ``dtype=None``
+    infers the dtype (numpy's default).
 
     Parameters
     ----------

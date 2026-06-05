@@ -17,13 +17,21 @@ import pytest
 from temporalcv import (
     SplitConformalPredictor,
     adf_test,
+    check_residual_autocorrelation,
     classify_volatility_regime,
+    compute_dm_influence,
+    compute_hac_variance,
     compute_mae,
+    compute_move_conditional_metrics,
     compute_move_threshold,
     compute_rmse,
     detect_changepoints,
     dm_test,
+    pt_test,
 )
+from temporalcv.metrics.event import compute_pr_auc
+from temporalcv.statistical_tests import compute_self_normalized_variance
+from temporalcv.viz.intervals import PredictionIntervalDisplay
 
 
 def _close(a: Any, b: Any) -> bool:
@@ -101,3 +109,79 @@ def test_metrics_container_agnostic(container: type) -> None:
     acts = preds + rng.standard_normal(40) * 0.2
     expected = compute_mae(preds, acts)
     assert _close(compute_mae(container(preds.tolist()), container(acts.tolist())), expected)
+
+
+# =============================================================================
+# Review remediation — lock the arithmetic-core, the two new as_array sites,
+# and the three hand-fixed forwarding spots against future dropped-normalization.
+# =============================================================================
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+def test_pt_test_accepts_list_like(container: type) -> None:
+    # First core op is boolean-mask assignment `classes[values > thr] = 1` — a raw list breaks.
+    rng = np.random.default_rng(5)
+    a = rng.standard_normal(50)
+    p = a + rng.standard_normal(50) * 0.4
+    assert _close(
+        pt_test(container(a.tolist()), container(p.tolist())).statistic, pt_test(a, p).statistic
+    )
+
+
+def test_compute_move_conditional_metrics_accepts_list_like() -> None:
+    # Boolean-mask selection `predictions[mask]` after thresholding — a raw list breaks.
+    rng = np.random.default_rng(6)
+    p = rng.standard_normal(80)
+    a = p + rng.standard_normal(80) * 0.3
+    r_list = compute_move_conditional_metrics(p.tolist(), a.tolist())
+    r_arr = compute_move_conditional_metrics(p, a)
+    assert _close(r_list.mae_up, r_arr.mae_up)
+    assert r_list.n_up == r_arr.n_up
+
+
+def test_compute_pr_auc_accepts_list_like() -> None:
+    # Sorts/indexes pred_probs[order] for the PR curve — a raw list breaks.
+    rng = np.random.default_rng(7)
+    pr = rng.random(60)
+    binary = (rng.random(60) > 0.5).astype(int)
+    assert _close(
+        compute_pr_auc(pr.tolist(), binary.tolist()).pr_auc, compute_pr_auc(pr, binary).pr_auc
+    )
+
+
+def test_new_as_array_variance_sites_accept_list_like() -> None:
+    # The two functions that gained a NEW as_array(d) call in this PR.
+    rng = np.random.default_rng(8)
+    d = rng.standard_normal(70)
+    assert _close(compute_hac_variance(d.tolist()), compute_hac_variance(d))
+    assert _close(compute_self_normalized_variance(d.tolist()), compute_self_normalized_variance(d))
+
+
+def test_compute_dm_influence_accepts_list_like() -> None:
+    rng = np.random.default_rng(9)
+    e1 = rng.standard_normal(60)
+    e2 = e1 + rng.standard_normal(60) * 0.5
+    r_list = compute_dm_influence(e1.tolist(), e2.tolist())
+    r_arr = compute_dm_influence(e1, e2)
+    assert np.array_equal(
+        np.asarray(r_list.observation_influence), np.asarray(r_arr.observation_influence)
+    )
+
+
+def test_check_residual_autocorrelation_accepts_list_like() -> None:
+    # Hand-fixed forwarding spot: normalization order + re-narrowing.
+    rng = np.random.default_rng(10)
+    resid = rng.standard_normal(100)
+    assert (
+        check_residual_autocorrelation(resid.tolist()).passed
+        == check_residual_autocorrelation(resid).passed
+    )
+
+
+def test_prediction_interval_display_accepts_list_x() -> None:
+    # Hand-fixed new as_array site: PredictionIntervalDisplay stored x raw before the sweep.
+    rng = np.random.default_rng(11)
+    preds = rng.standard_normal(20)
+    x = list(range(20))
+    disp = PredictionIntervalDisplay(preds, preds - 1.0, preds + 1.0, x=x)
+    assert np.array_equal(np.asarray(disp.x), np.asarray(x))
