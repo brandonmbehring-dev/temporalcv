@@ -12,15 +12,16 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
 
+from temporalcv._serialization import result_to_dict
 from temporalcv.cv import WalkForwardCV
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True, slots=True, eq=False)
 class GapSensitivityResult:
     """
     Result of gap sensitivity analysis.
@@ -59,6 +60,8 @@ class GapSensitivityResult:
     - Non-monotonic patterns may indicate data irregularities
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     gap_values: np.ndarray
     metrics: np.ndarray
     metric_name: str
@@ -67,6 +70,10 @@ class GapSensitivityResult:
     degradation_threshold: float
     baseline_metric: float
     baseline_gap: int
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this sensitivity result."""
+        return result_to_dict(self)
 
 
 def gap_sensitivity_analysis(

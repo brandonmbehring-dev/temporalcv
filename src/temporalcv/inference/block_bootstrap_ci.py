@@ -42,12 +42,15 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import NDArray
 
+from temporalcv._serialization import result_to_dict
 
-@dataclass(frozen=True, eq=False)
+
+@dataclass(frozen=True, slots=True, eq=False)
 class BlockBootstrapResult:
     """
     Result of block bootstrap confidence interval estimation.
@@ -78,6 +81,8 @@ class BlockBootstrapResult:
     bias-corrected accelerated (BCa) intervals (not implemented here).
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     estimate: float
     ci_lower: float
     ci_upper: float
@@ -86,6 +91,10 @@ class BlockBootstrapResult:
     n_bootstrap: int
     block_length: int
     bootstrap_distribution: NDArray[np.float64]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this bootstrap result."""
+        return result_to_dict(self)
 
 
 def compute_block_length(n: int) -> int:
