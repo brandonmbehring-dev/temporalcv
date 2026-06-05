@@ -31,7 +31,11 @@ GitHub issue.
   cross-validates declared tags against observed behavior. (`NestedWalkForwardCV` excluded — a
   tuning meta-estimator, not a splitter.)
 - [ ] #15 backend-agnostic contract (`ArrayLike` sigs + lazy splitter seam; reserve `xp`/narwhals).
-- [ ] #16 governance: layout/public-contract ADR + public-API stability test; fix `pyproject` URLs (→ canonical brandon-behring).
+- [x] #16 governance: layout/public-contract ADR + public-API stability test; fix `pyproject` URLs (→ canonical brandon-behring).
+  **Done (A1):** `docs/adr/0002-public-contract-and-layout.md` (the top-level `__all__` IS the stable
+  surface; subpackages are not import paths; `cv.py` vs `cv_financial.py`; seams/tags/result-object
+  layout). `tests/test_public_api.py` snapshots the 175-name `__all__` (drift fails loud) + guards
+  no-dangling-export / no-private-leak. `pyproject` URLs verified already canonical.
 
 ## Follow-up
 - [ ] #17 eval-toolkit ↔ temporalcv purged-splitter overlap (keep separate per hub `universal-vs-unique.md`).
