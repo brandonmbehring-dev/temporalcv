@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Generator, Sized
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
@@ -1166,7 +1167,9 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
             try:
                 model_clone = clone(model)
             except TypeError:
-                model_clone = model
+                # Not an sklearn estimator: deep-copy for a fresh per-fold instance
+                # (avoids cross-fold state leakage for stateful learners).
+                model_clone = deepcopy(model)
 
             model_clone.fit(X[train_idx], y[train_idx])
             predictions[test_idx] = model_clone.predict(X[test_idx])
@@ -1314,15 +1317,26 @@ def cross_fit_residualize(
             f"X={X.shape[0]}, A={n_samples}, B={B.shape[0]}."
         )
 
+    folds = list(cv.split(X))
+    if not folds:
+        raise ValueError(
+            f"{type(cv).__name__}.split yielded no folds for n_samples={n_samples}; "
+            "cannot residualize (an all-NaN result would silently produce NaN estimates "
+            "downstream). Use more observations, fewer splits, or a smaller gap."
+        )
+
     a_hat = np.full(n_samples, np.nan)
     b_hat = np.full(n_samples, np.nan)
 
-    for train_idx, test_idx in cv.split(X):
+    for train_idx, test_idx in folds:
         for model, target, out in ((model_a, A, a_hat), (model_b, B, b_hat)):
             try:
                 fold_model = clone(model)
             except TypeError:
-                fold_model = model
+                # Not an sklearn estimator: deep-copy so each fold trains a fresh,
+                # independent instance (no state leakage across folds for stateful
+                # learners). Raises if the object is genuinely un-copyable.
+                fold_model = deepcopy(model)
             fold_model.fit(X[train_idx], target[train_idx])
             out[test_idx] = fold_model.predict(X[test_idx])
 

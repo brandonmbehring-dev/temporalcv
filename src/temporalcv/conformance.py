@@ -15,6 +15,7 @@ conformance suite is the contract").
 
 from __future__ import annotations
 
+import inspect
 from typing import Any
 
 import numpy as np
@@ -108,10 +109,13 @@ def check_temporal_splitter(
         )
 
     # get_n_splits consistency (None allowed for lazy splitters per the contract).
-    try:
-        n_splits = splitter.get_n_splits(X_arr)
-    except TypeError:
-        n_splits = splitter.get_n_splits()
+    # Dispatch on the signature rather than catching TypeError, so a genuine TypeError
+    # raised *inside* a get_n_splits(X) body propagates instead of being masked.
+    accepts_x = any(
+        p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD, p.VAR_POSITIONAL)
+        for p in inspect.signature(splitter.get_n_splits).parameters.values()
+    )
+    n_splits = splitter.get_n_splits(X_arr) if accepts_x else splitter.get_n_splits()
     if n_splits is not None:
         assert int(n_splits) == len(folds), (
             f"{name}.get_n_splits(X)={n_splits} != folds yielded={len(folds)}."

@@ -470,20 +470,38 @@ class _NonCloneableModel:
         return np.asarray(np.asarray(X) @ self.coef_)
 
 
+class _StatefulNonCloneable:
+    """Non-cloneable AND stateful: predict() reveals how many times it was fit.
+
+    Lets the test prove the clone-fallback deep-copies a fresh instance per fold (so each
+    sees exactly one fit) rather than reusing one instance (which would leak fit-count,
+    i.e. corrupt OOF predictions, across folds).
+    """
+
+    def __init__(self) -> None:
+        self.n_fits = 0
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> _StatefulNonCloneable:
+        self.n_fits += 1
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return np.full(len(X), float(self.n_fits))
+
+
 class TestCrossFitResidualizeEdgeCases:
     """Behaviour of cross_fit_residualize on the irregular paths (review R3)."""
 
-    def test_zero_folds_returns_all_nan_shared_mask(
+    def test_zero_folds_raises(
         self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
     ) -> None:
+        # C1 (review R5): zero usable folds is a loud error in the seam, not silent all-NaN
+        # (which would yield NaN estimates downstream under FWL-by-formula).
         X, y, d, _ = linear_dgp
-        y_res, d_res = cross_fit_residualize(
-            LinearRegression(), LinearRegression(), X, y, d, _ZeroFoldSplitter()
-        )
-        # documented contract: uncovered rows are NaN; zero folds -> all NaN, both identical.
-        assert np.all(np.isnan(y_res))
-        assert np.all(np.isnan(d_res))
-        np.testing.assert_array_equal(np.isnan(y_res), np.isnan(d_res))
+        with pytest.raises(ValueError, match="no folds"):
+            cross_fit_residualize(
+                LinearRegression(), LinearRegression(), X, y, d, _ZeroFoldSplitter()
+            )
 
     def test_noncontiguous_coverage_shares_mask(
         self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
@@ -507,13 +525,96 @@ class TestCrossFitResidualizeEdgeCases:
         np.testing.assert_array_equal(np.isnan(y_res), np.isnan(d_res))
         assert np.isfinite(y_res[~np.isnan(y_res)]).all()
 
-    def test_nan_in_target_fails_loud(
+    def test_clone_fallback_isolates_fold_state(
         self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
     ) -> None:
+        # C2 (review R5): the deepcopy fallback gives each fold a fresh instance, so a
+        # stateful non-cloneable learner sees exactly ONE fit per fold. Its predict()
+        # returns n_fits, so every covered row must read 1.0 — not 2, 3, 4... that a
+        # leaked/reused single instance would produce.
+        X, y, d, _ = linear_dgp
+        y_res, _ = cross_fit_residualize(
+            _StatefulNonCloneable(), _StatefulNonCloneable(), X, y, d, CrossFitCV(n_splits=5)
+        )
+        covered = ~np.isnan(y_res)
+        predicted = y - y_res  # predicted value == n_fits the fold's model has seen
+        np.testing.assert_allclose(predicted[covered], 1.0)
+
+    def test_nan_in_target_with_validating_learner_raises(
+        self, linear_dgp: tuple[np.ndarray, np.ndarray, np.ndarray, float]
+    ) -> None:
+        # H1 (review R5): the seam itself does NOT validate finiteness — this raises only
+        # because the *learner* (sklearn here) rejects NaN. NaN-tolerant learners would
+        # absorb it silently; the test name reflects that scoping.
         X, y, d, _ = linear_dgp
         y_bad = y.copy()
-        y_bad[3] = np.nan  # row 3 lands in fold 0 -> training fold for later folds
-        with pytest.raises(ValueError):
+        y_bad[3] = np.nan  # row 3 lands in fold 0 -> a training fold for later folds
+        with pytest.raises(ValueError, match="NaN"):
             cross_fit_residualize(
                 LinearRegression(), LinearRegression(), X, y_bad, d, CrossFitCV(n_splits=5)
             )
+
+
+# =============================================================================
+# CrossFitter OOF / residual contract — negative (review R5 / G1)
+# =============================================================================
+
+
+class _LeakyCrossFitter:
+    """A CrossFitter that writes finite predictions on uncovered rows (leakage)."""
+
+    def split(
+        self, X: object, y: object = None, groups: object = None
+    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        n = len(X)  # type: ignore[arg-type]
+        half = n // 2
+        yield np.arange(0, half, dtype=np.intp), np.arange(half, n, dtype=np.intp)
+
+    def get_n_splits(self, X: object = None, y: object = None, groups: object = None) -> int:
+        return 1
+
+    def fit_predict(self, model: object, X: object, y: object) -> np.ndarray:
+        # BUG: all-finite, including the uncovered leading block [0, half)
+        return np.zeros(len(y))  # type: ignore[arg-type]
+
+    def fit_predict_residuals(self, model: object, X: object, y: object) -> np.ndarray:
+        return np.asarray(y) - self.fit_predict(model, X, y)
+
+
+class _InconsistentResidualCrossFitter:
+    """fit_predict_residuals disagrees with y - fit_predict."""
+
+    def split(
+        self, X: object, y: object = None, groups: object = None
+    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        n = len(X)  # type: ignore[arg-type]
+        half = n // 2
+        yield np.arange(0, half, dtype=np.intp), np.arange(half, n, dtype=np.intp)
+
+    def get_n_splits(self, X: object = None, y: object = None, groups: object = None) -> int:
+        return 1
+
+    def fit_predict(self, model: object, X: object, y: object) -> np.ndarray:
+        n = len(y)  # type: ignore[arg-type]
+        half = n // 2
+        out = np.full(n, np.nan)
+        out[half:] = 0.0  # covered rows finite, uncovered NaN (correct)
+        return out
+
+    def fit_predict_residuals(self, model: object, X: object, y: object) -> np.ndarray:
+        return np.full(len(y), 999.0)  # type: ignore[arg-type]  # BUG: != y - fit_predict
+
+
+class TestCrossFitterContractNegative:
+    """check_temporal_splitter must enforce the CrossFitter OOF/residual contract (G1)."""
+
+    def test_leaky_uncovered_predictions_rejected(self) -> None:
+        # the NaN-on-uncovered leakage invariant — the one dml_ts most relies on
+        assert isinstance(_LeakyCrossFitter(), CrossFitter)
+        with pytest.raises(AssertionError, match="uncovered"):
+            check_temporal_splitter(_LeakyCrossFitter())
+
+    def test_inconsistent_residuals_rejected(self) -> None:
+        assert isinstance(_InconsistentResidualCrossFitter(), CrossFitter)
+        with pytest.raises(AssertionError, match="fit_predict_residuals"):
+            check_temporal_splitter(_InconsistentResidualCrossFitter())
