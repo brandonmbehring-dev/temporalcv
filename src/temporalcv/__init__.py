@@ -91,11 +91,13 @@ from temporalcv.conformance import check_temporal_estimator, check_temporal_spli
 
 # Cross-validation exports
 from temporalcv.cv import (
+    BlockedTimeSeriesCV,
     CrossFitCV,
     NestedCVResult,
     NestedWalkForwardCV,
     SplitInfo,
     SplitResult,
+    TimeSeriesCrossValidator,
     WalkForwardCV,
     WalkForwardResults,
     cross_fit_residualize,
@@ -326,6 +328,8 @@ __all__ = [
     "WalkForwardResults",
     "NestedCVResult",
     "WalkForwardCV",
+    "TimeSeriesCrossValidator",
+    "BlockedTimeSeriesCV",
     "CrossFitCV",
     "NestedWalkForwardCV",
     "walk_forward_evaluate",

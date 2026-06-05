@@ -919,6 +919,338 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
 
 
 # =============================================================================
+# TimeSeriesCrossValidator - expanding/sliding window with gap and purge
+# =============================================================================
+
+
+class TimeSeriesCrossValidator(BaseCrossValidator):  # type: ignore[misc]
+    """Expanding or sliding window temporal CV with gap and purging.
+
+    Forward-only splitter: ``max(train) < min(test)`` for every fold. Test sets are
+    tiled from the end of the series; each fold inserts a ``gap`` (and optional
+    ``purge_length``) between the train end and the test start. This is the universal
+    port of dml_ts's primary DML cross-fitter; it satisfies the
+    :class:`~temporalcv.Splitter` Protocol and the
+    :func:`~temporalcv.check_temporal_splitter` contract.
+
+    Parameters
+    ----------
+    n_splits : int, default=5
+        Number of CV folds.
+    gap : int, default=0
+        Periods between train end and test start (leakage buffer).
+    purge_length : int, default=0
+        Periods removed from the train end, in addition to ``gap``.
+    test_size : int, optional
+        Test-fold size. ``None`` ⇒ ``n_samples // (n_splits + 1)``.
+    expanding : bool, default=True
+        Expanding (``True``) vs sliding (``False``) training window.
+    min_train_size : int, optional
+        Minimum training-set size. ``None`` ⇒ ``n_samples // (n_splits + 1)``.
+
+    Examples
+    --------
+    >>> cv = TimeSeriesCrossValidator(n_splits=5, gap=10, purge_length=5)
+    >>> for train, test in cv.split(X):
+    ...     assert train[-1] < test[0]  # forward-only
+
+    See Also
+    --------
+    WalkForwardCV : Walk-forward CV with horizon-aware gap semantics.
+    BlockedTimeSeriesCV : Whole-block-preserving temporal CV.
+    """
+
+    def __init__(
+        self,
+        n_splits: int = 5,
+        gap: int = 0,
+        purge_length: int = 0,
+        test_size: int | None = None,
+        expanding: bool = True,
+        min_train_size: int | None = None,
+    ) -> None:
+        if n_splits < 1:
+            raise ValueError(f"n_splits must be >= 1, got {n_splits}")
+        if gap < 0:
+            raise ValueError(f"gap must be >= 0, got {gap}")
+        if purge_length < 0:
+            raise ValueError(f"purge_length must be >= 0, got {purge_length}")
+
+        self.n_splits = n_splits
+        self.gap = gap
+        self.purge_length = purge_length
+        self.test_size = test_size
+        self.expanding = expanding
+        self.min_train_size = min_train_size
+
+    def split(
+        self,
+        X: ArrayLike,
+        y: ArrayLike | None = None,
+        groups: ArrayLike | None = None,
+    ) -> Generator[tuple[np.ndarray, np.ndarray], None, None]:
+        """
+        Yield ``(train_idx, test_idx)`` integer arrays for each fold.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, ...)
+            Data to split. Only ``n_samples`` (first axis) is used.
+        y, groups : array-like, optional
+            Unused; accepted for sklearn API compatibility.
+
+        Yields
+        ------
+        train : np.ndarray
+            Training indices for this fold.
+        test : np.ndarray
+            Test indices for this fold.
+
+        Raises
+        ------
+        ValueError
+            If ``n_samples`` is too small for the requested configuration.
+        """
+        X_arr = np.asarray(X)
+        n_samples = X_arr.shape[0]
+
+        test_size = (
+            self.test_size if self.test_size is not None else n_samples // (self.n_splits + 1)
+        )
+        min_train_size = (
+            self.min_train_size
+            if self.min_train_size is not None
+            else n_samples // (self.n_splits + 1)
+        )
+
+        min_required = min_train_size + self.gap + self.purge_length + test_size
+        if n_samples < min_required:
+            raise ValueError(
+                f"Not enough samples ({n_samples}) for requested configuration. "
+                f"Need at least {min_required} samples "
+                f"(min_train={min_train_size}, gap={self.gap}, "
+                f"purge={self.purge_length}, test_size={test_size})"
+            )
+
+        for fold_idx in range(self.n_splits):
+            yield self._get_fold_indices(n_samples, fold_idx, test_size, min_train_size)
+
+    def _get_fold_indices(
+        self,
+        n_samples: int,
+        fold_idx: int,
+        test_size: int,
+        min_train_size: int,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Compute ``(train_idx, test_idx)`` for one fold (test sets tiled from the end)."""
+        test_end = n_samples - (self.n_splits - 1 - fold_idx) * test_size
+        test_start = test_end - test_size
+
+        train_end_raw = test_start - self.gap
+        train_end = train_end_raw - self.purge_length  # purge removes from train end
+
+        if self.expanding:
+            train_start = 0
+        else:
+            window_size = min_train_size + fold_idx * test_size
+            train_start = max(0, train_end - window_size)
+
+        if train_end - train_start < min_train_size:
+            train_start = max(0, train_end - min_train_size)
+
+        train_idx = np.arange(train_start, train_end, dtype=np.intp)
+        test_idx = np.arange(test_start, test_end, dtype=np.intp)
+        return train_idx, test_idx
+
+    def get_n_splits(
+        self,
+        X: ArrayLike | None = None,
+        y: ArrayLike | None = None,
+        groups: ArrayLike | None = None,
+    ) -> int:
+        """Return the number of folds."""
+        return self.n_splits
+
+    def get_split_info(self, X: ArrayLike) -> list[SplitInfo]:
+        """
+        Return :class:`SplitInfo` boundary metadata for each fold.
+
+        Mirrors :meth:`WalkForwardCV.get_split_info`. Boundaries use temporalcv's
+        inclusive ``train_end``/``test_end`` convention; the raw index arrays remain
+        available via :meth:`split`.
+        """
+        infos: list[SplitInfo] = []
+        for idx, (train, test) in enumerate(self.split(X)):
+            infos.append(
+                SplitInfo(
+                    split_idx=idx,
+                    train_start=int(train[0]),
+                    train_end=int(train[-1]),
+                    test_start=int(test[0]),
+                    test_end=int(test[-1]),
+                )
+            )
+        return infos
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return (
+            f"TimeSeriesCrossValidator(n_splits={self.n_splits}, gap={self.gap}, "
+            f"purge_length={self.purge_length}, test_size={self.test_size}, "
+            f"expanding={self.expanding}, min_train_size={self.min_train_size})"
+        )
+
+
+# =============================================================================
+# BlockedTimeSeriesCV - whole-block-preserving temporal CV
+# =============================================================================
+
+
+class BlockedTimeSeriesCV(BaseCrossValidator):  # type: ignore[misc]
+    """Blocked temporal CV: whole blocks stay together in train or test.
+
+    Forward-only splitter that groups observations into contiguous blocks and keeps
+    each block entirely in train or test (never split), with a block-level gap. Useful
+    when autocorrelation spans multiple periods. Satisfies the
+    :class:`~temporalcv.Splitter` Protocol / :func:`~temporalcv.check_temporal_splitter`.
+
+    Unlike dml_ts's original, an under-provisioned configuration (a fold left with no
+    training blocks) raises ``ValueError`` rather than silently dropping the fold, so
+    ``split`` always yields exactly ``n_splits`` folds on a valid configuration.
+
+    Parameters
+    ----------
+    n_splits : int, default=5
+        Number of CV folds.
+    block_size : int, optional
+        Size of each block. ``None`` ⇒ auto (``n_samples // (2*n_splits + gap_blocks + 1)``).
+    gap_blocks : int, default=1
+        Number of blocks between train and test.
+    test_blocks : int, optional
+        Number of blocks per test set. ``None`` ⇒ ``max(1, n_blocks // (n_splits + 1))``.
+
+    Examples
+    --------
+    >>> cv = BlockedTimeSeriesCV(n_splits=3, block_size=20, gap_blocks=1)
+    >>> for train, test in cv.split(X):
+    ...     assert train[-1] < test[0]
+
+    See Also
+    --------
+    TimeSeriesCrossValidator : Expanding/sliding window CV with gap and purge.
+    """
+
+    def __init__(
+        self,
+        n_splits: int = 5,
+        block_size: int | None = None,
+        gap_blocks: int = 1,
+        test_blocks: int | None = None,
+    ) -> None:
+        if n_splits < 1:
+            raise ValueError(f"n_splits must be >= 1, got {n_splits}")
+        if gap_blocks < 0:
+            raise ValueError(f"gap_blocks must be >= 0, got {gap_blocks}")
+
+        self.n_splits = n_splits
+        self.block_size = block_size
+        self.gap_blocks = gap_blocks
+        self.test_blocks = test_blocks
+
+    def split(
+        self,
+        X: ArrayLike,
+        y: ArrayLike | None = None,
+        groups: ArrayLike | None = None,
+    ) -> Generator[tuple[np.ndarray, np.ndarray], None, None]:
+        """
+        Yield blocked ``(train_idx, test_idx)`` integer arrays for each fold.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, ...)
+            Data to split. Only ``n_samples`` (first axis) is used.
+        y, groups : array-like, optional
+            Unused; accepted for sklearn API compatibility.
+
+        Yields
+        ------
+        train : np.ndarray
+            Training indices for this fold.
+        test : np.ndarray
+            Test indices for this fold.
+
+        Raises
+        ------
+        ValueError
+            If there are too few blocks for the configuration, or if any fold would
+            be left with no training blocks (fail-loud, vs silently dropping the fold).
+        """
+        X_arr = np.asarray(X)
+        n_samples = X_arr.shape[0]
+
+        if self.block_size is not None:
+            block_size = self.block_size
+        else:
+            n_blocks_needed = self.n_splits * 2 + self.gap_blocks + 1
+            block_size = max(1, n_samples // n_blocks_needed)
+
+        n_blocks = n_samples // block_size
+
+        if self.test_blocks is not None:
+            test_blocks = self.test_blocks
+        else:
+            test_blocks = max(1, n_blocks // (self.n_splits + 1))
+
+        min_blocks = 1 + self.gap_blocks + test_blocks
+        if n_blocks < min_blocks:
+            raise ValueError(
+                f"Not enough blocks ({n_blocks}) for requested configuration. "
+                f"Need at least {min_blocks} blocks "
+                f"(min_train=1, gap={self.gap_blocks}, test={test_blocks})"
+            )
+
+        for fold_idx in range(self.n_splits):
+            test_block_end = n_blocks - (self.n_splits - 1 - fold_idx) * test_blocks
+            test_block_start = test_block_end - test_blocks
+            train_block_end = test_block_start - self.gap_blocks
+
+            if train_block_end <= 0:
+                raise ValueError(
+                    f"Fold {fold_idx} would have no training blocks "
+                    f"(train_block_end={train_block_end} <= 0) for configuration "
+                    f"n_splits={self.n_splits}, block_size={block_size}, "
+                    f"gap_blocks={self.gap_blocks}, test_blocks={test_blocks}, "
+                    f"n_blocks={n_blocks}. Provide more samples/blocks or reduce "
+                    f"n_splits/gap_blocks/test_blocks."
+                )
+
+            train_end_sample = train_block_end * block_size
+            test_start_sample = test_block_start * block_size
+            test_end_sample = min(test_block_end * block_size, n_samples)
+
+            train_idx = np.arange(0, train_end_sample, dtype=np.intp)
+            test_idx = np.arange(test_start_sample, test_end_sample, dtype=np.intp)
+            yield train_idx, test_idx
+
+    def get_n_splits(
+        self,
+        X: ArrayLike | None = None,
+        y: ArrayLike | None = None,
+        groups: ArrayLike | None = None,
+    ) -> int:
+        """Return the number of folds."""
+        return self.n_splits
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return (
+            f"BlockedTimeSeriesCV(n_splits={self.n_splits}, block_size={self.block_size}, "
+            f"gap_blocks={self.gap_blocks}, test_blocks={self.test_blocks})"
+        )
+
+
+# =============================================================================
 # CrossFitCV - Temporal Cross-Fitting for Debiased Metrics
 # =============================================================================
 
@@ -2145,6 +2477,8 @@ __all__ = [
     "WalkForwardResults",
     "NestedCVResult",
     "WalkForwardCV",
+    "TimeSeriesCrossValidator",
+    "BlockedTimeSeriesCV",
     "CrossFitCV",
     "NestedWalkForwardCV",
     "walk_forward_evaluate",
