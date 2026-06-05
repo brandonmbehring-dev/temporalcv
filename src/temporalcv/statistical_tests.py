@@ -63,17 +63,19 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
-from typing import Literal, cast
+from typing import Any, ClassVar, Literal, cast
 
 import numpy as np
 from scipy import stats
+
+from temporalcv._serialization import result_to_dict
 
 # =============================================================================
 # Result dataclasses
 # =============================================================================
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class DMTestResult:
     """
     Result from Diebold-Mariano test.
@@ -101,6 +103,8 @@ class DMTestResult:
         Variance estimation method ("hac" or "self_normalized")
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     statistic: float
     pvalue: float
     h: int
@@ -110,6 +114,10 @@ class DMTestResult:
     harvey_adjusted: bool
     mean_loss_diff: float
     variance_method: str = "hac"  # Default for backward compatibility
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this result."""
+        return result_to_dict(self)
 
     def __str__(self) -> str:
         """Format result as string."""
@@ -135,7 +143,7 @@ class DMTestResult:
         return self.pvalue < 0.01
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class PTTestResult:
     """
     Result from Pesaran-Timmermann directional accuracy test.
@@ -156,12 +164,18 @@ class PTTestResult:
         Number of direction classes (2 or 3)
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     statistic: float
     pvalue: float
     accuracy: float
     expected: float
     n: int
     n_classes: int
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this result."""
+        return result_to_dict(self)
 
     def __str__(self) -> str:
         """Format result as string."""
@@ -187,7 +201,7 @@ class PTTestResult:
         return self.accuracy - self.expected
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class GWTestResult:
     """
     Result from Giacomini-White test for conditional predictive ability.
@@ -237,6 +251,8 @@ class GWTestResult:
          Ability. Econometrica, 74(6), 1545-1578.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     statistic: float
     pvalue: float
     r_squared: float
@@ -246,6 +262,10 @@ class GWTestResult:
     loss: str
     alternative: str
     mean_loss_diff: float
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this result."""
+        return result_to_dict(self)
 
     def __str__(self) -> str:
         """Format result as string."""
@@ -276,7 +296,7 @@ class GWTestResult:
         return self.significant_at_05
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class CWTestResult:
     """
     Result from Clark-West test for nested model comparison.
@@ -335,6 +355,8 @@ class CWTestResult:
          138(1), 291-311.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     statistic: float
     pvalue: float
     h: int
@@ -346,6 +368,10 @@ class CWTestResult:
     mean_loss_diff_adjusted: float
     adjustment_magnitude: float
     variance_method: str = "hac"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this result."""
+        return result_to_dict(self)
 
     def __str__(self) -> str:
         """Format result as string."""
@@ -1688,7 +1714,7 @@ def pt_test(
 # =============================================================================
 
 
-@dataclass
+@dataclass(frozen=True, slots=True, eq=False)
 class MultiModelComparisonResult:
     """
     Result from multi-model comparison using pairwise DM tests.
@@ -1717,12 +1743,18 @@ class MultiModelComparisonResult:
     ...     print(f"{pair[0]} significantly better than {pair[1]}")
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     pairwise_results: dict[tuple[str, str], DMTestResult]
     best_model: str
     bonferroni_alpha: float
     original_alpha: float
     model_rankings: list[tuple[str, float]]
     significant_pairs: list[tuple[str, str]]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this result."""
+        return result_to_dict(self)
 
     @property
     def n_comparisons(self) -> int:
@@ -1918,7 +1950,7 @@ def compare_multiple_models(
 from collections.abc import Sequence
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class MultiHorizonResult:
     """
     Result from comparing two models across multiple forecast horizons.
@@ -1971,6 +2003,8 @@ class MultiHorizonResult:
     dm_test : Underlying test for each horizon.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     horizons: tuple[int, ...]
     dm_results: dict[int, DMTestResult]
     model_1_name: str
@@ -1979,6 +2013,10 @@ class MultiHorizonResult:
     loss: str
     alternative: str
     alpha: float
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this result."""
+        return result_to_dict(self)
 
     @property
     def significant_horizons(self) -> list[int]:
@@ -2124,7 +2162,7 @@ class MultiHorizonResult:
         return "\n".join(lines)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class MultiModelHorizonResult:
     """
     Result from comparing multiple models across multiple horizons.
@@ -2165,10 +2203,16 @@ class MultiModelHorizonResult:
     compare_multiple_models : Underlying multi-model comparison.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     horizons: tuple[int, ...]
     model_names: tuple[str, ...]
     pairwise_by_horizon: dict[int, MultiModelComparisonResult]
     alpha: float
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this result."""
+        return result_to_dict(self)
 
     @property
     def best_model_by_horizon(self) -> dict[int, str]:
@@ -2440,7 +2484,7 @@ def compare_models_horizons(
 # =============================================================================
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class EncompassingTestResult:
     """
     Result from forecast encompassing test.
@@ -2473,6 +2517,8 @@ class EncompassingTestResult:
     Tests for Forecast Encompassing. JBES, 16(2), 254-259.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     lambda_coef: float
     statistic: float
     pvalue: float
@@ -2482,8 +2528,12 @@ class EncompassingTestResult:
     n: int
     h: int
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this result."""
+        return result_to_dict(self)
 
-@dataclass
+
+@dataclass(frozen=True, slots=True)
 class BidirectionalEncompassingResult:
     """
     Result from bidirectional forecast encompassing test.
@@ -2502,10 +2552,16 @@ class BidirectionalEncompassingResult:
         Optimal weight for B if recommendation is "combine"
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     a_encompasses_b: EncompassingTestResult
     b_encompasses_a: EncompassingTestResult
     recommendation: str
     combined_weight_b: float | None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this result."""
+        return result_to_dict(self)
 
 
 def forecast_encompassing_test(
@@ -2731,7 +2787,7 @@ def forecast_encompassing_bidirectional(
 # =============================================================================
 
 
-@dataclass
+@dataclass(frozen=True, slots=True, eq=False)
 class RealityCheckResult:
     """
     Result from White's Reality Check test for data snooping.
@@ -2764,6 +2820,8 @@ class RealityCheckResult:
     Econometrica, 68(5), 1097-1126.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     statistic: float
     pvalue: float
     best_model: str
@@ -2773,13 +2831,17 @@ class RealityCheckResult:
     block_size: int
     n: int
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this result."""
+        return result_to_dict(self)
+
     @property
     def significant_models(self) -> list[str]:
         """Return models that beat the benchmark (positive test statistics)."""
         return [model for model, stat in self.individual_statistics.items() if stat > 0]
 
 
-@dataclass
+@dataclass(frozen=True, slots=True, eq=False)
 class SPATestResult:
     """
     Result from Hansen's Superior Predictive Ability test.
@@ -2815,6 +2877,8 @@ class SPATestResult:
     Journal of Business & Economic Statistics, 23(4), 365-380.
     """
 
+    SCHEMA_VERSION: ClassVar[int] = 1
+
     statistic: float
     pvalue: float
     pvalue_consistent: float
@@ -2825,6 +2889,10 @@ class SPATestResult:
     n_bootstrap: int
     block_size: int
     n: int
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping of this result."""
+        return result_to_dict(self)
 
 
 def _stationary_bootstrap_indices(
