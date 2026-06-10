@@ -245,6 +245,12 @@ from temporalcv.regimes import (
     mask_low_n_regimes,
 )
 
+# Simulators exports (generic AR/ARMA path generators)
+from temporalcv.simulators import (
+    simulate_ar,
+    simulate_arma,
+)
+
 # Stationarity tests exports
 from temporalcv.stationarity import (
     JointStationarityResult,
@@ -285,11 +291,15 @@ from temporalcv.statistical_tests import (
 )
 from temporalcv.tags import TemporalTags
 
-# Validators exports (theoretical bounds)
+# Validators exports (theoretical bounds + numeric output guards)
 from temporalcv.validators import (
     check_against_ar1_bounds,
+    ci_ordered,
+    coverage_in_unit,
+    finite_se,
     generate_ar1_series,
     generate_ar2_series,
+    psd,
     theoretical_ar1_mae_bound,
     theoretical_ar1_mse_bound,
     theoretical_ar2_mse_bound,
@@ -454,6 +464,14 @@ __all__ = [
     "check_against_ar1_bounds",
     "generate_ar1_series",
     "generate_ar2_series",
+    # Validators (numeric output guards)
+    "finite_se",
+    "psd",
+    "ci_ordered",
+    "coverage_in_unit",
+    # Simulators (generic AR/ARMA path generators)
+    "simulate_ar",
+    "simulate_arma",
     # Guardrails (unified validation)
     "GuardrailResult",
     "check_suspicious_improvement",

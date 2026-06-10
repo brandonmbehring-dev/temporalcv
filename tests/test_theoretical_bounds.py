@@ -38,12 +38,21 @@ class TestTheoreticalAR1MSEBound:
         assert theoretical_ar1_mse_bound(phi=0.5, sigma_sq=4.0, h=1) == pytest.approx(4.0)
         assert theoretical_ar1_mse_bound(phi=-0.7, sigma_sq=2.0, h=1) == pytest.approx(2.0)
 
-    def test_phi_zero_gives_h_times_sigma_sq(self) -> None:
-        """For φ=0 (white noise), MSE = h·σ²."""
-        # White noise: errors are independent, variance adds
+    def test_phi_zero_constant_in_horizon(self) -> None:
+        """For φ=0 (white noise), MSE = σ² at EVERY horizon.
+
+        y_t = e_t has optimal h-step forecast 0 with error e_{t+h}, so MSE
+        is constant in h (σ²·h is the RANDOM-WALK formula, φ=1 — a former
+        special case wrongly returned it here; fixed 2026-06-09). Must agree
+        with theoretical_ar2_mse_bound(0, 0, ...), the ψ-weight implementation.
+        """
         assert theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.0, h=1) == pytest.approx(1.0)
-        assert theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.0, h=5) == pytest.approx(5.0)
-        assert theoretical_ar1_mse_bound(phi=0.0, sigma_sq=2.0, h=10) == pytest.approx(20.0)
+        assert theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.0, h=5) == pytest.approx(1.0)
+        assert theoretical_ar1_mse_bound(phi=0.0, sigma_sq=2.0, h=10) == pytest.approx(2.0)
+        for h in (1, 3, 10):
+            assert theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.5, h=h) == pytest.approx(
+                theoretical_ar2_mse_bound(phi1=0.0, phi2=0.0, sigma_sq=1.5, h=h)
+            )
 
     def test_mse_increases_with_horizon(self) -> None:
         """MSE should increase with forecast horizon."""

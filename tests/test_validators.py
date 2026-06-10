@@ -34,13 +34,18 @@ class TestTheoreticalAR1MSEBound:
         assert theoretical_ar1_mse_bound(phi=0.9, sigma_sq=1.0, h=1) == 1.0
         assert theoretical_ar1_mse_bound(phi=-0.5, sigma_sq=2.0, h=1) == 2.0
 
-    def test_phi_zero_gives_linear_growth(self) -> None:
-        """For phi=0 (white noise), MSE = h * sigma_sq."""
-        # [T1] White noise has no predictability, so MSE grows linearly
+    def test_phi_zero_constant_in_horizon(self) -> None:
+        """For phi=0 (white noise), MSE = sigma_sq at every horizon.
+
+        [T1] y_t = e_t: the optimal h-step forecast is 0, error is e_{t+h},
+        so MSE is constant in h. (Linear growth sigma_sq*h is the
+        random-walk phi=1 formula — a former phi==0 special case wrongly
+        returned it; fixed 2026-06-09.)
+        """
         assert theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.0, h=1) == 1.0
-        assert theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.0, h=5) == 5.0
-        assert theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.0, h=10) == 10.0
-        assert theoretical_ar1_mse_bound(phi=0.0, sigma_sq=2.0, h=3) == 6.0
+        assert theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.0, h=5) == 1.0
+        assert theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.0, h=10) == 1.0
+        assert theoretical_ar1_mse_bound(phi=0.0, sigma_sq=2.0, h=3) == 2.0
 
     def test_mse_increases_with_horizon(self) -> None:
         """MSE should increase with forecast horizon."""

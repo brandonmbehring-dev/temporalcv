@@ -36,11 +36,26 @@ References
 
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 
 from temporalcv.gates import GateResult, GateStatus
+from temporalcv.simulators import simulate_ar
+
+
+def _stationary_burn_in(max_root_modulus: float) -> int:
+    """Persistence-aware burn-in for the synthetic-series helpers.
+
+    After ``b`` zero-init steps, a stationary AR recursion with dominant
+    characteristic-root modulus ``r`` has reached ``1 - r**(2b)`` of its
+    stationary variance; solve ``r**(2b) <= 1e-6``. Capped at 100_000 steps
+    (the cap leaves a visible deficit only for ``r > ~0.99993``, far beyond
+    any realistic use of these helpers).
+    """
+    r = max_root_modulus
+    if r <= 0.01:
+        return 100
+    needed = int(np.ceil(np.log(1e-6) / (2.0 * np.log(r))))
+    return min(100_000, max(100, needed))
 
 
 def theoretical_ar1_mse_bound(
@@ -77,11 +92,12 @@ def theoretical_ar1_mse_bound(
 
     Examples
     --------
-    >>> # Random walk (phi=0): MSE = sigma_sq for all h
+    >>> # White noise (phi=0): y_t = e_t, so the optimal h-step forecast is 0
+    >>> # and MSE = sigma_sq for EVERY horizon (error accumulation needs phi != 0)
     >>> theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.0, h=1)
     1.0
     >>> theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.0, h=10)
-    10.0
+    1.0
 
     >>> # High persistence (phi=0.9): MSE grows with horizon
     >>> theoretical_ar1_mse_bound(phi=0.9, sigma_sq=1.0, h=1)
@@ -97,12 +113,10 @@ def theoretical_ar1_mse_bound(
     if h < 1:
         raise ValueError(f"horizon h must be >= 1, got {h}")
 
-    # Special case: phi = 0 (white noise)
-    if phi == 0:
-        return float(sigma_sq * h)
-
-    # General case: geometric sum
     # MSE = σ² · Σ(φ^(2i) for i=0..h-1) = σ² · (1 - φ^(2h)) / (1 - φ²)
+    # (handles phi=0 exactly: white noise has MSE = σ² at every horizon —
+    # a former phi==0 special case wrongly returned σ²·h, the RANDOM-WALK
+    # formula; fixed 2026-06-09, found by independent review)
     phi_sq = phi**2
     mse = sigma_sq * (1.0 - phi_sq**h) / (1.0 - phi_sq)
     return float(mse)
@@ -400,22 +414,15 @@ def generate_ar1_series(
     if n < 1:
         raise ValueError(f"n must be >= 1, got {n}")
 
-    rng = np.random.default_rng(random_state)
-
-    # Initialize from stationary distribution
-    # Var(y) = σ² / (1 - φ²) for stationary AR(1)
-    y0_std = sigma / np.sqrt(1.0 - phi**2) if phi != 0 else sigma
-    y = np.zeros(n)
-    y[0] = rng.normal(0, y0_std)
-
-    # Generate innovations
-    innovations = rng.normal(0, sigma, size=n)
-
-    # AR(1) recursion
-    for t in range(1, n):
-        y[t] = phi * y[t - 1] + innovations[t]
-
-    return cast(np.ndarray, y)
+    # Delegates to the canonical simulator (one AR implementation for these
+    # synthetic-series helpers; gates.gate_synthetic_ar1 and
+    # benchmarks.create_synthetic_dataset still carry local AR(1) recursions —
+    # consolidating those is future work). v2.0 note: the seed-exact stream
+    # changed (burn-in init replaced exact stationary init); the
+    # persistence-aware burn-in below keeps the draws statistically
+    # indistinguishable from stationary even as |phi| -> 1.
+    burn_in = _stationary_burn_in(abs(phi))
+    return np.asarray(simulate_ar([phi], n, sigma=sigma, burn_in=burn_in, rng=random_state)[0])
 
 
 def generate_ar2_series(
@@ -468,28 +475,16 @@ def generate_ar2_series(
             f"Need: φ₁+φ₂<1, φ₂-φ₁<1, |φ₂|<1"
         )
 
-    rng = np.random.default_rng(random_state)
-
-    # Compute unconditional variance for initialization
-    # γ₀ = σ² / ((1 - φ₂) · ((1 + φ₂)² - φ₁²))
-    try:
-        gamma0 = sigma**2 / ((1 - phi2) * ((1 + phi2) ** 2 - phi1**2))
-        y0_std = np.sqrt(max(gamma0, sigma**2))
-    except (ZeroDivisionError, ValueError):
-        y0_std = sigma
-
-    y = np.zeros(n)
-    y[0] = rng.normal(0, y0_std)
-    y[1] = rng.normal(0, y0_std)
-
-    # Generate innovations
-    innovations = rng.normal(0, sigma, size=n)
-
-    # AR(2) recursion
-    for t in range(2, n):
-        y[t] = phi1 * y[t - 1] + phi2 * y[t - 2] + innovations[t]
-
-    return cast(np.ndarray, y)
+    # Delegates to the canonical simulator (see generate_ar1_series for the
+    # delegation/consolidation note). The old AR(2) init used an incorrect
+    # gamma_0 formula, so this delegation also FIXED the initial-condition
+    # scale; persistence-aware burn-in keeps draws statistically
+    # indistinguishable from stationary.
+    dominant_root = float(np.max(np.abs(np.roots([1.0, -phi1, -phi2]))))
+    burn_in = _stationary_burn_in(dominant_root)
+    return np.asarray(
+        simulate_ar([phi1, phi2], n, sigma=sigma, burn_in=burn_in, rng=random_state)[0]
+    )
 
 
 # Type-only export for public API

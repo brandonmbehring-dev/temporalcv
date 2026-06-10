@@ -9,12 +9,15 @@ release. This ADR records the public-contract and module-layout decisions; ADR 0
 seam strategy.
 
 **Implementation status (2026-06-05):** in place — `tests/test_public_api.py` snapshots the
-175-name top-level `__all__` and guards no-dangling-export / no-private-leak; the result-object
+top-level `__all__` (175 names at adoption; the test snapshot is the canonical count) and guards
+no-dangling-export / no-private-leak; the result-object
 registry test guards versioned result objects; the conformance suite guards the seams. `pyproject`
 URLs already point at canonical `brandon-behring`.
 
 ## Decision
-1. **The stable v2.0 surface is the top-level `temporalcv` namespace via `__all__`** (175 names).
+1. **The stable v2.0 surface is the top-level `temporalcv` namespace via `__all__`** (175 names
+   at adoption; additions land via deliberate snapshot updates in `tests/test_public_api.py`,
+   which is the canonical count).
    Subpackages (`compare/`, `bagging/`, `metrics/`, `viz/`, `diagnostics/`, `inference/`,
    `validators/`, `benchmarks/`) are **implementation grouping**: subpackage import paths
    (`from temporalcv.bagging.base import X`) are **unstable and unsupported** — they may move

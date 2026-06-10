@@ -12,8 +12,17 @@ GitHub issue.
   dropping a fold); golden-parity vs dml_ts on skip-free configs.
 - [x] #8  dual-model `cross_fit_residualize(model_a, model_b, X, A, B, cv) -> (A_resid, B_resid)` with fold-0 NaN-mask. **Done (pilot)** — `src/temporalcv/cv.py`, typed `cv: Splitter`, identical shared NaN mask; exported top-level.
 - [ ] #9  standalone HAC residual covariance (Bartlett/Parzen/QS + optimal bandwidth + Newey-West), **matrix-accepting** (panel-ready).
-- [ ] #10 numeric/stat output validators (`finite_se`, `psd`, `ci_ordered`, `coverage_in_unit`).
-- [ ] #11 generic AR/ARMA time-series simulators.
+- [x] #10 numeric/stat output validators (`finite_se`, `psd`, `ci_ordered`, `coverage_in_unit`).
+  **Done (A3):** `validators/numeric.py` — validate-and-return guards raising stdlib `ValueError`
+  on impossible arithmetic (empty input rejected); top-level exported; distinct from gate-returning
+  theoretical validators and from conformance `check_*`.
+- [x] #11 generic AR/ARMA time-series simulators.
+  **Done (A3):** top-level `simulators.py` — `simulate_arma(ar, ma, n, n_paths=1, ...)` (recursion
+  convention, Gaussian innovations, burn-in, always `(n_paths, n)` matrix-out, AR stationarity
+  fail-loud) + `simulate_ar` convenience; `validators.generate_ar{1,2}_series` now DELEGATE to it
+  with persistence-aware burn-in (equality-pinned; seed-exact streams changed in v2.0; local AR(1)
+  recursions remain in `gates.gate_synthetic_ar1` + `benchmarks.create_synthetic_dataset` —
+  consolidation is future work).
 
 ## Design (breaking → v2.0)
 - [x] #12 unify seam vocabulary → static `@runtime_checkable` Protocols + sklearn base + mixins.
@@ -34,7 +43,7 @@ GitHub issue.
 - [x] #16 governance: layout/public-contract ADR + public-API stability test; fix `pyproject` URLs (→ canonical brandon-behring).
   **Done (A1):** `docs/adr/0002-public-contract-and-layout.md` (the top-level `__all__` IS the stable
   surface; subpackages are not import paths; `cv.py` vs `cv_financial.py`; seams/tags/result-object
-  layout). `tests/test_public_api.py` snapshots the 175-name `__all__` (drift fails loud) + guards
+  layout). `tests/test_public_api.py` snapshots the `__all__` surface (drift fails loud) + guards
   no-dangling-export / no-private-leak. `pyproject` URLs verified already canonical.
 
 ## Follow-up
