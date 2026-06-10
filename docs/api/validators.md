@@ -9,7 +9,8 @@ The validators subpackage hosts two distinct vocabularies:
 
 1. **Theoretical bounds** (gate-returning): detect "impossibly good" results
    that indicate leakage — the right response is *investigate*, so these
-   return `GateResult` (PASS/HALT).
+   return `GateResult` (PASS/WARN/HALT, or SKIP when the bounds cannot be
+   computed; the WARN/HALT thresholds are [T3] empirical heuristics).
 2. **Numeric output guards** (hard raises): police arithmetically impossible
    statistical outputs — if one fires, the upstream computation is wrong, so
    these raise `ValueError` immediately.

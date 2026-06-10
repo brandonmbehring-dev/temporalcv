@@ -42,6 +42,22 @@ from temporalcv.gates import GateResult, GateStatus
 from temporalcv.simulators import simulate_ar
 
 
+def _stationary_burn_in(max_root_modulus: float) -> int:
+    """Persistence-aware burn-in for the synthetic-series helpers.
+
+    After ``b`` zero-init steps, a stationary AR recursion with dominant
+    characteristic-root modulus ``r`` has reached ``1 - r**(2b)`` of its
+    stationary variance; solve ``r**(2b) <= 1e-6``. Capped at 100_000 steps
+    (the cap leaves a visible deficit only for ``r > ~0.99993``, far beyond
+    any realistic use of these helpers).
+    """
+    r = max_root_modulus
+    if r <= 0.01:
+        return 100
+    needed = int(np.ceil(np.log(1e-6) / (2.0 * np.log(r))))
+    return min(100_000, max(100, needed))
+
+
 def theoretical_ar1_mse_bound(
     phi: float,
     sigma_sq: float,
@@ -76,11 +92,12 @@ def theoretical_ar1_mse_bound(
 
     Examples
     --------
-    >>> # Random walk (phi=0): MSE = sigma_sq for all h
+    >>> # White noise (phi=0): y_t = e_t, so the optimal h-step forecast is 0
+    >>> # and MSE = sigma_sq for EVERY horizon (error accumulation needs phi != 0)
     >>> theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.0, h=1)
     1.0
     >>> theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.0, h=10)
-    10.0
+    1.0
 
     >>> # High persistence (phi=0.9): MSE grows with horizon
     >>> theoretical_ar1_mse_bound(phi=0.9, sigma_sq=1.0, h=1)
@@ -96,12 +113,10 @@ def theoretical_ar1_mse_bound(
     if h < 1:
         raise ValueError(f"horizon h must be >= 1, got {h}")
 
-    # Special case: phi = 0 (white noise)
-    if phi == 0:
-        return float(sigma_sq * h)
-
-    # General case: geometric sum
     # MSE = σ² · Σ(φ^(2i) for i=0..h-1) = σ² · (1 - φ^(2h)) / (1 - φ²)
+    # (handles phi=0 exactly: white noise has MSE = σ² at every horizon —
+    # a former phi==0 special case wrongly returned σ²·h, the RANDOM-WALK
+    # formula; fixed 2026-06-09, found by independent review)
     phi_sq = phi**2
     mse = sigma_sq * (1.0 - phi_sq**h) / (1.0 - phi_sq)
     return float(mse)
@@ -399,10 +414,15 @@ def generate_ar1_series(
     if n < 1:
         raise ValueError(f"n must be >= 1, got {n}")
 
-    # Delegates to the canonical simulator (single AR implementation library-wide).
-    # v2.0 note: this changed the seed-exact stream (burn-in init replaced exact
-    # stationary init); statistical properties are unchanged.
-    return np.asarray(simulate_ar([phi], n, sigma=sigma, rng=random_state)[0])
+    # Delegates to the canonical simulator (one AR implementation for these
+    # synthetic-series helpers; gates.gate_synthetic_ar1 and
+    # benchmarks.create_synthetic_dataset still carry local AR(1) recursions —
+    # consolidating those is future work). v2.0 note: the seed-exact stream
+    # changed (burn-in init replaced exact stationary init); the
+    # persistence-aware burn-in below keeps the draws statistically
+    # indistinguishable from stationary even as |phi| -> 1.
+    burn_in = _stationary_burn_in(abs(phi))
+    return np.asarray(simulate_ar([phi], n, sigma=sigma, burn_in=burn_in, rng=random_state)[0])
 
 
 def generate_ar2_series(
@@ -455,10 +475,16 @@ def generate_ar2_series(
             f"Need: φ₁+φ₂<1, φ₂-φ₁<1, |φ₂|<1"
         )
 
-    # Delegates to the canonical simulator (single AR implementation library-wide).
-    # v2.0 note: this changed the seed-exact stream (burn-in init replaced exact
-    # stationary init); statistical properties are unchanged.
-    return np.asarray(simulate_ar([phi1, phi2], n, sigma=sigma, rng=random_state)[0])
+    # Delegates to the canonical simulator (see generate_ar1_series for the
+    # delegation/consolidation note). The old AR(2) init used an incorrect
+    # gamma_0 formula, so this delegation also FIXED the initial-condition
+    # scale; persistence-aware burn-in keeps draws statistically
+    # indistinguishable from stationary.
+    dominant_root = float(np.max(np.abs(np.roots([1.0, -phi1, -phi2]))))
+    burn_in = _stationary_burn_in(dominant_root)
+    return np.asarray(
+        simulate_ar([phi1, phi2], n, sigma=sigma, burn_in=burn_in, rng=random_state)[0]
+    )
 
 
 # Type-only export for public API

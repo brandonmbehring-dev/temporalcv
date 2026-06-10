@@ -53,14 +53,39 @@ _MIN_BURN_IN = 100
 
 
 def _validate_coefficients(coef: ArrayLike, name: str) -> np.ndarray:
-    """Normalize a coefficient sequence to a finite 1-D float array."""
-    arr = np.asarray(coef, dtype=float)
+    """Normalize a coefficient sequence to a finite 1-D float array.
+
+    A bare scalar is promoted to a length-1 sequence; ndim > 1 raises.
+    None and complex input are refused loudly (``np.asarray(..., dtype=float)``
+    would silently turn None into NaN and discard imaginary parts).
+    """
+    if coef is None:
+        raise ValueError(f"{name} is None — pass [] for no {name} part")
+    raw = np.asarray(coef)
+    if np.iscomplexobj(raw):
+        raise ValueError(
+            f"{name} has complex dtype {raw.dtype} — refusing to silently discard imaginary parts"
+        )
+    arr = np.asarray(raw, dtype=float)
     if arr.ndim > 1:
         raise ValueError(f"{name} must be a 1-D coefficient sequence, got ndim={arr.ndim}")
     arr = np.atleast_1d(arr)
     if not np.all(np.isfinite(arr)):
         raise ValueError(f"{name} contains non-finite coefficients: {arr}")
     return arr
+
+
+def _validate_int(value: int, name: str, minimum: int) -> int:
+    """Require a true integer (bool excluded) with ``value >= minimum``.
+
+    Without this, a float ``n`` surfaces as a nameless TypeError deep inside
+    numpy's ``size=`` handling instead of pointing at the offending parameter.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, np.integer)):
+        raise TypeError(f"{name} must be an integer, got {type(value).__name__} ({value!r})")
+    if value < minimum:
+        raise ValueError(f"{name} must be >= {minimum}, got {value}")
+    return int(value)
 
 
 def _check_ar_stationarity(ar: np.ndarray) -> None:
@@ -102,12 +127,13 @@ def simulate_arma(
     ----------
     ar : ArrayLike
         AR coefficients ``[phi_1, ..., phi_p]`` in the recursion convention
-        (``y_t = phi_1*y_{t-1} + ...``). Pass ``[]`` for no AR part.
-        Must define a stationary recursion (all characteristic roots
-        strictly inside the unit circle).
+        (``y_t = phi_1*y_{t-1} + ...``). Pass ``[]`` for no AR part; a bare
+        scalar is promoted to a length-1 sequence. Must define a stationary
+        recursion (all characteristic roots strictly inside the unit circle).
     ma : ArrayLike
         MA coefficients ``[theta_1, ..., theta_q]``
-        (``... + e_t + theta_1*e_{t-1} + ...``). Pass ``[]`` for no MA part.
+        (``... + e_t + theta_1*e_{t-1} + ...``). Pass ``[]`` for no MA part;
+        a bare scalar is promoted to a length-1 sequence.
     n : int
         Number of observations per returned path. Must be >= 1.
     n_paths : int, default 1
@@ -132,8 +158,12 @@ def simulate_arma(
     ------
     ValueError
         If ``n < 1``, ``n_paths < 1``, ``sigma <= 0`` or non-finite,
-        ``burn_in < 0``, coefficients are non-finite or not 1-D, or the AR
-        part is non-stationary.
+        ``burn_in < 0``, coefficients are None/complex/non-finite/ndim > 1,
+        the AR part is non-stationary, or the recursion overflows float64
+        (the output is guaranteed finite).
+    TypeError
+        If ``n``, ``n_paths``, or ``burn_in`` is not a true integer
+        (floats and bools are rejected, never truncated).
 
     Knowledge Tier: [T1] Standard ARMA generation (Hamilton 1994).
 
@@ -146,10 +176,8 @@ def simulate_arma(
     >>> white_noise.shape
     (1, 100)
     """
-    if n < 1:
-        raise ValueError(f"n must be >= 1, got {n}")
-    if n_paths < 1:
-        raise ValueError(f"n_paths must be >= 1, got {n_paths}")
+    n = _validate_int(n, "n", minimum=1)
+    n_paths = _validate_int(n_paths, "n_paths", minimum=1)
     if not np.isfinite(sigma) or sigma <= 0:
         raise ValueError(f"sigma must be finite and positive, got {sigma}")
 
@@ -160,8 +188,8 @@ def simulate_arma(
     p, q = ar_arr.size, ma_arr.size
     if burn_in is None:
         burn_in = max(_MIN_BURN_IN, 10 * (p + q))
-    elif burn_in < 0:
-        raise ValueError(f"burn_in must be >= 0, got {burn_in}")
+    else:
+        burn_in = _validate_int(burn_in, "burn_in", minimum=0)
 
     generator = np.random.default_rng(rng)
     total = burn_in + n
@@ -176,7 +204,15 @@ def simulate_arma(
             acc += ma_arr[j - 1] * eps[:, t - j]
         y[:, t] = acc
 
-    return y[:, burn_in:]
+    out = y[:, burn_in:]
+    if not np.all(np.isfinite(out)):
+        n_bad = int((~np.isfinite(out)).sum())
+        raise ValueError(
+            f"simulated paths contain {n_bad} non-finite values of {out.size} — "
+            f"the recursion overflowed float64 "
+            f"(ar={ar_arr.tolist()}, ma={ma_arr.tolist()}, sigma={sigma})"
+        )
+    return out
 
 
 def simulate_ar(

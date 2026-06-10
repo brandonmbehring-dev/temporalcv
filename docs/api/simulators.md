@@ -58,6 +58,9 @@ panel = simulate_ar([0.6, -0.2], n=300, n_paths=50, rng=7)  # AR(2) panel
 ## Relationship to `validators.generate_ar*_series`
 
 `temporalcv.validators.generate_ar1_series` / `generate_ar2_series` (the
-theoretical-bounds test helpers) delegate to `simulate_ar` — a single AR
-implementation library-wide, pinned by equality tests
-(`tests/test_simulators.py::TestDelegationPins`).
+theoretical-bounds test helpers) delegate to `simulate_ar` with a
+persistence-aware burn-in, pinned by equality tests
+(`tests/test_simulators.py::TestDelegationPins`). Two other modules still
+carry local AR(1) recursions for their own purposes
+(`gates.gate_synthetic_ar1`, `benchmarks.create_synthetic_dataset`);
+consolidating those is future work, not a current claim.

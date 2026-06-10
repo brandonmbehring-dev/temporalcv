@@ -105,6 +105,14 @@ class TestPSD:
         with pytest.raises(ValueError, match="tol"):
             psd([[1.0]], tol=bad_tol)
 
+    def test_tol_is_wired_to_eigenvalue_threshold(self) -> None:
+        # Review finding: hardcoding the eigenvalue threshold to the default
+        # previously survived the suite — pin that tol= actually controls it.
+        cov = np.array([[1.0, 0.0], [0.0, -1e-5]])
+        psd(cov, tol=1e-4)  # within the loose tolerance
+        with pytest.raises(ValueError, match="positive semi-definite"):
+            psd(cov)  # default tol=1e-8 must reject the same matrix
+
     def test_name_in_message(self) -> None:
         with pytest.raises(ValueError, match="theta_cov"):
             psd([[-1.0]], name="theta_cov")
@@ -136,6 +144,17 @@ class TestCIOrdered:
     def test_inverted_raises_with_location(self) -> None:
         with pytest.raises(ValueError, match="inverted.*index 1"):
             ci_ordered([0.0, 5.0], [1.0, 2.0])
+
+    def test_inverted_2d_reports_correct_flat_index_and_values(self) -> None:
+        # Review finding: np.nonzero(...)[0][0] on a 2-D mask returned the
+        # ROW index (1) and read the wrong elements; the true violation here
+        # is at flat index 3 (lower=5 > upper=2).
+        with pytest.raises(ValueError, match=r"flat index 3: lower = 5 > upper = 2"):
+            ci_ordered([[0.0, 0.0], [0.0, 5.0]], [[1.0, 1.0], [1.0, 2.0]])
+
+    def test_name_in_message(self) -> None:
+        with pytest.raises(ValueError, match="theta_ci"):
+            ci_ordered(2.0, 1.0, name="theta_ci")
 
     def test_inverted_scalar_raises(self) -> None:
         with pytest.raises(ValueError, match="inverted"):
@@ -187,3 +206,46 @@ class TestCoverageInUnit:
     def test_name_in_message(self) -> None:
         with pytest.raises(ValueError, match="pi_coverage"):
             coverage_in_unit(1.5, name="pi_coverage")
+
+
+# ---------------------------------------------------------------------------
+# Cross-guard input hygiene (complex / None rejection)
+# ---------------------------------------------------------------------------
+
+
+class TestComplexAndNoneRejection:
+    """np.asarray(x, dtype=float) silently discards imaginary parts and turns
+    None into NaN — both are upstream-bug signatures these guards exist to
+    catch (review finding: a complex 'standard error' previously PASSED
+    finite_se with only a ComplexWarning)."""
+
+    def test_finite_se_complex_raises(self) -> None:
+        with pytest.raises(ValueError, match="complex"):
+            finite_se(np.array([0.5 + 1j]))
+
+    def test_psd_complex_raises(self) -> None:
+        # Even a valid complex Hermitian PSD matrix must be refused: the cast
+        # would silently return a DIFFERENT (real-truncated) matrix.
+        with pytest.raises(ValueError, match="complex"):
+            psd(np.array([[2.0, 1j], [-1j, 2.0]]))
+
+    def test_ci_ordered_complex_raises_either_bound(self) -> None:
+        with pytest.raises(ValueError, match="complex"):
+            ci_ordered(np.array([1 + 5j]), np.array([2.0]))
+        with pytest.raises(ValueError, match="complex"):
+            ci_ordered(np.array([1.0]), np.array([2 - 3j]))
+
+    def test_coverage_in_unit_complex_raises(self) -> None:
+        with pytest.raises(ValueError, match="complex"):
+            coverage_in_unit(np.array([0.5 + 0.5j]))
+
+    def test_none_raises_with_clear_message(self) -> None:
+        # Not "contains NaN" — the user passed None, say so.
+        with pytest.raises(ValueError, match="None"):
+            finite_se(None)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="None"):
+            coverage_in_unit(None)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="None"):
+            psd(None)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="None"):
+            ci_ordered(None, [1.0])  # type: ignore[arg-type]

@@ -20,7 +20,9 @@ GitHub issue.
   **Done (A3):** top-level `simulators.py` — `simulate_arma(ar, ma, n, n_paths=1, ...)` (recursion
   convention, Gaussian innovations, burn-in, always `(n_paths, n)` matrix-out, AR stationarity
   fail-loud) + `simulate_ar` convenience; `validators.generate_ar{1,2}_series` now DELEGATE to it
-  (single AR implementation, equality-pinned; seed-exact streams changed in v2.0).
+  with persistence-aware burn-in (equality-pinned; seed-exact streams changed in v2.0; local AR(1)
+  recursions remain in `gates.gate_synthetic_ar1` + `benchmarks.create_synthetic_dataset` —
+  consolidation is future work).
 
 ## Design (breaking → v2.0)
 - [x] #12 unify seam vocabulary → static `@runtime_checkable` Protocols + sklearn base + mixins.

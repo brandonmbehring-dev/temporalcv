@@ -16,8 +16,9 @@ How these relate to the library's other "checking" vocabularies:
 
 - **Conformance** ``check_*`` functions (``conformance.py``) assert seam
   CONTRACTS for developers and raise ``AssertionError``.
-- **Gates** (``gates.py``) return PASS/HALT *investigation signals* for
-  methodology questions where the right answer may be "look closer".
+- **Gates** (``gates.py``) return *investigation signals*
+  (PASS/WARN/HALT, or SKIP when a gate cannot run) for methodology
+  questions where the right answer may be "look closer".
 - **These guards** police impossible ARITHMETIC: if one fires, the upstream
   computation is wrong — there is nothing to investigate, so they raise
   immediately (``ValueError``).
@@ -43,8 +44,26 @@ from temporalcv._typing import ArrayLike
 __all__ = ["ci_ordered", "coverage_in_unit", "finite_se", "psd"]
 
 
+def _as_float_array(x: ArrayLike, name: str) -> np.ndarray:
+    """Cast to a float array, refusing None and complex input loudly.
+
+    ``np.asarray(x, dtype=float)`` would silently turn None into NaN and
+    silently DISCARD imaginary parts of complex input — both are exactly the
+    upstream-bug signatures these guards exist to catch.
+    """
+    if x is None:
+        raise ValueError(f"{name} is None — expected a numeric value or array")
+    raw = np.asarray(x)
+    if np.iscomplexobj(raw):
+        raise ValueError(
+            f"{name} has complex dtype {raw.dtype} — refusing to silently "
+            f"discard imaginary parts (complex statistics indicate an upstream bug)"
+        )
+    return np.asarray(raw, dtype=float)
+
+
 def _as_nonempty_float_array(x: ArrayLike, name: str) -> np.ndarray:
-    arr = np.asarray(x, dtype=float)
+    arr = _as_float_array(x, name)
     if arr.size == 0:
         raise ValueError(f"{name} is empty — nothing to validate (upstream bug?)")
     return arr
@@ -179,7 +198,7 @@ def ci_ordered(
     >>> lo, hi = ci_ordered(-np.inf, 1.96)  # one-sided is fine
     """
     lo = _as_nonempty_float_array(lower, f"{name} lower")
-    hi = np.asarray(upper, dtype=float)
+    hi = _as_float_array(upper, f"{name} upper")
     if lo.shape != hi.shape:
         raise ValueError(
             f"{name} bounds have mismatched shapes: lower {lo.shape} vs upper {hi.shape}"
@@ -187,7 +206,7 @@ def ci_ordered(
     if np.any(np.isnan(lo)) or np.any(np.isnan(hi)):
         raise ValueError(f"{name} bounds contain NaN")
     if np.any(lo > hi):
-        bad = np.nonzero(np.atleast_1d(lo > hi))[0][0]
+        bad = int(np.flatnonzero(np.atleast_1d(lo > hi))[0])
         lo_1d, hi_1d = np.atleast_1d(lo), np.atleast_1d(hi)
         raise ValueError(
             f"{name} bounds are inverted (lower > upper), first at flat index "
