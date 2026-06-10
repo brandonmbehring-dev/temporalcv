@@ -29,6 +29,7 @@ from temporalcv.diagnostics.influence import InfluenceDiagnostic
 from temporalcv.diagnostics.sensitivity import GapSensitivityResult
 from temporalcv.gates import GateResult, GateStatus, StratifiedValidationReport, ValidationReport
 from temporalcv.guardrails import GuardrailResult
+from temporalcv.hac import HACResult
 from temporalcv.inference.block_bootstrap_ci import BlockBootstrapResult
 from temporalcv.inference.wild_bootstrap import WildBootstrapResult
 from temporalcv.lag_selection import LagSelectionResult
@@ -417,6 +418,22 @@ RESULT_FACTORIES: list[tuple[str, Callable[[], object]]] = [
             n_clusters=5,
             weight_type="rademacher",
             bootstrap_distribution=np.array([0.9, 1.0]),
+        ),
+    ),
+    # hac (A3, issue #9)
+    (
+        "HACResult",
+        lambda: HACResult(
+            se=0.1,
+            variance=0.01,
+            long_run_variance=1.0,
+            covariance=np.array([[0.01, 0.0], [0.0, 0.02]]),
+            bandwidth=4,
+            kernel="bartlett",
+            n_samples=100,
+            effective_dof=96.0,
+            prewhitened=False,
+            ar_coef=None,
         ),
     ),
     # lag_selection / guardrails / stationarity / changepoint (review remediation)

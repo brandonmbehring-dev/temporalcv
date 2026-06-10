@@ -463,6 +463,12 @@ def compute_hac_variance(
     See Also
     --------
     dm_test : Primary consumer of HAC variance estimation.
+    temporalcv.hac : The general HAC module (kernels, matrix-accepting
+        long-run covariance, sandwich SEs, prewhitening). This function
+        deliberately does NOT delegate to it: it uses sum/(n-j)
+        autocovariances and the 4*(n/100)^(2/9) bandwidth rule, and
+        changing dm_test's variance estimator would silently shift test
+        statistics. Kept as the DM-test-scoped scalar variant.
     """
     d = as_array(d)
     n = len(d)

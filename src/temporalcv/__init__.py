@@ -152,6 +152,18 @@ from temporalcv.guardrails import (
     run_all_guardrails,
 )
 
+# HAC exports (kernels, bandwidth, long-run covariance, Newey-West SEs)
+from temporalcv.hac import (
+    HACResult,
+    bartlett_kernel,
+    long_run_covariance,
+    newey_west_covariance,
+    newey_west_se,
+    optimal_bandwidth,
+    parzen_kernel,
+    quadratic_spectral_kernel,
+)
+
 # Inference exports
 from temporalcv.inference import (
     WildBootstrapResult,
@@ -454,6 +466,15 @@ __all__ = [
     "compute_dm_influence",
     "GapSensitivityResult",
     "gap_sensitivity_analysis",
+    # HAC (kernels, bandwidth, long-run covariance, Newey-West SEs)
+    "HACResult",
+    "bartlett_kernel",
+    "parzen_kernel",
+    "quadratic_spectral_kernel",
+    "optimal_bandwidth",
+    "long_run_covariance",
+    "newey_west_se",
+    "newey_west_covariance",
     # Inference
     "WildBootstrapResult",
     "wild_cluster_bootstrap",

@@ -11,7 +11,18 @@ GitHub issue.
   `cv.py`, now **fail-loud** (raises on an under-provisioned config instead of silently
   dropping a fold); golden-parity vs dml_ts on skip-free configs.
 - [x] #8  dual-model `cross_fit_residualize(model_a, model_b, X, A, B, cv) -> (A_resid, B_resid)` with fold-0 NaN-mask. **Done (pilot)** — `src/temporalcv/cv.py`, typed `cv: Splitter`, identical shared NaN mask; exported top-level.
-- [ ] #9  standalone HAC residual covariance (Bartlett/Parzen/QS + optimal bandwidth + Newey-West), **matrix-accepting** (panel-ready).
+- [x] #9  standalone HAC residual covariance (Bartlett/Parzen/QS + optimal bandwidth + Newey-West), **matrix-accepting** (panel-ready).
+  **Done (A3):** `hac.py` — functions + frozen `HACResult` (NO stateful estimator class);
+  `long_run_covariance` accepts an (n, k) score matrix; AR(1) prewhitening implemented CORRECTLY
+  (dml_ts's was broken: X-mode crashed, mean-mode never recolored); golden-parity vs live dml_ts
+  pinned on the correct upstream paths (deliberate exceptions documented in-module: Andrews+Bartlett
+  uses the literature alpha(1), and negative/non-finite estimates raise instead of dml_ts's silent
+  clamp/NaN); fail-loud on singular X'X / negative QS variance estimates / overflow /
+  matrix-where-series.
+  `HACResult` splits `long_run_variance` (Omega) from `variance` (Omega/n) — the ambiguity behind
+  dml_ts#7 (TemporalPLRDML SEs understated by sqrt(n)). `compute_hac_variance` deliberately NOT
+  delegated (different autocovariance normalization + bandwidth rule; delegation would silently
+  shift dm_test statistics).
 - [x] #10 numeric/stat output validators (`finite_se`, `psd`, `ci_ordered`, `coverage_in_unit`).
   **Done (A3):** `validators/numeric.py` — validate-and-return guards raising stdlib `ValueError`
   on impossible arithmetic (empty input rejected); top-level exported; distinct from gate-returning
