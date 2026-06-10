@@ -36,6 +36,12 @@ References
      and Control. Holden-Day.
 """
 
+from temporalcv.validators.numeric import (
+    ci_ordered,
+    coverage_in_unit,
+    finite_se,
+    psd,
+)
 from temporalcv.validators.theoretical import (
     check_against_ar1_bounds,
     generate_ar1_series,
@@ -46,10 +52,16 @@ from temporalcv.validators.theoretical import (
 )
 
 __all__ = [
+    # Theoretical bounds (gate-returning investigation signals)
     "theoretical_ar1_mse_bound",
     "theoretical_ar1_mae_bound",
     "theoretical_ar2_mse_bound",
     "check_against_ar1_bounds",
     "generate_ar1_series",
     "generate_ar2_series",
+    # Numeric output guards (hard ValueError raises)
+    "finite_se",
+    "psd",
+    "ci_ordered",
+    "coverage_in_unit",
 ]
