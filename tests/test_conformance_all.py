@@ -13,9 +13,11 @@ EVERY splitter the library ships is classified here, exactly once:
 - **``NestedWalkForwardCV``** is a tuning meta-estimator, not a splitter
   (A1 decision); it does not satisfy the ``Splitter`` Protocol — asserted.
 
-An exhaustiveness guard walks ``cv.py``/``cv_financial.py`` and fails the
-moment a new splitter class ships without being classified here — the same
-fail-loud pattern as ``test_result_objects.py::test_registry_is_exhaustive``.
+An exhaustiveness guard walks EVERY module in the package (pkgutil, not a
+hardcoded module list — a splitter defined in a future ``cv_panel.py`` is
+caught too) and fails the moment a new splitter class ships without being
+classified here — the same fail-loud pattern as
+``test_result_objects.py::test_registry_is_exhaustive``.
 
 (The strategy/adapter conformance counterpart is exhaustive in
 ``test_seam_vocab.py``: ``ALL_STRATEGIES`` / ``ALL_ADAPTERS``.)
@@ -23,7 +25,9 @@ fail-loud pattern as ``test_result_objects.py::test_registry_is_exhaustive``.
 
 from __future__ import annotations
 
+import importlib
 import inspect
+import pkgutil
 
 import pytest
 from sklearn.linear_model import LinearRegression
@@ -56,6 +60,10 @@ FORWARD_ONLY_SPLITTERS = [
     CrossFitCV(n_splits=3),
     CrossFitCV(n_splits=4, extra_gap=2),
     PurgedWalkForward(n_splits=3),
+    # Note: embargo_pct is structurally a no-op for this forward-only
+    # splitter (it only embargoes train indices AFTER the test block, which
+    # never exist here) — real embargo behavior is exercised by the
+    # bidirectional PurgedKFold tests. The config stays as a smoke config.
     PurgedWalkForward(n_splits=3, purge_gap=2, embargo_pct=0.02),
 ]
 
@@ -74,7 +82,9 @@ class TestForwardOnlyConformance:
     @pytest.mark.parametrize(
         "splitter",
         FORWARD_ONLY_SPLITTERS,
-        ids=lambda s: f"{type(s).__name__}-{id(s) % 1000}",
+        # Deterministic ids (an id(s)-based scheme broke --last-failed and
+        # node-id reruns — review finding).
+        ids=[f"{type(s).__name__}-{i}" for i, s in enumerate(FORWARD_ONLY_SPLITTERS)],
     )
     def test_passes_temporal_splitter_contract(self, splitter: Splitter) -> None:
         check_temporal_splitter(splitter)  # must not raise
@@ -84,22 +94,37 @@ class TestForwardOnlyConformance:
         # Track-B migration target for dml_ts's purged_cv strategy (#23).
         assert isinstance(PurgedWalkForward(n_splits=3), Splitter)
 
+    def test_under_provisioned_purged_walk_forward_violates_count_contract(self) -> None:
+        # KNOWN LIMITATION (#32): PurgedWalkForward silently DROPS
+        # under-provisioned folds while get_n_splits stays nominal — the
+        # silent fold-drop pattern v2.0 fixed in BlockedTimeSeriesCV/
+        # TimeSeriesCrossValidator. The conformance checker correctly
+        # EXPOSES it (count-consistency invariant). When #32 hardens the
+        # splitter to raise like its siblings, this pin becomes a
+        # deliberate red diff.
+        with pytest.raises(AssertionError):
+            check_temporal_splitter(
+                PurgedWalkForward(n_splits=5, train_size=50, test_size=20), n_samples=30
+            )
+
 
 class TestBidirectionalExclusions:
     @pytest.mark.parametrize("splitter", BIDIRECTIONAL_BY_DESIGN, ids=lambda s: type(s).__name__)
     def test_fails_forward_only_contract_as_designed(self, splitter: Splitter) -> None:
         # These purged K-folds train on BOTH sides of the test block (the
         # de Prado evaluation setting). The forward-only contract must
-        # reject them on the no-lookahead invariant — loudly, so nobody
-        # mistakes them for walk-forward splitters.
-        with pytest.raises(AssertionError, match="lookahead"):
+        # reject them on the FOLD-LEVEL no-lookahead invariant — the match
+        # is anchored to "fold N: lookahead" because a bare "lookahead"
+        # would also match the tags-consistency message that fires in the
+        # OPPOSITE scenario (review finding).
+        with pytest.raises(AssertionError, match=r"fold \d+: lookahead"):
             check_temporal_splitter(splitter)
 
-    def test_they_still_satisfy_the_structural_protocol(self) -> None:
+    @pytest.mark.parametrize("splitter", BIDIRECTIONAL_BY_DESIGN, ids=lambda s: type(s).__name__)
+    def test_they_still_satisfy_the_structural_protocol(self, splitter: Splitter) -> None:
         # Structurally they ARE Splitters (split/get_n_splits) — the
         # exclusion is behavioral (forward-only), not structural.
-        for splitter in BIDIRECTIONAL_BY_DESIGN:
-            assert isinstance(splitter, Splitter)
+        assert isinstance(splitter, Splitter)
 
 
 class TestNonSplitterExclusions:
@@ -117,21 +142,28 @@ class TestInventoryIsExhaustive:
         classified = {type(s).__name__ for s in FORWARD_ONLY_SPLITTERS}
         classified |= {type(s).__name__ for s in BIDIRECTIONAL_BY_DESIGN}
 
-        # Detector: classes defined in the two CV modules exposing the
-        # splitter surface (split + get_n_splits). NestedWalkForwardCV has
-        # NEITHER (pure tuning meta-estimator), so it is not collected —
-        # its exclusion is documented in NON_SPLITTER_CLASSES and verified
-        # separately below.
+        # Detector: walk EVERY module in the package for classes exposing
+        # the splitter surface (split + get_n_splits). A two-module
+        # hardcoded walk was bypassable by a splitter defined in a new
+        # module (review finding) — pkgutil closes that. Protocol
+        # DEFINITIONS (Splitter/CrossFitter) are excluded; sklearn-imported
+        # classes are excluded via the temporalcv __module__ prefix.
+        # NestedWalkForwardCV exposes NEITHER method (pure tuning
+        # meta-estimator), so it is not collected — its exclusion is
+        # documented in NON_SPLITTER_CLASSES and verified separately below.
         shipped: set[str] = set()
-        for module in (temporalcv.cv, temporalcv.cv_financial):
+        for info in pkgutil.walk_packages(temporalcv.__path__, "temporalcv."):
+            module = importlib.import_module(info.name)
             for name, obj in vars(module).items():
                 if (
                     inspect.isclass(obj)
+                    and obj.__module__.startswith("temporalcv.")
                     and obj.__module__ == module.__name__
                     and callable(getattr(obj, "split", None))
                     and callable(getattr(obj, "get_n_splits", None))
                 ):
                     shipped.add(name)
+        shipped -= {"Splitter", "CrossFitter"}  # Protocol definitions, not splitters
 
         unclassified = shipped - classified
         assert not unclassified, (

@@ -15,8 +15,9 @@ No unreleased changes.
 
 Breaking modernization into a durable universal time-series toolkit (ADR 0001/0002,
 `docs/plans/v2_roadmap.md`). `dml_ts` is the sole known consumer and migrates in lockstep
-(Track B), so breaking changes land here in one release. Every PR in this line received an
-independent 4-agent adversarial review before merge (PRs #18, #20, #24, #26, #27, #28, #29, #30).
+(Track B), so breaking changes land here in one release. Every PR in this line received
+independent adversarial review before merge: three escalating independent review rounds for the
+pilot (#18), and a full 4-agent review for each of #20, #24, #26, #27, #28, #29, #30.
 
 ### Breaking
 
@@ -34,7 +35,8 @@ independent 4-agent adversarial review before merge (PRs #18, #20, #24, #26, #27
   preserved; the AR(2) initial-condition scale was previously wrong and is now correct).
 - **`theoretical_ar1_mse_bound(phi=0, h>1)` value fix**: the white-noise bound returned the
   random-walk formula `sigma_sq*h`; it now correctly returns `sigma_sq` at every horizon.
-  Multi-step leakage HALT gates against near-white-noise series were inflated by factor `h`.
+  Multi-step leakage HALT gates against white-noise (`phi=0` exactly) series were inflated by
+  factor `h`.
 - **`Splitter.get_n_splits` may return `None`** (lazy splitter seam): consumers must handle it.
 - **Package identity**: canonical repository is `brandon-behring/temporalcv`.
 
