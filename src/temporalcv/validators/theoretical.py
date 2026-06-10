@@ -36,11 +36,10 @@ References
 
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 
 from temporalcv.gates import GateResult, GateStatus
+from temporalcv.simulators import simulate_ar
 
 
 def theoretical_ar1_mse_bound(
@@ -400,22 +399,10 @@ def generate_ar1_series(
     if n < 1:
         raise ValueError(f"n must be >= 1, got {n}")
 
-    rng = np.random.default_rng(random_state)
-
-    # Initialize from stationary distribution
-    # Var(y) = σ² / (1 - φ²) for stationary AR(1)
-    y0_std = sigma / np.sqrt(1.0 - phi**2) if phi != 0 else sigma
-    y = np.zeros(n)
-    y[0] = rng.normal(0, y0_std)
-
-    # Generate innovations
-    innovations = rng.normal(0, sigma, size=n)
-
-    # AR(1) recursion
-    for t in range(1, n):
-        y[t] = phi * y[t - 1] + innovations[t]
-
-    return cast(np.ndarray, y)
+    # Delegates to the canonical simulator (single AR implementation library-wide).
+    # v2.0 note: this changed the seed-exact stream (burn-in init replaced exact
+    # stationary init); statistical properties are unchanged.
+    return np.asarray(simulate_ar([phi], n, sigma=sigma, rng=random_state)[0])
 
 
 def generate_ar2_series(
@@ -468,28 +455,10 @@ def generate_ar2_series(
             f"Need: φ₁+φ₂<1, φ₂-φ₁<1, |φ₂|<1"
         )
 
-    rng = np.random.default_rng(random_state)
-
-    # Compute unconditional variance for initialization
-    # γ₀ = σ² / ((1 - φ₂) · ((1 + φ₂)² - φ₁²))
-    try:
-        gamma0 = sigma**2 / ((1 - phi2) * ((1 + phi2) ** 2 - phi1**2))
-        y0_std = np.sqrt(max(gamma0, sigma**2))
-    except (ZeroDivisionError, ValueError):
-        y0_std = sigma
-
-    y = np.zeros(n)
-    y[0] = rng.normal(0, y0_std)
-    y[1] = rng.normal(0, y0_std)
-
-    # Generate innovations
-    innovations = rng.normal(0, sigma, size=n)
-
-    # AR(2) recursion
-    for t in range(2, n):
-        y[t] = phi1 * y[t - 1] + phi2 * y[t - 2] + innovations[t]
-
-    return cast(np.ndarray, y)
+    # Delegates to the canonical simulator (single AR implementation library-wide).
+    # v2.0 note: this changed the seed-exact stream (burn-in init replaced exact
+    # stationary init); statistical properties are unchanged.
+    return np.asarray(simulate_ar([phi1, phi2], n, sigma=sigma, rng=random_state)[0])
 
 
 # Type-only export for public API
