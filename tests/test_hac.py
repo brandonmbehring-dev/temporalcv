@@ -94,7 +94,10 @@ BANDWIDTHS = {
     ("newey_west", "bartlett"): 4,
     ("newey_west", "parzen"): 4,
     ("newey_west", "quadratic_spectral"): 4,
-    ("andrews", "bartlett"): 11,
+    # andrews+bartlett is a DELIBERATE deviation from dml_ts (which gave 11):
+    # Andrews (1991) order-1 kernels use alpha(1) = 4 rho^2/(1-rho^2)^2, not
+    # the alpha(2) dml_ts applied to all kernels (module deviation #6).
+    ("andrews", "bartlett"): 6,
     ("andrews", "parzen"): 10,
     ("andrews", "quadratic_spectral"): 5,
 }
@@ -208,8 +211,7 @@ class TestCorrectness:
         assert long_run_covariance(e, bandwidth=2).shape == (1, 1)
 
     def test_mean_se_consistency_with_core(self) -> None:
-        # mean-mode result: variance * n == long_run_variance == core's (1,1)
-        # (when the scalar clamp is inactive, i.e. omega > 0).
+        # mean-mode result: variance * n == long_run_variance == core's (1,1).
         e, _ = _reference_inputs()
         result = newey_west_se(e, bandwidth=4)
         omega_core = long_run_covariance(e, bandwidth=4)[0, 0]
@@ -292,9 +294,54 @@ class TestPrewhitening:
         with pytest.raises(ValueError, match="at least 3"):
             newey_west_se([1.0, 2.0], prewhiten=True)
 
-    def test_prewhiten_constant_zero_series_raises(self) -> None:
-        with pytest.raises(ValueError, match="constant zero"):
+    def test_prewhiten_constant_series_raises(self) -> None:
+        # Both the all-zero and the constant-NONZERO series must raise:
+        # before demeaning was added to the phi fit, a constant-5 series
+        # sailed through with a fabricated ar_coef=0.99 (review finding).
+        with pytest.raises(ValueError, match="constant series"):
             newey_west_se(np.zeros(10), prewhiten=True)
+        with pytest.raises(ValueError, match="constant series"):
+            newey_west_se(np.full(50, 5.0), prewhiten=True)
+
+    def test_prewhiten_neutral_on_nonzero_mean_iid_series(self) -> None:
+        # Review CRITICAL finding: an un-demeaned phi fit on mean-10 iid
+        # noise gave phi=0.989 and inflated the SE ~50x silently. With
+        # demeaning, prewhitening must be nearly neutral — the mean is the
+        # ESTIMAND for influence scores, not autocorrelation.
+        rng = np.random.default_rng(11)
+        e = 10.0 + rng.standard_normal(500)
+        plain = newey_west_se(e, bandwidth="auto", prewhiten=False)
+        white = newey_west_se(e, bandwidth="auto", prewhiten=True)
+        assert white.se == pytest.approx(plain.se, rel=0.15)
+        assert abs(white.ar_coef) < 0.2  # type: ignore[arg-type]
+
+    def test_prewhiten_sandwich_recovers_ar1_variance(self) -> None:
+        # Value-level pin for the prewhitened SANDWICH path (a wrong
+        # recolor factor here previously survived the suite — mutation
+        # finding). Intercept-only design: leading coefficient is the
+        # mean, true SE = sqrt(Omega/n) with Omega = 1/(1-phi)^2.
+        phi, n = 0.9, 4000
+        rng = np.random.default_rng(7)
+        raw = rng.standard_normal(n)
+        e = raw.copy()
+        for t in range(1, n):
+            e[t] = phi * e[t - 1] + raw[t]
+        true_se = float(np.sqrt((1.0 / (1 - phi) ** 2) / n))
+        result = newey_west_covariance(e - e.mean(), np.ones((n, 1)), bandwidth=2, prewhiten=True)
+        assert result.se == pytest.approx(true_se, rel=0.25)
+
+    def test_prewhiten_auto_bandwidth_uses_whitened_series(self) -> None:
+        # Documented deviation (Andrews-Monahan 1992): auto bandwidth is
+        # selected on the WHITENED series. Selecting on the ORIGINAL
+        # phi=0.9 series would give a bandwidth in the hundreds.
+        phi, n = 0.9, 4000
+        rng = np.random.default_rng(7)
+        raw = rng.standard_normal(n)
+        e = raw.copy()
+        for t in range(1, n):
+            e[t] = phi * e[t - 1] + raw[t]
+        result = newey_west_se(e, bandwidth="andrews", prewhiten=True)
+        assert result.bandwidth <= 3
 
 
 class TestValidation:
@@ -347,7 +394,7 @@ class TestValidation:
         e = rng.standard_normal(50)
         col = rng.standard_normal(50)
         x = np.column_stack([col, col])
-        with pytest.raises(ValueError, match="singular"):
+        with pytest.raises(ValueError, match="rank-deficient"):
             newey_west_covariance(e, x, bandwidth=3)
 
     def test_unknown_kernel_raises(self) -> None:
@@ -376,6 +423,71 @@ class TestValidation:
     def test_andrews_on_matrix_scores_raises(self) -> None:
         with pytest.raises(ValueError, match="andrews"):
             long_run_covariance(np.ones((10, 2)) + np.eye(10, 2), bandwidth="andrews")
+
+    def test_andrews_on_constant_series_raises(self) -> None:
+        # Review finding: np.corrcoef of a zero-variance series is NaN and
+        # previously crashed with a context-free numpy error.
+        with pytest.raises(ValueError, match="constant series"):
+            optimal_bandwidth(np.full(50, 5.0), method="andrews")
+
+    def test_optimal_bandwidth_validates_kernel_for_every_method(self) -> None:
+        # Review finding: a kernel typo silently passed for newey_west
+        # (kernel only affects andrews constants, but typos must be loud).
+        with pytest.raises(ValueError, match="Unknown kernel"):
+            optimal_bandwidth([1.0, 2.0, 3.0], method="newey_west", kernel="barlett")  # type: ignore[arg-type]
+
+
+class TestFailLoudOnNumericGarbage:
+    """Review CRITICAL findings: overflow and negative estimates must raise,
+    never launder into a plausible se=0.0 or a NaN matrix."""
+
+    def test_scalar_overflow_raises(self) -> None:
+        # max(0.0, nan) is 0.0 — the old dml_ts clamp silently turned
+        # float64 overflow into se=0.0 (infinite t-stats downstream).
+        e = np.array([1e200, -1e200] * 10)
+        with pytest.raises(ValueError, match="non-finite"):
+            newey_west_se(e, bandwidth=4)
+
+    def test_long_run_covariance_overflow_raises(self) -> None:
+        scores = np.array([1e200, -1e200] * 10)
+        with pytest.raises(ValueError, match="non-finite"):
+            long_run_covariance(scores, bandwidth=4)
+        mixed = np.column_stack([np.array([1e200, -1e200] * 10), np.ones(20)])
+        with pytest.raises(ValueError, match="non-finite"):
+            long_run_covariance(mixed, bandwidth=4)
+
+    def test_sandwich_overflow_raises_with_named_cause(self) -> None:
+        rng = np.random.default_rng(9)
+        e = np.array([1e200, -1e200] * 25)
+        x = rng.standard_normal((50, 2))
+        with pytest.raises(ValueError, match="overflow"):
+            newey_west_covariance(e, x, bandwidth=3)
+
+    def test_qs_negative_scalar_variance_raises(self) -> None:
+        # Alternating series + QS: the truncated weight sequence fails
+        # PSD-ness (raw omega < 0). dml_ts clamped this to se=0.0 silently.
+        e = np.array([(-1.0) ** t for t in range(12)])
+        with pytest.raises(ValueError, match="negative"):
+            newey_west_se(e, bandwidth=1, kernel="quadratic_spectral")
+
+    def test_qs_negative_sandwich_diagonal_raises(self) -> None:
+        # Exercises the documented deviation #4 raise branch (previously
+        # untested). dml_ts returned se=NaN with only a RuntimeWarning.
+        e = np.array([(-1.0) ** t for t in range(12)])
+        with pytest.raises(ValueError, match="negative diagonal"):
+            newey_west_covariance(e, np.ones((12, 1)), bandwidth=1, kernel="quadratic_spectral")
+
+    def test_long_run_covariance_shift_invariant(self) -> None:
+        # Demeaning pin by property: Omega must be invariant to adding a
+        # constant (redundant guard for the single test that catches a
+        # dropped-demeaning mutation).
+        rng = np.random.default_rng(12)
+        e = rng.standard_normal(300)
+        np.testing.assert_allclose(
+            long_run_covariance(e, bandwidth=5),
+            long_run_covariance(e + 100.0, bandwidth=5),
+            rtol=1e-8,
+        )
 
 
 class TestHACResultContract:
@@ -427,3 +539,7 @@ class TestHACResultContract:
             HACResult(**{**kwargs, "prewhitened": True})
         with pytest.raises(ValueError, match="square"):
             HACResult(**{**kwargs, "covariance": np.ones((2, 3))})
+        # Review finding: NaN covariance entries previously slipped through
+        # (only ndim/squareness was checked) and produced RFC-invalid JSON.
+        with pytest.raises(ValueError, match="non-finite"):
+            HACResult(**{**kwargs, "covariance": np.array([[1.0, np.nan], [np.nan, 1.0]])})

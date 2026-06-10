@@ -65,17 +65,25 @@ omega = long_run_covariance(scores, bandwidth=6)   # (n, k) -> (k, k)
 ```
 
 Returns `Omega` (NOT divided by n). Always 2-D, including `(1, 1)` for a
-single series. Bartlett/Parzen guarantee PSD; QS may not be PSD in small
-samples — validate with [`psd`](validators.md) if required.
+single series. Bartlett/Parzen guarantee PSD up to floating-point
+round-off; QS may not be PSD in small samples (negative variance estimates
+raise) — validate with [`psd`](validators.md) if PSD-ness is required.
 
 ### `optimal_bandwidth`
 
 ```python
 from temporalcv import optimal_bandwidth
 
-optimal_bandwidth(residuals)                      # floor(T^(1/3)), NW 1994
+optimal_bandwidth(residuals)                      # floor(T^(1/3)) heuristic
 optimal_bandwidth(residuals, method="andrews")    # AR(1) plug-in, Andrews 1991
 ```
+
+`floor(T^(1/3))` is a common heuristic at the Bartlett-optimal growth rate
+(ported from dml_ts); Newey-West (1994)'s own rule of thumb is
+`4·(T/100)^(2/9)` — that one is used by `compute_hac_variance`. The Andrews
+plug-in uses the kernel-correct constants (`alpha(1)` for Bartlett —
+dml_ts applied `alpha(2)` to all kernels, so Andrews+Bartlett bandwidths
+deliberately differ from dml_ts).
 
 ### Kernels
 

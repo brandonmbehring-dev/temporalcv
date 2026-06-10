@@ -17,35 +17,58 @@ Deviations from dml_ts (deliberate, documented)
 -----------------------------------------------
 1. ``HACResult`` carries BOTH ``long_run_variance`` (the long-run variance
    Omega of the series) and ``variance`` (Omega/n — the variance of the MEAN).
-   dml_ts exposed only the ambiguous ``get_variance()``, which led its own
-   consumer to divide by n twice (dml_ts issue #7: TemporalPLRDML standard
-   errors understated by sqrt(n)). **``se`` here is the standard error of the
-   mean — never divide it (or ``variance``) by n again.**
+   dml_ts's ``get_variance()`` was ambiguous about Omega vs Omega/n, which
+   led its own consumer to divide by n twice (dml_ts issue #7:
+   TemporalPLRDML standard errors understated by sqrt(n)). **``se`` here is
+   the standard error of the mean — never divide it (or ``variance``) by n
+   again.**
 2. Prewhitening WORKS here. In dml_ts, ``prewhiten=True`` with a design
    matrix always raised (whitened residuals length n-1 vs n rows of X) and
-   mean-mode prewhitening never recolored (wrong scale). Here: whiten
+   mean-mode prewhitening never recolored (wrong scale). Here: DEMEAN, fit
    ``e_t -> u_t = e_t - phi*e_{t-1}``, select the (auto) bandwidth on the
    WHITENED series (Andrews & Monahan 1992), estimate, then recolor by
    ``1/(1-phi)^2`` in both modes; X is row-aligned (first row dropped).
    This is *scalar* AR(1) prewhitening of the residuals with a scalar
    recoloring factor — a simplification of full Andrews-Monahan VAR(1)
-   prewhitening of the score series.
-3. A singular ``X'X`` raises ``ValueError`` (dml_ts silently fell back to
-   the pseudo-inverse, producing garbage covariance for a rank-deficient
-   design).
-4. A negative leading diagonal in the sandwich covariance (possible with
-   the quadratic-spectral kernel in small samples) raises instead of
-   silently propagating ``sqrt(negative) = NaN``.
+   prewhitening of the score series. (Demeaning before the phi fit is
+   essential: on a nonzero-mean series an un-demeaned fit drives
+   phi -> 1 and inflates the recolored SE ~50x — found by review.)
+   The whitened sample has n-1 observations while ``variance`` divides by
+   the original n, an O(1/n) effect that is asymptotically negligible.
+3. A singular ``X'X`` raises ``ValueError`` (dml_ts silently produced
+   garbage: ``np.linalg.inv`` does not reliably raise on float-singular
+   input, and dml_ts's pseudo-inverse fallback fired only for exact
+   singularity).
+4. A NEGATIVE long-run variance estimate raises in BOTH modes (possible
+   with the quadratic-spectral kernel in small samples), as does any
+   negative sandwich diagonal — instead of dml_ts's silent
+   ``max(0, .)`` clamp (mean-mode, yielding a lying ``se = 0``) or silent
+   ``sqrt(negative) = NaN`` (sandwich mode). A non-finite estimate
+   (float64 overflow from huge inputs) also raises in all paths.
 5. A matrix passed where a single series is required raises (dml_ts
    ``ravel()``-ed, silently concatenating columns into one series).
+6. ``optimal_bandwidth(method="andrews", kernel="bartlett")`` uses the
+   literature-correct Andrews (1991) constant ``alpha(1) =
+   4*rho^2/(1-rho^2)^2`` for the Bartlett (order-1) kernel; dml_ts applied
+   the order-2 constant ``alpha(2) = 4*rho^2/(1-rho)^4`` to ALL kernels,
+   overestimating Bartlett bandwidths (e.g. 11 vs 6 on the reference
+   series). Andrews+Bartlett bandwidths therefore deliberately DIFFER from
+   dml_ts. ``rho`` is estimated by the lag-1 sample autocorrelation.
+7. ``bandwidth=None`` is not accepted (dml_ts silently mapped it to
+   "andrews"); pass an int or an explicit method string.
 
 Knowledge Tiers
 ---------------
 [T1] Newey-West long-run variance / sandwich covariance and the Bartlett
-     kernel's PSD guarantee: Newey & West (1987).
+     kernel's PSD guarantee (exact arithmetic; floating point can leave
+     eigenvalues negative at round-off scale): Newey & West (1987).
 [T1] Kernel choice and asymptotic optimality of QS: Andrews (1991).
-[T1] Automatic bandwidth m = floor(T^(1/3)): Newey & West (1994) rule of
-     thumb; Andrews (1991) AR(1) plug-in for the data-driven option.
+[T2] Automatic bandwidth m = floor(T^(1/3)): a common heuristic at the
+     Bartlett-optimal T^(1/3) growth rate (ported from dml_ts). Newey &
+     West (1994)'s own rule of thumb is 4*(T/100)^(2/9) — used by
+     ``compute_hac_variance`` in statistical_tests, not here.
+[T1] Andrews (1991) AR(1) plug-in (kernel-specific alpha constants) for
+     the data-driven bandwidth option.
 [T1] AR(1) prewhitening and recoloring: Andrews & Monahan (1992).
 
 References
@@ -115,7 +138,8 @@ class HACResult:
         ``None`` in mean-mode.
     bandwidth : int
         Lag-truncation bandwidth actually used (after auto-selection and
-        clamping to ``n - 1``).
+        clamping to one less than the working sample length — the whitened
+        length ``n - 1`` when ``prewhiten=True``).
     kernel : str
         Kernel name used.
     n_samples : int
@@ -156,6 +180,8 @@ class HACResult:
             cov = self.covariance
             if cov.ndim != 2 or cov.shape[0] != cov.shape[1]:
                 raise ValueError(f"covariance must be square 2-D, got shape {cov.shape}")
+            if not np.all(np.isfinite(cov)):
+                raise ValueError("covariance contains non-finite entries")
         if self.prewhitened != (self.ar_coef is not None):
             raise ValueError(
                 f"ar_coef must be set iff prewhitened "
@@ -207,10 +233,14 @@ def quadratic_spectral_kernel(lag: int, bandwidth: int) -> float:
     """
     Quadratic spectral (QS) kernel weight.
 
-    Asymptotically MSE-optimal (Andrews 1991) but NOT truncated and can be
-    slightly negative at large lags — in small samples the resulting
-    estimate may fail positive semi-definiteness (the sandwich path raises
-    rather than returning a NaN standard error).
+    Asymptotically MSE-optimal (Andrews 1991). The weight sequence as
+    truncated at the bandwidth here is not of positive semi-definite type
+    (unlike Bartlett/Parzen), so in small samples the resulting estimate
+    may fail PSD-ness — a negative variance estimate raises rather than
+    being silently clamped or propagated as ``sqrt(negative) = NaN``.
+    (The weights actually used, ``lag <= bandwidth``, are all positive;
+    the kernel function itself only goes negative beyond ~1.2x the
+    bandwidth, a region these estimators never evaluate.)
     """
     if lag == 0:
         return 1.0
@@ -293,10 +323,15 @@ def optimal_bandwidth(
     residuals : ArrayLike
         1-D series (a matrix raises — pass one series).
     method : {"newey_west", "auto", "andrews"}, default "newey_west"
-        - ``"newey_west"`` / ``"auto"``: rule of thumb ``floor(T**(1/3))``
-          (Newey & West 1994).
+        - ``"newey_west"`` / ``"auto"``: ``floor(T**(1/3))`` — a common
+          heuristic at the Bartlett-optimal growth rate, ported from
+          dml_ts (Newey & West 1994's own rule of thumb is
+          ``4*(T/100)**(2/9)``).
         - ``"andrews"``: AR(1) plug-in (Andrews 1991) with kernel-specific
-          constants.
+          constants — ``alpha(1)`` for Bartlett, ``alpha(2)`` for
+          Parzen/QS (dml_ts used ``alpha(2)`` everywhere; deviation #6).
+          ``rho`` is the lag-1 sample autocorrelation; a (near-)constant
+          series raises.
     kernel : {"bartlett", "parzen", "quadratic_spectral"}
         Kernel (affects the Andrews constants only).
 
@@ -310,6 +345,7 @@ def optimal_bandwidth(
     ValueError
         On unknown method/kernel or non-1-D input.
     """
+    _get_kernel(kernel)  # validate kernel name for EVERY method, not just andrews
     arr = _as_series(residuals, "residuals")
     n = arr.size
     if n < 2:
@@ -319,18 +355,28 @@ def optimal_bandwidth(
         return max(0, int(np.floor(n ** (1 / 3))))
 
     if method == "andrews":
-        _get_kernel(kernel)  # validate kernel name
         if n < 3:
             return 0
-        rho = float(np.clip(np.corrcoef(arr[:-1], arr[1:])[0, 1], -0.99, 0.99))
-        alpha_den = (1 - rho) ** 4
-        alpha = 0.0 if alpha_den < 1e-10 else 4 * rho**2 / alpha_den
+        raw_rho = np.corrcoef(arr[:-1], arr[1:])[0, 1]
+        if not np.isfinite(raw_rho):
+            raise ValueError(
+                "andrews bandwidth is undefined for a (near-)constant series (zero variance)"
+            )
+        rho = float(np.clip(raw_rho, -0.99, 0.99))
         if kernel == "bartlett":
+            # Andrews (1991): order-1 kernel uses alpha(1) = 4 rho^2 / (1 - rho^2)^2.
+            # dml_ts applied alpha(2) here too — deliberate deviation #6.
+            alpha_den = (1 - rho**2) ** 2
+            alpha = 0.0 if alpha_den < 1e-10 else 4 * rho**2 / alpha_den
             bw = int(1.1447 * (alpha * n) ** (1 / 3))
-        elif kernel == "parzen":
-            bw = int(2.6614 * (alpha * n) ** (1 / 5))
-        else:  # quadratic_spectral
-            bw = int(1.3221 * (alpha * n) ** (1 / 5))
+        else:
+            # Order-2 kernels (Parzen, QS): alpha(2) = 4 rho^2 / (1 - rho)^4.
+            alpha_den = (1 - rho) ** 4
+            alpha = 0.0 if alpha_den < 1e-10 else 4 * rho**2 / alpha_den
+            if kernel == "parzen":
+                bw = int(2.6614 * (alpha * n) ** (1 / 5))
+            else:  # quadratic_spectral
+                bw = int(1.3221 * (alpha * n) ** (1 / 5))
         return max(0, min(bw, n - 1))
 
     raise ValueError(f"Unknown bandwidth method '{method}'. Use 'newey_west', 'andrews', or 'auto'")
@@ -417,18 +463,25 @@ def long_run_covariance(
         gamma_j = (u[j:].T @ u[:-j]) / n
         weight = kernel_func(j, bw)
         omega = omega + weight * (gamma_j + gamma_j.T)
-    return np.asarray((omega + omega.T) / 2.0, dtype=np.float64)
+    out = np.asarray((omega + omega.T) / 2.0, dtype=np.float64)
+    if not np.all(np.isfinite(out)):
+        raise ValueError(
+            "long-run covariance is non-finite — score magnitudes likely overflowed float64"
+        )
+    return out
 
 
 def _scalar_long_run_variance(
     residuals: np.ndarray, bandwidth: int, kernel_func: Callable[[int, int], float]
 ) -> float:
-    """Scalar long-run variance with the dml_ts non-negativity clamp.
+    """Scalar long-run variance — identical math to the (1, 1) core.
 
-    Identical math to the (1, 1) ``long_run_covariance`` case, plus the
-    upstream ``max(0, .)`` clamp that keeps a heavily negative-weighted QS
-    estimate from producing a negative variance for the mean (parity with
-    dml_ts ``_compute_long_run_variance``).
+    Fail-loud deviation #4 from dml_ts: a non-finite estimate (float64
+    overflow) or a negative estimate (QS kernel, small samples) RAISES.
+    dml_ts clamped with ``max(0, .)``, which silently turned both cases
+    into a lying ``se = 0`` (infinite t-statistics downstream) — and
+    ``max(0.0, nan)`` is nan-poisoned to 0.0 by Python comparison
+    semantics, so the clamp even laundered overflow into zero.
     """
     n = residuals.size
     e = residuals - residuals.mean()
@@ -438,7 +491,17 @@ def _scalar_long_run_variance(
             break
         gamma_j = float(np.sum(e[j:] * e[:-j]) / n)
         omega += 2 * kernel_func(j, bandwidth) * gamma_j
-    return max(0.0, omega)
+    if not np.isfinite(omega):
+        raise ValueError(
+            "long-run variance is non-finite — residual magnitudes likely overflowed float64"
+        )
+    if omega < 0:
+        raise ValueError(
+            f"long-run variance estimate is negative ({omega:.3e}) — the kernel's "
+            f"truncated weight sequence failed PSD-ness in this sample; use "
+            f"'bartlett' or 'parzen', or a smaller bandwidth"
+        )
+    return omega
 
 
 # ---------------------------------------------------------------------------
@@ -447,13 +510,21 @@ def _scalar_long_run_variance(
 
 
 def _prewhiten(residuals: np.ndarray) -> tuple[np.ndarray, float]:
-    """Fit ``e_t = phi*e_{t-1} + u_t`` by OLS; return (u, clipped phi)."""
+    """Demean, fit ``e_t = phi*e_{t-1} + u_t`` by OLS; return (u, clipped phi).
+
+    Demeaning BEFORE the phi fit is essential: on a nonzero-mean series an
+    un-demeaned fit gives phi ~= mu^2/(mu^2 + sigma^2) -> 1 regardless of
+    the true autocorrelation, and the 1/(1-phi)^2 recoloring then inflates
+    the SE ~50x silently (review finding). Andrews-Monahan prewhitening is
+    defined for mean-zero score series.
+    """
     if residuals.size < 3:
         raise ValueError(f"prewhitening requires at least 3 observations, got {residuals.size}")
-    e_lag, e_curr = residuals[:-1], residuals[1:]
+    e = residuals - residuals.mean()
+    e_lag, e_curr = e[:-1], e[1:]
     denom = float(np.sum(e_lag**2))
     if denom == 0.0:
-        raise ValueError("prewhitening is undefined for a constant zero series")
+        raise ValueError("prewhitening is undefined for a constant series (zero variance)")
     phi = float(np.clip(np.sum(e_lag * e_curr) / denom, -0.99, 0.99))
     return e_curr - phi * e_lag, phi
 
@@ -577,7 +648,12 @@ def newey_west_covariance(
     Parameters
     ----------
     residuals : ArrayLike
-        Regression residuals, 1-D, length n.
+        Regression residuals, 1-D, length n. These must be residuals FROM
+        a regression on this ``X`` (scores ``e_i * x_i`` then have mean
+        ~zero by orthogonality, and per standard practice they are NOT
+        demeaned here). Feeding raw uncentered data instead of residuals
+        gives a silently wrong covariance — for the HAC SE of a raw
+        series' mean, use :func:`newey_west_se` (which demeans).
     X : ArrayLike
         Design matrix ``(n, k)`` (a 1-D X is treated as one column).
     bandwidth, kernel, prewhiten
@@ -641,7 +717,9 @@ def newey_west_covariance(
     # rank explicitly. dml_ts silently used a pseudo-inverse here.
     if np.linalg.matrix_rank(xtx) < k:
         raise ValueError(
-            "X'X is singular — the design matrix is rank-deficient; drop collinear columns"
+            "X'X is rank-deficient by numpy's default (relative) tolerance — "
+            "drop collinear columns, or rescale wildly-scaled columns "
+            "(extreme column-scale differences can also trip this check)"
         )
     xtx_inv = np.linalg.inv(xtx)
 
@@ -654,18 +732,24 @@ def newey_west_covariance(
         gamma_j = u[j:].T @ u[:-j]
         omega += weight * (gamma_j + gamma_j.T)
 
+    if not np.all(np.isfinite(omega)):
+        raise ValueError(
+            "HAC sandwich meat is non-finite — residual/X magnitudes likely overflowed float64"
+        )
     cov = xtx_inv @ omega @ xtx_inv
     cov = np.asarray((cov + cov.T) / 2.0, dtype=np.float64)
     if ar_coef is not None:
         cov = cov / (1.0 - ar_coef) ** 2
 
-    leading = float(cov[0, 0])
-    if leading < 0:
+    diag = np.diag(cov)
+    if np.any(diag < 0):
+        worst = int(np.argmin(diag))
         raise ValueError(
-            f"leading sandwich variance is negative ({leading:.3e}) — the "
-            f"'{kernel}' kernel can fail PSD-ness in small samples; use "
-            f"'bartlett' or 'parzen', or a smaller bandwidth"
+            f"sandwich covariance has a negative diagonal (index {worst}: "
+            f"{diag[worst]:.3e}) — the '{kernel}' kernel can fail PSD-ness in "
+            f"small samples; use 'bartlett' or 'parzen', or a smaller bandwidth"
         )
+    leading = float(cov[0, 0])
 
     return HACResult(
         se=float(np.sqrt(leading)),

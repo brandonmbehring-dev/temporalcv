@@ -15,7 +15,10 @@ GitHub issue.
   **Done (A3):** `hac.py` — functions + frozen `HACResult` (NO stateful estimator class);
   `long_run_covariance` accepts an (n, k) score matrix; AR(1) prewhitening implemented CORRECTLY
   (dml_ts's was broken: X-mode crashed, mean-mode never recolored); golden-parity vs live dml_ts
-  pinned on all correct upstream paths; fail-loud on singular X'X / QS non-PSD / matrix-where-series.
+  pinned on the correct upstream paths (deliberate exceptions documented in-module: Andrews+Bartlett
+  uses the literature alpha(1), and negative/non-finite estimates raise instead of dml_ts's silent
+  clamp/NaN); fail-loud on singular X'X / negative QS variance estimates / overflow /
+  matrix-where-series.
   `HACResult` splits `long_run_variance` (Omega) from `variance` (Omega/n) — the ambiguity behind
   dml_ts#7 (TemporalPLRDML SEs understated by sqrt(n)). `compute_hac_variance` deliberately NOT
   delegated (different autocovariance normalization + bandwidth rule; delegation would silently
