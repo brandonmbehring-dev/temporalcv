@@ -83,6 +83,7 @@ Installation
    api/diagnostics
    api/changepoint
    api/inference
+   api/hac
    api/validators
    api/simulators
    api/metrics
