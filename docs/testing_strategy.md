@@ -1,6 +1,6 @@
 # Testing Strategy
 
-**Version**: 1.0.0 | **Last Updated**: 2025-01-05
+**Version**: 2.0.0 | **Last Updated**: 2026-06-10
 
 This document defines the testing approach for temporalcv, a library focused on temporal validation with leakage protection.
 

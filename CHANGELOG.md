@@ -11,6 +11,80 @@ No unreleased changes.
 
 ---
 
+## [2.0.0] - 2026-06-10
+
+Breaking modernization into a durable universal time-series toolkit (ADR 0001/0002,
+`docs/plans/v2_roadmap.md`). `dml_ts` is the sole known consumer and migrates in lockstep
+(Track B), so breaking changes land here in one release. Every PR in this line received
+independent adversarial review before merge: three escalating independent review rounds for the
+pilot (#18), and a full 4-agent review for each of #20, #24, #26, #27, #28, #29, #30.
+
+### Breaking
+
+- **Result objects** (#13): all 40 result dataclasses library-wide are now
+  `frozen=True, slots=True` with `SCHEMA_VERSION`, a JSON-able `to_dict()`, and **identity
+  equality** (`eq=False`) on array-bearing results — code that mutated results or compared
+  them by value must adapt. Registry-enforced (`tests/test_result_objects.py`).
+- **`CVFold`/`get_fold_info` removed** (#22): reconciled to `SplitInfo` /
+  `get_split_info()` (zero known consumers).
+- **`BlockedTimeSeriesCV` fails loud** (#7): under-provisioned configs now raise instead of
+  silently dropping folds (a carried-over silent leakage-fold path was also hardened in
+  `TimeSeriesCrossValidator`).
+- **`generate_ar1_series` / `generate_ar2_series` seed-exact streams changed** (#11): they
+  now delegate to `simulate_ar` with a persistence-aware burn-in (statistical properties
+  preserved; the AR(2) initial-condition scale was previously wrong and is now correct).
+- **`theoretical_ar1_mse_bound(phi=0, h>1)` value fix**: the white-noise bound returned the
+  random-walk formula `sigma_sq*h`; it now correctly returns `sigma_sq` at every horizon.
+  Multi-step leakage HALT gates against white-noise (`phi=0` exactly) series were inflated by
+  factor `h`.
+- **`Splitter.get_n_splits` may return `None`** (lazy splitter seam): consumers must handle it.
+- **Package identity**: canonical repository is `brandon-behring/temporalcv`.
+
+### Added
+
+- **Typed seam vocabulary** (#12): `@runtime_checkable` Protocols `Splitter`, `CrossFitter`,
+  `SupportsFitPredict`, `SupportsBootstrap`, `SupportsForecast`; ABCs retained as owned
+  shared-implementation bases.
+- **Executable conformance suite** (#14): `check_temporal_splitter`, `check_temporal_estimator`,
+  `check_bootstrap_strategy`, `check_forecast_adapter`; every shipped splitter is classified
+  and gated (`tests/test_conformance_all.py`), with bidirectional purged K-folds asserted as
+  designed exclusions from the forward-only contract.
+- **Capability tags** (#14): frozen `TemporalTags` via `temporal_tags()` on the forward-only
+  splitters, cross-validated against observed behavior by the conformance suite.
+- **Ported splitters** (#22, #7): `TimeSeriesCrossValidator` (expanding/sliding, gap, purge)
+  and `BlockedTimeSeriesCV`, golden-parity-verified bit-exact against the live dml_ts
+  implementations at port time.
+- **Cross-fitting seam** (#8): `cross_fit_residualize(model_a, model_b, X, A, B, cv)` —
+  dual-variable out-of-fold residualization with a shared fold-0 NaN mask, validated to
+  1e-10 against the dml_ts consumer.
+- **HAC module** (#9): `hac.py` — Bartlett/Parzen/QS kernels, automatic bandwidth
+  (`T^(1/3)` heuristic + Andrews 1991 plug-in with kernel-correct constants),
+  matrix-accepting `long_run_covariance` (panel-ready), `newey_west_se` /
+  `newey_west_covariance` returning a frozen `HACResult` that explicitly separates
+  `long_run_variance` (Omega) from `variance` (Omega/n), and working, demeaned AR(1)
+  prewhitening/recoloring (Andrews-Monahan). Fail-loud on singular designs, negative or
+  non-finite variance estimates, and overflow.
+- **Numeric output validators** (#10): `finite_se`, `psd`, `ci_ordered`, `coverage_in_unit` —
+  validate-and-return guards raising `ValueError` on impossible arithmetic.
+- **Generic simulators** (#11): `simulate_arma` / `simulate_ar` — seeded Gaussian ARMA path
+  generators, matrix-out `(n_paths, n)`, fail-loud on non-stationary AR and overflow.
+- **`ArrayLike` public input contract** (#15): ~100 public input parameters widened
+  (returns and stored fields stay concrete `np.ndarray`); `temporalcv._typing` reserves the
+  future array-API/narwhals backend seam.
+- **Public-API stability gate** (#16): `tests/test_public_api.py` snapshots the top-level
+  `__all__` (189 names at this release) — any surface change is a deliberate, reviewable diff.
+  ADR 0002 records the public-contract and layout decisions.
+
+### Fixed
+
+- `BlockedTimeSeriesCV` / `TimeSeriesCrossValidator` degenerate-fold silent paths now raise.
+- `theoretical_ar1_mse_bound` white-noise horizon scaling (see Breaking).
+- `ci_ordered` reports the correct flat index for inverted bounds in n-D input.
+- Complex statistical inputs are refused loudly across new guards, simulators, and HAC
+  (previously `np.asarray(..., dtype=float)` silently discarded imaginary parts).
+
+---
+
 ## [1.0.1] - 2026-04-29
 
 Trust-repair patch. No API or behavioral changes — pure documentation, configuration, and metadata corrections from the 2026-04-29 audit (`docs/audits/claude-audit-2026-04-29.md`). See `docs/plans/active/remediation_2026-04-29.md` Phase 1 for per-task evidence.

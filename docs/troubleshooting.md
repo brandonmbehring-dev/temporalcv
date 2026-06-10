@@ -16,7 +16,7 @@ pip install temporalcv
 Verify installation:
 ```python
 import temporalcv
-print(temporalcv.__version__)  # Should print "1.0.0-rc1"
+print(temporalcv.__version__)  # Should print "2.0.0"
 ```
 
 ### Python version requirements

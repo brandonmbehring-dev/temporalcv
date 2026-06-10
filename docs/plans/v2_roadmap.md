@@ -50,7 +50,11 @@ GitHub issue.
   via `temporal_tags()` on the 4 forward-only `cv.py` splitters; `check_temporal_splitter`
   cross-validates declared tags against observed behavior. (`NestedWalkForwardCV` excluded — a
   tuning meta-estimator, not a splitter.)
-- [ ] #15 backend-agnostic contract (`ArrayLike` sigs + lazy splitter seam; reserve `xp`/narwhals).
+- [x] #15 backend-agnostic contract (`ArrayLike` sigs + lazy splitter seam; reserve `xp`/narwhals).
+  **Done (A1, PR #27 — this tick was missed at merge time):** ~100 public INPUT params widened
+  `np.ndarray`→`ArrayLike` across 20 modules (returns/result-fields/internal seams stay concrete);
+  `temporalcv._typing` reserves the xp/narwhals seam + `as_array`; the lazy splitter seam
+  (`get_n_splits -> int | None`) landed earlier in the pilot (PR #18 R6).
 - [x] #16 governance: layout/public-contract ADR + public-API stability test; fix `pyproject` URLs (→ canonical brandon-behring).
   **Done (A1):** `docs/adr/0002-public-contract-and-layout.md` (the top-level `__all__` IS the stable
   surface; subpackages are not import paths; `cv.py` vs `cv_financial.py`; seams/tags/result-object
