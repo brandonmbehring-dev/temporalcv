@@ -94,15 +94,16 @@ class TestForwardOnlyConformance:
         # Track-B migration target for dml_ts's purged_cv strategy (#23).
         assert isinstance(PurgedWalkForward(n_splits=3), Splitter)
 
-    def test_under_provisioned_purged_walk_forward_violates_count_contract(self) -> None:
-        # KNOWN LIMITATION (#32): PurgedWalkForward silently DROPS
-        # under-provisioned folds while get_n_splits stays nominal — the
-        # silent fold-drop pattern v2.0 fixed in BlockedTimeSeriesCV/
-        # TimeSeriesCrossValidator. The conformance checker correctly
-        # EXPOSES it (count-consistency invariant). When #32 hardens the
-        # splitter to raise like its siblings, this pin becomes a
-        # deliberate red diff.
-        with pytest.raises(AssertionError):
+    def test_under_provisioned_purged_walk_forward_raises(self) -> None:
+        # #32 hardening: PurgedWalkForward raises on under-provisioned
+        # configs like its v2.0 siblings (BlockedTimeSeriesCV/
+        # TimeSeriesCrossValidator) instead of silently dropping folds.
+        # This was the KNOWN-LIMITATION pin (the conformance checker's
+        # count-consistency invariant exposed the silent drop); the raise
+        # now fires from the splitter itself before the checker can collect
+        # any fold (count-consistency keeps its own negative test via the
+        # synthetic under-yielding splitter in test_seam_vocab.py).
+        with pytest.raises(ValueError, match="empty train window"):
             check_temporal_splitter(
                 PurgedWalkForward(n_splits=5, train_size=50, test_size=20), n_samples=30
             )
