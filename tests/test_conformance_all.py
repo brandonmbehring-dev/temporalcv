@@ -100,8 +100,9 @@ class TestForwardOnlyConformance:
         # TimeSeriesCrossValidator) instead of silently dropping folds.
         # This was the KNOWN-LIMITATION pin (the conformance checker's
         # count-consistency invariant exposed the silent drop); the raise
-        # now fires from the splitter itself before conformance can even
-        # collect folds.
+        # now fires from the splitter itself before the checker can collect
+        # any fold (count-consistency keeps its own negative test via the
+        # synthetic under-yielding splitter in test_seam_vocab.py).
         with pytest.raises(ValueError, match="empty train window"):
             check_temporal_splitter(
                 PurgedWalkForward(n_splits=5, train_size=50, test_size=20), n_samples=30

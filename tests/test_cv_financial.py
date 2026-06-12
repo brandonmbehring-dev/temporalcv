@@ -347,6 +347,41 @@ class TestEdgeCases:
         with pytest.raises(ValueError, match="empty train window"):
             list(cv.split(X))
 
+    def test_walk_forward_raises_at_call_time(self) -> None:
+        """The under-provisioned raise fires at split() call time (#32).
+
+        Pins the call-time contract: a consumer that stores the result
+        without iterating still sees the error immediately.
+        """
+        X = np.arange(20).reshape(-1, 1)
+        cv = PurgedWalkForward(n_splits=10, train_size=15, test_size=5)
+
+        with pytest.raises(ValueError, match="empty train window"):
+            cv.split(X)  # no iteration
+
+    def test_walk_forward_expanding_window_insufficient_data_raises(self) -> None:
+        """The expanding-window branch raises on a squeezed train window (#32)."""
+        X = np.arange(100).reshape(-1, 1)
+        cv = PurgedWalkForward(n_splits=5, train_size=None, test_size=20)
+
+        with pytest.raises(ValueError, match="empty train window"):
+            list(cv.split(X))
+
+    def test_walk_forward_embargo_empties_train_raises(self) -> None:
+        """An embargo that swallows the whole train window raises (#32).
+
+        The train window [70, 80) is geometrically valid, but the symmetric
+        embargo (int(0.5 * 100) = 50 rows before the test window) removes
+        all of it — the second raise path, distinct from the geometric one.
+        """
+        X = np.arange(100).reshape(-1, 1)
+        cv = PurgedWalkForward(
+            n_splits=1, train_size=10, test_size=20, purge_gap=0, embargo_pct=0.5
+        )
+
+        with pytest.raises(ValueError, match="purge/embargo removal emptied"):
+            list(cv.split(X))
+
     def test_walk_forward_provisioned_yields_all_splits(self) -> None:
         """A provisioned config yields exactly get_n_splits folds (#32)."""
         X = np.arange(300).reshape(-1, 1)

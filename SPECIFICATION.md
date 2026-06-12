@@ -1,6 +1,6 @@
 # SPECIFICATION.md - temporalcv
 
-**Version**: 2.0.0 | **Last Updated**: 2026-06-10
+**Version**: 2.0.1 | **Last Updated**: 2026-06-12
 **Status**: AUTHORITATIVE (changes require Amendment Process)
 
 This document freezes all parameters, thresholds, and mathematical definitions. Changes must follow the Amendment Process in AI_CONTEXT.md.

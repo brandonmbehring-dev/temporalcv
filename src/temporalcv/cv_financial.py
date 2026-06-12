@@ -532,8 +532,9 @@ class PurgedWalkForward:
     order. Adding purging prevents leakage from overlapping labels.
 
     An under-provisioned configuration — any fold whose train window is empty
-    before or after purging — raises ``ValueError`` instead of silently
-    dropping folds, so ``split`` always yields exactly ``n_splits`` folds.
+    geometrically or after purge/embargo removal — raises ``ValueError`` at
+    ``split``/``split_detailed`` call time instead of silently dropping folds,
+    so ``split`` always yields exactly ``n_splits`` folds.
 
     See Also
     --------
@@ -587,22 +588,22 @@ class PurgedWalkForward:
         groups : array-like, optional
             Group labels (ignored).
 
-        Yields
-        ------
-        train : np.ndarray
-            Training indices (after purging).
-        test : np.ndarray
-            Test indices.
+        Returns
+        -------
+        Iterator[tuple[np.ndarray, np.ndarray]]
+            ``(train, test)`` index pairs; train indices are post-purging.
 
         Raises
         ------
         ValueError
-            If any fold would have an empty train window (before or after
-            purging) for this ``n_samples`` — the configuration is
-            under-provisioned. Raised before the first fold is yielded.
+            If any fold would have an empty train window (geometrically or
+            after purge/embargo removal) for this ``n_samples`` — the
+            configuration is under-provisioned. Raised at call time, before
+            any fold is produced.
         """
-        for detailed in self.split_detailed(X):
-            yield detailed.train_indices, detailed.test_indices
+        return iter(
+            [(detailed.train_indices, detailed.test_indices) for detailed in self.split_detailed(X)]
+        )
 
     def get_n_splits(
         self,
@@ -624,25 +625,25 @@ class PurgedWalkForward:
     ) -> Iterator[PurgedSplit]:
         """Generate detailed split information.
 
-        All fold geometries are validated eagerly: an under-provisioned
-        configuration raises before the first fold is yielded, so a consumer
-        never does partial work on a doomed iteration.
+        All fold geometries are validated at call time: an under-provisioned
+        configuration raises before any fold is produced, so a consumer never
+        does partial work on a doomed iteration.
 
         Parameters
         ----------
         X : array-like
             Training data.
 
-        Yields
-        ------
-        PurgedSplit
-            Detailed split with purge/embargo counts.
+        Returns
+        -------
+        Iterator[PurgedSplit]
+            Detailed splits with purge/embargo counts.
 
         Raises
         ------
         ValueError
-            If any fold would have an empty train window (before or after
-            purging) for this ``n_samples``.
+            If any fold would have an empty train window (geometrically or
+            after purge/embargo removal) for this ``n_samples``.
         """
         X_arr = np.asarray(X)
         n_samples = len(X_arr)
@@ -688,11 +689,17 @@ class PurgedWalkForward:
             )
 
             if len(purged_train) == 0:
+                # In this splitter's geometry the train window already sits
+                # total_gap before the test window, so the purge pass removes
+                # nothing — only the symmetric embargo can empty the window.
+                # Named generically in case the geometry ever changes.
                 raise ValueError(
-                    f"PurgedWalkForward fold {split_idx}: purging emptied the train "
-                    f"window [{train_start}, {train_end}) for n_samples={n_samples} "
-                    f"(purge_gap={self.purge_gap}, embargo_pct={self.embargo_pct}). "
-                    f"Reduce purge_gap/embargo_pct/n_splits or provide more samples."
+                    f"PurgedWalkForward fold {split_idx}: purge/embargo removal emptied "
+                    f"the train window [{train_start}, {train_end}) for "
+                    f"n_samples={n_samples} (n_splits={self.n_splits}, "
+                    f"test_size={test_size}, purge_gap={self.purge_gap}, "
+                    f"embargo_pct={self.embargo_pct}, extra_gap={self.extra_gap}). "
+                    f"Reduce embargo_pct/purge_gap/n_splits or provide more samples."
                 )
 
             splits.append(
@@ -704,4 +711,4 @@ class PurgedWalkForward:
                 )
             )
 
-        yield from splits
+        return iter(splits)

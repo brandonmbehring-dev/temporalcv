@@ -276,6 +276,32 @@ def test_check_temporal_splitter_skips_when_no_tags() -> None:
     check_temporal_splitter(_TaglessSplitter())  # must not raise
 
 
+def test_check_temporal_splitter_catches_lying_get_n_splits() -> None:
+    """Count-consistency invariant: get_n_splits must equal folds yielded.
+
+    Formerly exercised by the PurgedWalkForward KNOWN-LIMITATION pin (#32);
+    that splitter now raises before the checker can count folds, so a
+    synthetic under-counting splitter keeps the invariant itself tested.
+    """
+
+    class _UnderYieldingCV:
+        def split(
+            self,
+            X: Any,
+            y: Any = None,
+            groups: Any = None,
+        ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+            n = len(X)
+            cut = n // 2
+            yield np.arange(cut, dtype=np.intp), np.arange(cut, n, dtype=np.intp)
+
+        def get_n_splits(self, X: Any = None, y: Any = None, groups: Any = None) -> int:
+            return 3
+
+    with pytest.raises(AssertionError, match="folds yielded"):
+        check_temporal_splitter(_UnderYieldingCV())
+
+
 def _wfcv_with_tags(tags: TemporalTags) -> Any:
     class _LyingCV(WalkForwardCV):
         def temporal_tags(self) -> TemporalTags:
