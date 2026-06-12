@@ -198,9 +198,10 @@ def _apply_purge_and_embargo(
         if i in train_set:
             embargo_indices.add(i)
 
-    # Combine and remove
+    # Combine and remove. dtype is pinned because an empty list would
+    # otherwise infer float64 — unusable as an index array downstream.
     remove_indices = purge_indices | embargo_indices
-    purged_train = np.array([i for i in train_indices if i not in remove_indices])
+    purged_train = np.array([i for i in train_indices if i not in remove_indices], dtype=np.intp)
 
     return (
         purged_train,
@@ -239,6 +240,12 @@ class PurgedKFold:
     [T1] De Prado (2018), Chapter 7.3.
     Standard K-fold leaks information when labels overlap. Purging removes
     the overlapping samples from training.
+
+    An over-aggressive configuration — any fold whose train set is emptied
+    by purge/embargo removal, or ``n_samples < n_splits`` (empty test
+    folds) — raises ``ValueError`` at ``split``/``split_detailed`` call
+    time instead of silently yielding unusable folds, so ``split`` always
+    yields exactly ``n_splits`` folds with non-empty train and test sets.
 
     See Also
     --------
@@ -282,38 +289,21 @@ class PurgedKFold:
         groups : array-like, optional
             Group labels (ignored, for sklearn compatibility).
 
-        Yields
+        Returns
+        -------
+        Iterator[tuple[np.ndarray, np.ndarray]]
+            ``(train, test)`` index pairs; train indices are post-purging.
+
+        Raises
         ------
-        train : np.ndarray
-            Training indices (after purging).
-        test : np.ndarray
-            Test indices.
+        ValueError
+            If ``n_samples < n_splits`` (some test folds would be empty)
+            or purge/embargo removal empties any fold's train set. Raised
+            at call time, before any fold is produced.
         """
-        X_arr = np.asarray(X)
-        n_samples = len(X_arr)
-
-        indices = np.arange(n_samples)
-        if self.shuffle:
-            np.random.shuffle(indices)
-
-        fold_sizes = np.full(self.n_splits, n_samples // self.n_splits)
-        fold_sizes[: n_samples % self.n_splits] += 1
-
-        current = 0
-        for fold_size in fold_sizes:
-            test_indices = indices[current : current + fold_size]
-            train_indices = np.concatenate([indices[:current], indices[current + fold_size :]])
-
-            purged_train, _, _ = _apply_purge_and_embargo(
-                train_indices,
-                test_indices,
-                n_samples,
-                self.purge_gap,
-                self.embargo_pct,
-            )
-
-            yield purged_train, test_indices
-            current += fold_size
+        return iter(
+            [(detailed.train_indices, detailed.test_indices) for detailed in self.split_detailed(X)]
+        )
 
     def get_n_splits(
         self,
@@ -321,7 +311,12 @@ class PurgedKFold:
         y: ArrayLike | None = None,
         groups: ArrayLike | None = None,
     ) -> int:
-        """Return number of splits."""
+        """Return number of splits.
+
+        ``split`` either yields exactly this many folds or raises
+        ``ValueError`` on an over-aggressive configuration, so the nominal
+        count is always truthful.
+        """
         return self.n_splits
 
     def split_detailed(
@@ -330,18 +325,35 @@ class PurgedKFold:
     ) -> Iterator[PurgedSplit]:
         """Generate detailed split information including purge/embargo counts.
 
+        All folds are validated at call time: a configuration that empties
+        any train set raises before any fold is produced, so a consumer
+        never does partial work on a doomed iteration.
+
         Parameters
         ----------
         X : array-like
             Training data.
 
-        Yields
+        Returns
+        -------
+        Iterator[PurgedSplit]
+            Detailed splits with train/test indices and purge/embargo counts.
+
+        Raises
         ------
-        PurgedSplit
-            Detailed split with train/test indices and purge/embargo counts.
+        ValueError
+            If ``n_samples < n_splits`` (some test folds would be empty)
+            or purge/embargo removal empties any fold's train set.
         """
         X_arr = np.asarray(X)
         n_samples = len(X_arr)
+
+        if n_samples < self.n_splits:
+            raise ValueError(
+                f"PurgedKFold cannot split n_samples={n_samples} into "
+                f"n_splits={self.n_splits} folds: some test folds would be "
+                f"empty. Reduce n_splits or provide more samples."
+            )
 
         indices = np.arange(n_samples)
         if self.shuffle:
@@ -350,8 +362,9 @@ class PurgedKFold:
         fold_sizes = np.full(self.n_splits, n_samples // self.n_splits)
         fold_sizes[: n_samples % self.n_splits] += 1
 
+        splits: list[PurgedSplit] = []
         current = 0
-        for fold_size in fold_sizes:
+        for split_idx, fold_size in enumerate(fold_sizes):
             test_indices = indices[current : current + fold_size]
             train_indices = np.concatenate([indices[:current], indices[current + fold_size :]])
 
@@ -363,21 +376,36 @@ class PurgedKFold:
                 self.embargo_pct,
             )
 
-            yield PurgedSplit(
-                train_indices=purged_train,
-                test_indices=test_indices,
-                n_purged=n_purged,
-                n_embargoed=n_embargoed,
+            if len(purged_train) == 0:
+                raise ValueError(
+                    f"PurgedKFold fold {split_idx}: purge/embargo removal "
+                    f"emptied the train set for n_samples={n_samples} "
+                    f"(n_splits={self.n_splits}, purge_gap={self.purge_gap}, "
+                    f"embargo_pct={self.embargo_pct}). Reduce "
+                    f"purge_gap/embargo_pct, increase n_splits (smaller test "
+                    f"blocks shrink the purged band), or provide more samples."
+                )
+
+            splits.append(
+                PurgedSplit(
+                    train_indices=purged_train,
+                    test_indices=test_indices,
+                    n_purged=n_purged,
+                    n_embargoed=n_embargoed,
+                )
             )
             current += fold_size
+
+        return iter(splits)
 
 
 class CombinatorialPurgedCV:
     """Combinatorial Purged Cross-Validation (CPCV).
 
     Generates all (n choose k) combinations of groups for test sets,
-    applying purging and embargo to each. Ensures every sample is tested
-    exactly once across all paths.
+    applying purging and embargo to each. Every sample is tested the same
+    number of times — its group appears in C(n_splits-1, n_test_splits-1)
+    of the paths.
 
     Parameters
     ----------
@@ -395,13 +423,19 @@ class CombinatorialPurgedCV:
     >>> cv = CombinatorialPurgedCV(n_splits=5, n_test_splits=2, purge_gap=5)
     >>> n_paths = cv.get_n_splits(X)  # C(5,2) = 10 paths
     >>> for train_idx, test_idx in cv.split(X):
-    ...     # Each sample tested in exactly 2 paths
+    ...     # Each sample tested in C(4, 1) = 4 of the 10 paths
 
     Notes
     -----
     [T1] De Prado (2018), Chapter 7.4.
     CPCV provides more reliable backtests by testing each sample multiple
     times (via different paths). The number of paths is C(n_splits, n_test_splits).
+
+    An over-aggressive configuration — any path whose train set is emptied
+    by purge/embargo removal, or ``n_samples < n_splits`` (empty groups) —
+    raises ``ValueError`` at ``split`` call time instead of silently
+    yielding unusable paths, so ``split`` always yields exactly
+    ``get_n_splits()`` paths with non-empty train and test sets.
 
     See Also
     --------
@@ -437,6 +471,9 @@ class CombinatorialPurgedCV:
     ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
         """Generate train/test indices for all combinatorial paths.
 
+        All paths are validated at call time: a configuration that empties
+        any train set raises before any path is produced.
+
         Parameters
         ----------
         X : array-like
@@ -446,22 +483,38 @@ class CombinatorialPurgedCV:
         groups : array-like, optional
             Group labels (ignored).
 
-        Yields
+        Returns
+        -------
+        Iterator[tuple[np.ndarray, np.ndarray]]
+            ``(train, test)`` index pairs for all C(n_splits, n_test_splits)
+            paths; train indices are post-purging.
+
+        Raises
         ------
-        train : np.ndarray
-            Training indices (after purging).
-        test : np.ndarray
-            Test indices.
+        ValueError
+            If ``n_samples < n_splits`` (some groups would be empty) or
+            purge/embargo removal empties any path's train set. Raised at
+            call time, before any path is produced.
         """
         X_arr = np.asarray(X)
         n_samples = len(X_arr)
+
+        if n_samples < self.n_splits:
+            raise ValueError(
+                f"CombinatorialPurgedCV cannot divide n_samples={n_samples} "
+                f"into n_splits={self.n_splits} groups: some groups would be "
+                f"empty. Reduce n_splits or provide more samples."
+            )
 
         # Divide into groups
         indices = np.arange(n_samples)
         group_indices = np.array_split(indices, self.n_splits)
 
         # Generate all combinations of test groups
-        for test_groups in combinations(range(self.n_splits), self.n_test_splits):
+        splits: list[tuple[np.ndarray, np.ndarray]] = []
+        for path_idx, test_groups in enumerate(
+            combinations(range(self.n_splits), self.n_test_splits)
+        ):
             # Test indices = union of selected groups
             test_indices = np.concatenate([group_indices[g] for g in test_groups])
 
@@ -478,7 +531,21 @@ class CombinatorialPurgedCV:
                 self.embargo_pct,
             )
 
-            yield purged_train, test_indices
+            if len(purged_train) == 0:
+                raise ValueError(
+                    f"CombinatorialPurgedCV path {path_idx} (test groups "
+                    f"{test_groups}): purge/embargo removal emptied the train "
+                    f"set for n_samples={n_samples} (n_splits={self.n_splits}, "
+                    f"n_test_splits={self.n_test_splits}, "
+                    f"purge_gap={self.purge_gap}, "
+                    f"embargo_pct={self.embargo_pct}). Reduce "
+                    f"purge_gap/embargo_pct/n_test_splits or provide more "
+                    f"samples."
+                )
+
+            splits.append((purged_train, test_indices))
+
+        return iter(splits)
 
     def get_n_splits(
         self,
@@ -486,7 +553,12 @@ class CombinatorialPurgedCV:
         y: ArrayLike | None = None,
         groups: ArrayLike | None = None,
     ) -> int:
-        """Return number of combinatorial paths."""
+        """Return number of combinatorial paths.
+
+        ``split`` either yields exactly this many paths or raises
+        ``ValueError`` on an over-aggressive configuration, so the nominal
+        count is always truthful.
+        """
         from math import comb
 
         return comb(self.n_splits, self.n_test_splits)
@@ -504,6 +576,8 @@ class PurgedWalkForward:
         Number of test periods.
     train_size : int | None
         Fixed training window size. If None, uses expanding window.
+        The window is never silently truncated: a configuration where it
+        cannot fit raises ``ValueError`` at ``split`` call time.
     test_size : int | None
         Fixed test window size. If None, auto-computed.
     purge_gap : int
@@ -531,10 +605,16 @@ class PurgedWalkForward:
     Walk-forward is preferred for time series because it respects temporal
     order. Adding purging prevents leakage from overlapping labels.
 
-    An under-provisioned configuration — any fold whose train window is empty
-    geometrically or after purge/embargo removal — raises ``ValueError`` at
-    ``split``/``split_detailed`` call time instead of silently dropping folds,
-    so ``split`` always yields exactly ``n_splits`` folds.
+    An under-provisioned configuration — any fold whose train window is
+    empty geometrically, whose fixed ``train_size`` cannot fit without
+    truncation, whose train set is emptied by purge/embargo removal, or
+    whose auto-sized test windows have no sample budget — raises
+    ``ValueError`` at ``split``/``split_detailed`` call time instead of
+    silently dropping folds or truncating the window, so ``split`` always
+    yields exactly ``n_splits`` folds whose geometric train window is
+    exactly ``train_size`` (when fixed). Purge/embargo removal may still
+    shave up to ``max(0, n_embargo - purge_gap - extra_gap)`` rows off a
+    window's right edge; only emptying it raises.
 
     See Also
     --------
@@ -597,9 +677,10 @@ class PurgedWalkForward:
         ------
         ValueError
             If any fold would have an empty train window (geometrically or
-            after purge/embargo removal) for this ``n_samples`` — the
-            configuration is under-provisioned. Raised at call time, before
-            any fold is produced.
+            after purge/embargo removal), a fixed ``train_size`` cannot fit
+            without truncation, or auto test sizing has no samples to work
+            with — the configuration is under-provisioned. Raised at call
+            time, before any fold is produced.
         """
         return iter(
             [(detailed.train_indices, detailed.test_indices) for detailed in self.split_detailed(X)]
@@ -643,7 +724,9 @@ class PurgedWalkForward:
         ------
         ValueError
             If any fold would have an empty train window (geometrically or
-            after purge/embargo removal) for this ``n_samples``.
+            after purge/embargo removal), a fixed ``train_size`` cannot fit
+            without truncation, or auto test sizing has no samples to work
+            with for this ``n_samples``.
         """
         X_arr = np.asarray(X)
         n_samples = len(X_arr)
@@ -652,6 +735,20 @@ class PurgedWalkForward:
         if test_size is None:
             min_train = self.train_size or (n_samples // (self.n_splits + 1))
             available = n_samples - min_train - self.extra_gap
+            if available <= 0:
+                raise ValueError(
+                    f"PurgedWalkForward cannot auto-size test windows: "
+                    f"n_samples={n_samples} leaves available={available} "
+                    f"samples after reserving the train window and extra_gap "
+                    f"(n_splits={self.n_splits}, train_size={self.train_size}, "
+                    f"min_train={min_train}, extra_gap={self.extra_gap}). "
+                    f"Reduce train_size (if set) or extra_gap, increase "
+                    f"n_splits (expanding window reserves n_samples / "
+                    f"(n_splits + 1) for training), or provide more samples."
+                )
+            # 0 < available < n_splits still floors to 0; keep at least one
+            # test sample per fold and let the per-fold geometry guards
+            # below decide whether the configuration actually fits.
             test_size = max(1, available // self.n_splits)
 
         total_gap = self.extra_gap + self.purge_gap
@@ -662,11 +759,27 @@ class PurgedWalkForward:
 
             if self.train_size is not None:
                 train_end = test_start - total_gap
-                train_start = max(0, train_end - self.train_size)
+                train_start = train_end - self.train_size
+                if train_start < 0:
+                    raise ValueError(
+                        f"PurgedWalkForward fold {split_idx}: fixed "
+                        f"train_size={self.train_size} does not fit — only "
+                        f"{max(train_end, 0)} samples of history precede the "
+                        f"train/test gap for n_samples={n_samples} "
+                        f"(n_splits={self.n_splits}, test_size={test_size}, "
+                        f"purge_gap={self.purge_gap}, "
+                        f"extra_gap={self.extra_gap}). Use train_size=None "
+                        f"for an expanding window, reduce "
+                        f"train_size/n_splits/test_size/gaps, or provide "
+                        f"more samples."
+                    )
             else:
                 train_start = 0
                 train_end = test_start - total_gap
 
+            # Only reachable in expanding-window mode: with a fixed
+            # train_size the truncation guard above already ensures
+            # train_end - train_start == train_size >= 1.
             if train_end <= train_start:
                 raise ValueError(
                     f"PurgedWalkForward fold {split_idx} has an empty train window "
@@ -699,7 +812,9 @@ class PurgedWalkForward:
                     f"n_samples={n_samples} (n_splits={self.n_splits}, "
                     f"test_size={test_size}, purge_gap={self.purge_gap}, "
                     f"embargo_pct={self.embargo_pct}, extra_gap={self.extra_gap}). "
-                    f"Reduce embargo_pct/purge_gap/n_splits or provide more samples."
+                    f"Reduce embargo_pct, or increase purge_gap/extra_gap "
+                    f"(the embargo bite is max(0, n_embargo - purge_gap - "
+                    f"extra_gap))."
                 )
 
             splits.append(
