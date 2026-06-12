@@ -57,16 +57,23 @@ def valid_cpcv_params(draw: st.DrawFn) -> dict:
 
 @st.composite
 def valid_walk_forward_params(draw: st.DrawFn) -> dict:
-    """Generate valid parameters for PurgedWalkForward."""
+    """Generate provisioned parameters for PurgedWalkForward.
+
+    Fold 0 has the smallest train window, ending at
+    ``n_samples - n_splits * test_size - purge_gap``. The symmetric embargo
+    (default ``embargo_pct=0.01``) additionally removes up to
+    ``int(0.01 * n_samples)`` train rows just before the test window, so the
+    window must clear that too or the splitter raises on the
+    under-provisioned config (#32).
+    """
     n_samples = draw(st.integers(min_value=200, max_value=1000))
     n_splits = draw(st.integers(min_value=2, max_value=10))
     test_size = draw(st.integers(min_value=10, max_value=50))
     train_size = draw(st.integers(min_value=50, max_value=200))
     purge_gap = draw(st.integers(min_value=0, max_value=10))
 
-    # Ensure enough data
-    min_required = train_size + test_size + purge_gap
-    assume(n_samples >= min_required * 2)
+    n_embargo = int(0.01 * n_samples)
+    assume(n_samples - n_splits * test_size - purge_gap - n_embargo >= 1)
 
     return {
         "n_samples": n_samples,
@@ -257,6 +264,20 @@ class TestPurgedWalkForwardInvariants:
             train_set = set(train_idx)
             test_set = set(test_idx)
             assert len(train_set & test_set) == 0
+
+    @given(params=valid_walk_forward_params())
+    @settings(max_examples=100)
+    def test_yields_exactly_n_splits(self, params: dict) -> None:
+        """A provisioned config yields exactly get_n_splits folds (#32)."""
+        cv = PurgedWalkForward(
+            n_splits=params["n_splits"],
+            train_size=params["train_size"],
+            test_size=params["test_size"],
+            purge_gap=params["purge_gap"],
+        )
+        X = np.zeros((params["n_samples"], 1))
+
+        assert len(list(cv.split(X))) == cv.get_n_splits()
 
 
 class TestLabelOverlapInvariants:

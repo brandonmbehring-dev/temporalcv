@@ -531,6 +531,10 @@ class PurgedWalkForward:
     Walk-forward is preferred for time series because it respects temporal
     order. Adding purging prevents leakage from overlapping labels.
 
+    An under-provisioned configuration — any fold whose train window is empty
+    before or after purging — raises ``ValueError`` instead of silently
+    dropping folds, so ``split`` always yields exactly ``n_splits`` folds.
+
     See Also
     --------
     temporalcv.cv.WalkForwardCV : Standard walk-forward without purging.
@@ -589,53 +593,16 @@ class PurgedWalkForward:
             Training indices (after purging).
         test : np.ndarray
             Test indices.
+
+        Raises
+        ------
+        ValueError
+            If any fold would have an empty train window (before or after
+            purging) for this ``n_samples`` — the configuration is
+            under-provisioned. Raised before the first fold is yielded.
         """
-        X_arr = np.asarray(X)
-        n_samples = len(X_arr)
-
-        # Compute test size if not specified
-        test_size = self.test_size
-        if test_size is None:
-            # Reserve space for train, extra_gap, and splits
-            min_train = self.train_size or (n_samples // (self.n_splits + 1))
-            available = n_samples - min_train - self.extra_gap
-            test_size = max(1, available // self.n_splits)
-
-        # Compute starting positions for each split
-        total_gap = self.extra_gap + self.purge_gap
-        for split_idx in range(self.n_splits):
-            # Test window position
-            test_end = n_samples - (self.n_splits - split_idx - 1) * test_size
-            test_start = test_end - test_size
-
-            # Train window
-            if self.train_size is not None:
-                # Fixed window
-                train_end = test_start - total_gap
-                train_start = max(0, train_end - self.train_size)
-            else:
-                # Expanding window
-                train_start = 0
-                train_end = test_start - total_gap
-
-            if train_end <= train_start:
-                # Not enough data for this split
-                continue
-
-            train_indices = np.arange(train_start, train_end)
-            test_indices = np.arange(test_start, test_end)
-
-            # Apply additional purging and embargo
-            purged_train, _, _ = _apply_purge_and_embargo(
-                train_indices,
-                test_indices,
-                n_samples,
-                self.purge_gap,
-                self.embargo_pct,
-            )
-
-            if len(purged_train) > 0:
-                yield purged_train, test_indices
+        for detailed in self.split_detailed(X):
+            yield detailed.train_indices, detailed.test_indices
 
     def get_n_splits(
         self,
@@ -643,7 +610,12 @@ class PurgedWalkForward:
         y: ArrayLike | None = None,
         groups: ArrayLike | None = None,
     ) -> int:
-        """Return number of splits."""
+        """Return number of splits.
+
+        ``split`` either yields exactly this many folds or raises
+        ``ValueError`` on an under-provisioned configuration, so the nominal
+        count is always truthful.
+        """
         return self.n_splits
 
     def split_detailed(
@@ -651,6 +623,10 @@ class PurgedWalkForward:
         X: ArrayLike,
     ) -> Iterator[PurgedSplit]:
         """Generate detailed split information.
+
+        All fold geometries are validated eagerly: an under-provisioned
+        configuration raises before the first fold is yielded, so a consumer
+        never does partial work on a doomed iteration.
 
         Parameters
         ----------
@@ -661,6 +637,12 @@ class PurgedWalkForward:
         ------
         PurgedSplit
             Detailed split with purge/embargo counts.
+
+        Raises
+        ------
+        ValueError
+            If any fold would have an empty train window (before or after
+            purging) for this ``n_samples``.
         """
         X_arr = np.asarray(X)
         n_samples = len(X_arr)
@@ -672,6 +654,7 @@ class PurgedWalkForward:
             test_size = max(1, available // self.n_splits)
 
         total_gap = self.extra_gap + self.purge_gap
+        splits: list[PurgedSplit] = []
         for split_idx in range(self.n_splits):
             test_end = n_samples - (self.n_splits - split_idx - 1) * test_size
             test_start = test_end - test_size
@@ -684,7 +667,14 @@ class PurgedWalkForward:
                 train_end = test_start - total_gap
 
             if train_end <= train_start:
-                continue
+                raise ValueError(
+                    f"PurgedWalkForward fold {split_idx} has an empty train window "
+                    f"[{train_start}, {train_end}) for n_samples={n_samples} "
+                    f"(n_splits={self.n_splits}, train_size={self.train_size}, "
+                    f"test_size={test_size}, purge_gap={self.purge_gap}, "
+                    f"extra_gap={self.extra_gap}). Reduce n_splits/test_size/gaps "
+                    f"or provide more samples."
+                )
 
             train_indices = np.arange(train_start, train_end)
             test_indices = np.arange(test_start, test_end)
@@ -697,10 +687,21 @@ class PurgedWalkForward:
                 self.embargo_pct,
             )
 
-            if len(purged_train) > 0:
-                yield PurgedSplit(
+            if len(purged_train) == 0:
+                raise ValueError(
+                    f"PurgedWalkForward fold {split_idx}: purging emptied the train "
+                    f"window [{train_start}, {train_end}) for n_samples={n_samples} "
+                    f"(purge_gap={self.purge_gap}, embargo_pct={self.embargo_pct}). "
+                    f"Reduce purge_gap/embargo_pct/n_splits or provide more samples."
+                )
+
+            splits.append(
+                PurgedSplit(
                     train_indices=purged_train,
                     test_indices=test_indices,
                     n_purged=n_purged,
                     n_embargoed=n_embargoed,
                 )
+            )
+
+        yield from splits

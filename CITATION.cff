@@ -9,8 +9,8 @@ authors:
 repository-code: "https://github.com/brandon-behring/temporalcv"
 url: "https://temporalcv.readthedocs.io"
 license: MIT
-version: "2.0.0"
-date-released: "2026-06-10"
+version: "2.0.1"
+date-released: "2026-06-12"
 keywords:
   - time-series
   - cross-validation

@@ -339,14 +339,21 @@ class TestEdgeCases:
 
         assert cv.get_n_splits() == comb(5, 1)  # 5 paths
 
-    def test_walk_forward_insufficient_data(self) -> None:
-        """Walk-forward should handle insufficient data gracefully."""
+    def test_walk_forward_insufficient_data_raises(self) -> None:
+        """An under-provisioned config raises instead of dropping folds (#32)."""
         X = np.arange(20).reshape(-1, 1)
         cv = PurgedWalkForward(n_splits=10, train_size=15, test_size=5)
 
-        # Should still produce some splits (maybe fewer than requested)
+        with pytest.raises(ValueError, match="empty train window"):
+            list(cv.split(X))
+
+    def test_walk_forward_provisioned_yields_all_splits(self) -> None:
+        """A provisioned config yields exactly get_n_splits folds (#32)."""
+        X = np.arange(300).reshape(-1, 1)
+        cv = PurgedWalkForward(n_splits=5, train_size=50, test_size=20, purge_gap=5)
+
         splits = list(cv.split(X))
-        assert len(splits) <= 10
+        assert len(splits) == cv.get_n_splits() == 5
 
 
 class TestIntegration:

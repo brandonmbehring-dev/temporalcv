@@ -11,6 +11,22 @@ No unreleased changes.
 
 ---
 
+## [2.0.1] - 2026-06-12
+
+### Fixed
+
+- **`PurgedWalkForward` fails loud** (#32): under-provisioned configurations now raise
+  `ValueError` instead of silently dropping folds. **Behavior change:** any fold whose
+  train window is empty — geometrically, or after purge/embargo removal — aborts the
+  split eagerly (before the first fold is yielded), so `split` always yields exactly
+  `get_n_splits()` folds. This completes the 2.0.0 fold-drop hardening that fixed the
+  same silent pattern in `BlockedTimeSeriesCV`/`TimeSeriesCrossValidator` (#7); the
+  conformance suite's KNOWN-LIMITATION pin flips to assert the raise. `split()` now
+  delegates to `split_detailed()`, removing the duplicated geometry logic that let the
+  two paths carry the same bug.
+
+---
+
 ## [2.0.0] - 2026-06-10
 
 Breaking modernization into a durable universal time-series toolkit (ADR 0001/0002,
