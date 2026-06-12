@@ -7,7 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No unreleased changes.
+### Fixed
+
+- **Purged-family hardening round 2** (#35, #36), completing the #32 contract across
+  `cv_financial`. **Behavior change:** configurations that previously yielded silently
+  degraded folds now raise `ValueError` at `split()` call time —
+  - `PurgedWalkForward`: a fixed `train_size` that cannot fit is no longer silently
+    truncated at the left edge, and the auto-`test_size` branch no longer clamps a
+    negative sample budget to a 1-sample test window (#35).
+  - `PurgedKFold` / `CombinatorialPurgedCV`: folds/paths whose train sets are emptied
+    by purge/embargo removal now raise instead of yielding empty trains, as does
+    `n_samples < n_splits` (previously an opaque numpy crash or empty test folds)
+    (#36). `PurgedKFold.split` now delegates to `split_detailed` (one geometry).
+  - `_apply_purge_and_embargo` pins `dtype=np.intp`, so an empty purged train can
+    never surface as a float64 array masquerading as indices (#36).
 
 ---
 

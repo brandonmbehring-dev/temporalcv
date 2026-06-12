@@ -103,7 +103,10 @@ class TestForwardOnlyConformance:
         # now fires from the splitter itself before the checker can collect
         # any fold (count-consistency keeps its own negative test via the
         # synthetic under-yielding splitter in test_seam_vocab.py).
-        with pytest.raises(ValueError, match="empty train window"):
+        # Since #35 this fixed-window config reports the failure as the
+        # window not fitting (the truncation guard fires before the
+        # geometric empty-window check).
+        with pytest.raises(ValueError, match="does not fit"):
             check_temporal_splitter(
                 PurgedWalkForward(n_splits=5, train_size=50, test_size=20), n_samples=30
             )

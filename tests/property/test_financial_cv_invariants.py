@@ -60,11 +60,12 @@ def valid_walk_forward_params(draw: st.DrawFn) -> dict:
     """Generate provisioned parameters for PurgedWalkForward.
 
     Fold 0 has the smallest train window, ending at
-    ``n_samples - n_splits * test_size - purge_gap``. The symmetric embargo
-    (default ``embargo_pct=0.01``) additionally removes up to
-    ``int(0.01 * n_samples)`` train rows just before the test window, so the
-    window must clear that too or the splitter raises on the
-    under-provisioned config (#32).
+    ``n_samples - n_splits * test_size - purge_gap``. Since #35 the fixed
+    window is never truncated: fold 0 must fit the whole ``train_size``
+    (``train_end - train_size >= 0``) or the splitter raises. The symmetric
+    embargo (default ``embargo_pct=0.01``) additionally removes up to
+    ``max(0, int(0.01 * n_samples) - purge_gap)`` rows from the window's
+    right edge, which ``train_size >= 50`` always survives.
     """
     n_samples = draw(st.integers(min_value=200, max_value=1000))
     n_splits = draw(st.integers(min_value=2, max_value=10))
@@ -72,8 +73,7 @@ def valid_walk_forward_params(draw: st.DrawFn) -> dict:
     train_size = draw(st.integers(min_value=50, max_value=200))
     purge_gap = draw(st.integers(min_value=0, max_value=10))
 
-    n_embargo = int(0.01 * n_samples)
-    assume(n_samples - n_splits * test_size - purge_gap - n_embargo >= 1)
+    assume(n_samples - n_splits * test_size - purge_gap - train_size >= 0)
 
     return {
         "n_samples": n_samples,
@@ -278,6 +278,29 @@ class TestPurgedWalkForwardInvariants:
         X = np.zeros((params["n_samples"], 1))
 
         assert len(list(cv.split(X))) == cv.get_n_splits()
+
+    @given(params=valid_walk_forward_params())
+    @settings(max_examples=100)
+    def test_fixed_window_never_truncated(self, params: dict) -> None:
+        """A provisioned fixed window is exactly train_size, never clipped (#35).
+
+        purge_gap >= n_embargo is not guaranteed, so the embargo may shave
+        ``max(0, n_embargo - purge_gap)`` rows off the window's right edge;
+        the geometric window itself must never shrink below that.
+        """
+        cv = PurgedWalkForward(
+            n_splits=params["n_splits"],
+            train_size=params["train_size"],
+            test_size=params["test_size"],
+            purge_gap=params["purge_gap"],
+        )
+        X = np.zeros((params["n_samples"], 1))
+
+        n_embargo = int(0.01 * params["n_samples"])
+        max_embargo_bite = max(0, n_embargo - params["purge_gap"])
+        for train_idx, _ in cv.split(X):
+            assert len(train_idx) >= params["train_size"] - max_embargo_bite
+            assert len(train_idx) <= params["train_size"]
 
 
 class TestLabelOverlapInvariants:
