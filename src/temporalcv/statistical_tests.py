@@ -1770,7 +1770,8 @@ class MultiModelComparisonResult:
         comma-joined-key object — model names legitimately contain commas
         (``ARIMA(1,1,0)``), which made the old flat keys collide (silently
         dropping comparisons) and unrecoverable (#21). ``SCHEMA_VERSION`` 2
-        marks the shape change.
+        marks the shape change. ``model_rankings`` and ``significant_pairs``
+        serialize as lists of two-element lists (tuples are never joined).
         """
         return {
             "schema_version": self.SCHEMA_VERSION,

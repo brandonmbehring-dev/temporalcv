@@ -585,6 +585,7 @@ def test_multimodel_to_dict_emits_pairwise_records() -> None:
         {"models": ["A", "B"], "result": _dm().to_dict()},
     ]
     assert d["model_rankings"] == [["A", 0.1], ["B", 0.2]]  # tuples -> lists
+    assert d["significant_pairs"] == [["A", "B"]]  # tuples -> lists, not joined
     json.dumps(d)  # whole document remains JSON-serializable
 
 

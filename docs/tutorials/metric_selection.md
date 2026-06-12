@@ -276,15 +276,18 @@ When comparing 3+ models, use p-value correction:
 ```python
 from temporalcv import compare_multiple_models
 
+# forecast_errors: dict of model name -> error array (actuals - predictions)
 result = compare_multiple_models(
-    predictions_dict={"AR": preds_ar, "Ridge": preds_ridge, "RF": preds_rf},
-    actuals=actuals,
-    correction="holm"  # Holm-Bonferroni correction
-)
+    {"AR": errors_ar, "Ridge": errors_ridge, "RF": errors_rf},
+)  # Bonferroni-corrected pairwise DM tests
 
-for comparison in result.pairwise_results:
-    print(f"{comparison['model_a']} vs {comparison['model_b']}: "
-          f"p={comparison['adjusted_pvalue']:.4f}")
+for (model_a, model_b), dm in result.pairwise_results.items():
+    print(f"{model_a} vs {model_b}: p={dm.pvalue:.4f}")
+
+# JSON form (schema v2): pairwise_results is a list of records
+# {"models": [model_a, model_b], "result": {...}} — model names with
+# commas (ARIMA(1,1,0)) survive losslessly.
+doc = result.to_dict()
 ```
 
 ---
