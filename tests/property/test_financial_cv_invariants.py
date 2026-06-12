@@ -127,8 +127,9 @@ class TestPurgedKFoldInvariants:
                 if len(train_arr) > 0:
                     distances = np.abs(train_arr - t_idx)
                     min_dist = np.min(distances)
-                    # Must be at least purge_gap away (or 1 if purge_gap=0)
-                    assert min_dist >= max(1, params["purge_gap"]), (
+                    # Purging removes distances 0..purge_gap inclusive, so
+                    # surviving train rows must be strictly beyond purge_gap.
+                    assert min_dist > params["purge_gap"], (
                         f"Purge gap violated: min_dist={min_dist}, purge_gap={params['purge_gap']}"
                     )
 

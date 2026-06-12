@@ -245,7 +245,7 @@ class PurgedKFold:
     by purge/embargo removal, or ``n_samples < n_splits`` (empty test
     folds) — raises ``ValueError`` at ``split``/``split_detailed`` call
     time instead of silently yielding unusable folds, so ``split`` always
-    yields exactly ``n_splits`` non-degenerate folds.
+    yields exactly ``n_splits`` folds with non-empty train and test sets.
 
     See Also
     --------
@@ -382,7 +382,8 @@ class PurgedKFold:
                     f"emptied the train set for n_samples={n_samples} "
                     f"(n_splits={self.n_splits}, purge_gap={self.purge_gap}, "
                     f"embargo_pct={self.embargo_pct}). Reduce "
-                    f"purge_gap/embargo_pct/n_splits or provide more samples."
+                    f"purge_gap/embargo_pct, increase n_splits (smaller test "
+                    f"blocks shrink the purged band), or provide more samples."
                 )
 
             splits.append(
@@ -402,8 +403,9 @@ class CombinatorialPurgedCV:
     """Combinatorial Purged Cross-Validation (CPCV).
 
     Generates all (n choose k) combinations of groups for test sets,
-    applying purging and embargo to each. Ensures every sample is tested
-    exactly once across all paths.
+    applying purging and embargo to each. Every sample is tested the same
+    number of times — its group appears in C(n_splits-1, n_test_splits-1)
+    of the paths.
 
     Parameters
     ----------
@@ -421,7 +423,7 @@ class CombinatorialPurgedCV:
     >>> cv = CombinatorialPurgedCV(n_splits=5, n_test_splits=2, purge_gap=5)
     >>> n_paths = cv.get_n_splits(X)  # C(5,2) = 10 paths
     >>> for train_idx, test_idx in cv.split(X):
-    ...     # Each sample tested in exactly 2 paths
+    ...     # Each sample tested in C(4, 1) = 4 of the 10 paths
 
     Notes
     -----
@@ -433,7 +435,7 @@ class CombinatorialPurgedCV:
     by purge/embargo removal, or ``n_samples < n_splits`` (empty groups) —
     raises ``ValueError`` at ``split`` call time instead of silently
     yielding unusable paths, so ``split`` always yields exactly
-    ``get_n_splits()`` non-degenerate paths.
+    ``get_n_splits()`` paths with non-empty train and test sets.
 
     See Also
     --------
@@ -603,12 +605,16 @@ class PurgedWalkForward:
     Walk-forward is preferred for time series because it respects temporal
     order. Adding purging prevents leakage from overlapping labels.
 
-    An under-provisioned configuration — any fold whose train window is empty
-    geometrically, whose fixed ``train_size`` cannot fit without truncation,
-    or whose train set is emptied by purge/embargo removal — raises
+    An under-provisioned configuration — any fold whose train window is
+    empty geometrically, whose fixed ``train_size`` cannot fit without
+    truncation, whose train set is emptied by purge/embargo removal, or
+    whose auto-sized test windows have no sample budget — raises
     ``ValueError`` at ``split``/``split_detailed`` call time instead of
-    silently dropping or shrinking folds, so ``split`` always yields exactly
-    ``n_splits`` folds with the promised geometry.
+    silently dropping folds or truncating the window, so ``split`` always
+    yields exactly ``n_splits`` folds whose geometric train window is
+    exactly ``train_size`` (when fixed). Purge/embargo removal may still
+    shave up to ``max(0, n_embargo - purge_gap - extra_gap)`` rows off a
+    window's right edge; only emptying it raises.
 
     See Also
     --------
@@ -736,8 +742,9 @@ class PurgedWalkForward:
                     f"samples after reserving the train window and extra_gap "
                     f"(n_splits={self.n_splits}, train_size={self.train_size}, "
                     f"min_train={min_train}, extra_gap={self.extra_gap}). "
-                    f"Reduce train_size/extra_gap/n_splits or provide more "
-                    f"samples."
+                    f"Reduce train_size (if set) or extra_gap, increase "
+                    f"n_splits (expanding window reserves n_samples / "
+                    f"(n_splits + 1) for training), or provide more samples."
                 )
             # 0 < available < n_splits still floors to 0; keep at least one
             # test sample per fold and let the per-fold geometry guards
@@ -770,6 +777,9 @@ class PurgedWalkForward:
                 train_start = 0
                 train_end = test_start - total_gap
 
+            # Only reachable in expanding-window mode: with a fixed
+            # train_size the truncation guard above already ensures
+            # train_end - train_start == train_size >= 1.
             if train_end <= train_start:
                 raise ValueError(
                     f"PurgedWalkForward fold {split_idx} has an empty train window "
@@ -802,7 +812,9 @@ class PurgedWalkForward:
                     f"n_samples={n_samples} (n_splits={self.n_splits}, "
                     f"test_size={test_size}, purge_gap={self.purge_gap}, "
                     f"embargo_pct={self.embargo_pct}, extra_gap={self.extra_gap}). "
-                    f"Reduce embargo_pct/purge_gap/n_splits or provide more samples."
+                    f"Reduce embargo_pct, or increase purge_gap/extra_gap "
+                    f"(the embargo bite is max(0, n_embargo - purge_gap - "
+                    f"extra_gap))."
                 )
 
             splits.append(

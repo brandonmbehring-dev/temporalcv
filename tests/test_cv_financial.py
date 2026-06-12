@@ -17,6 +17,7 @@ from temporalcv.cv_financial import (
     PurgedKFold,
     PurgedSplit,
     PurgedWalkForward,
+    _apply_purge_and_embargo,
     compute_label_overlap,
     estimate_purge_gap,
 )
@@ -172,6 +173,19 @@ class TestPurgedKFold:
         with pytest.raises(ValueError, match="purge/embargo removal emptied"):
             cv.split(X)  # no iteration
 
+    def test_split_detailed_raises_at_call_time(self) -> None:
+        """split_detailed's own documented call-time contract holds (#36).
+
+        Pins it independently of split(): a `yield from` refactor of
+        split_detailed would defer the raise to first next() and split()
+        would still mask it via its eager list comprehension.
+        """
+        X = np.arange(20).reshape(-1, 1)
+        cv = PurgedKFold(n_splits=2, purge_gap=100)
+
+        with pytest.raises(ValueError, match="purge/embargo removal emptied"):
+            cv.split_detailed(X)  # no iteration
+
     def test_more_splits_than_samples_raises(self) -> None:
         """n_samples < n_splits raises a clear message, not a numpy crash (#36)."""
         X = np.arange(3).reshape(-1, 1)
@@ -179,6 +193,21 @@ class TestPurgedKFold:
 
         with pytest.raises(ValueError, match="test folds would be empty"):
             list(cv.split(X))
+
+    def test_n_samples_equals_n_splits_is_legal(self) -> None:
+        """The exact n_samples == n_splits boundary yields all folds (#36).
+
+        Guards against an off-by-one (`<=`) regression in the empty-test
+        guard: five samples into five folds is minimal but legal.
+        """
+        X = np.arange(5).reshape(-1, 1)
+        cv = PurgedKFold(n_splits=5, embargo_pct=0.0)
+
+        splits = list(cv.split(X))
+        assert len(splits) == 5
+        for train, test in splits:
+            assert len(train) == 4
+            assert len(test) == 1
 
     def test_split_matches_split_detailed(self) -> None:
         """split() yields exactly split_detailed()'s index pairs (dedup, #36)."""
@@ -272,6 +301,21 @@ class TestCombinatorialPurgedCV:
 
         with pytest.raises(ValueError, match="groups would be empty"):
             list(cv.split(X))
+
+    def test_n_samples_equals_n_splits_is_legal(self) -> None:
+        """The exact n_samples == n_splits boundary yields all paths (#36).
+
+        np.array_split makes five singleton groups — minimal but legal;
+        guards against an off-by-one (`<=`) regression in the group guard.
+        """
+        X = np.arange(5).reshape(-1, 1)
+        cv = CombinatorialPurgedCV(n_splits=5, n_test_splits=2, embargo_pct=0.0)
+
+        splits = list(cv.split(X))
+        assert len(splits) == cv.get_n_splits() == 10
+        for train, test in splits:
+            assert len(train) == 3
+            assert len(test) == 2
 
     def test_train_indices_integer_dtype(self) -> None:
         """Train indices keep an integer dtype usable for array indexing (#36)."""
@@ -478,6 +522,38 @@ class TestEdgeCases:
 
         with pytest.raises(ValueError, match="does not fit"):
             cv.split(X)  # no iteration
+
+    def test_walk_forward_split_detailed_raises_at_call_time(self) -> None:
+        """split_detailed's own documented call-time contract holds (#32).
+
+        Pins it independently of split(): a `yield from` refactor of
+        split_detailed would defer the raise to first next() and split()
+        would still mask it via its eager list comprehension.
+        """
+        X = np.arange(20).reshape(-1, 1)
+        cv = PurgedWalkForward(n_splits=10, train_size=15, test_size=5)
+
+        with pytest.raises(ValueError, match="does not fit"):
+            cv.split_detailed(X)  # no iteration
+
+    def test_apply_purge_and_embargo_empty_result_integer_dtype(self) -> None:
+        """An emptied purged train keeps an integer dtype (#36).
+
+        Pins the dtype=np.intp pin directly: the public splitters now raise
+        before an empty train can surface, so only this unit-level test
+        catches a revert to bare np.array([]) (which infers float64).
+        """
+        purged_train, n_purged, _ = _apply_purge_and_embargo(
+            train_indices=np.arange(0, 5),
+            test_indices=np.arange(5, 10),
+            n_samples=10,
+            purge_gap=100,
+            embargo_pct=0.0,
+        )
+
+        assert len(purged_train) == 0
+        assert np.issubdtype(purged_train.dtype, np.integer)
+        assert n_purged == 5
 
     def test_walk_forward_expanding_window_insufficient_data_raises(self) -> None:
         """The expanding-window branch raises on a squeezed train window (#32)."""
