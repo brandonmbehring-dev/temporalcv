@@ -138,6 +138,12 @@ def psd(cov: ArrayLike, *, tol: float = 1e-8, rtol: float = 1e-12, name: str = "
         and below genuine asymmetry bugs (~1e-6 relative and up). Pass
         ``rtol=0`` for the pre-#33 strictly absolute behavior. Must be
         finite and >= 0.
+
+        Trade-off: a relative floor cannot distinguish a genuinely negative
+        eigenvalue from jitter once the condition number exceeds ~1/rtol —
+        ``diag([1e12, -0.5])`` passes at the default because -0.5 is -5e-13
+        *relative* to the top eigenvalue. Tighten ``rtol`` when validating
+        extremely ill-conditioned matrices (pinned by test).
     name : str, default "cov"
         Label used in error messages.
 

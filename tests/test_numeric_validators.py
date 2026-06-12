@@ -119,21 +119,35 @@ class TestPSD:
 
     @staticmethod
     def _large_scale_sandwich() -> np.ndarray:
-        """Healthy sandwich covariance at |cov| ~ 1e11 (the #33 fixture).
+        """Large-scale SPD matrix with roundoff-scale asymmetry (the #33 fixture).
 
-        Symmetric by construction; float roundoff leaves |cov - cov.T|
-        ~ 1.7e-5 absolute (>> the 1e-8 atol) but ~ 1.6e-16 relative.
+        Models a sandwich covariance ``G_inv @ meat @ G_inv.T`` at
+        ``|cov| ~ 1e10``: one off-diagonal element carries a 1e-15 relative
+        (a few ULPs, ~1e-5 absolute) asymmetry — above the 1e-8 atol but
+        far below rtol. Injected deterministically rather than relying on
+        real dgemm roundoff, which is BLAS/platform-dependent and would
+        make the fixture's discrimination property flaky across CI runners.
         """
-        rng = np.random.default_rng(0)
-        g_inv = rng.normal(size=(4, 4)) * 1e5
-        m = rng.normal(size=(4, 4))
-        return np.asarray(g_inv @ (m @ m.T) @ g_inv.T)
+        base = (
+            np.array(
+                [
+                    [4.0, 1.2, -0.7, 0.3],
+                    [1.2, 3.5, 0.9, -0.4],
+                    [-0.7, 0.9, 5.1, 1.0],
+                    [0.3, -0.4, 1.0, 2.8],
+                ]
+            )
+            * 1e10
+        )  # diagonally dominant with positive diagonal -> SPD
+        cov = base.copy()
+        cov[0, 1] *= 1.0 + 1e-15  # roundoff-scale relative asymmetry
+        return cov
 
     def test_large_scale_sandwich_passes_by_default(self) -> None:
         """A healthy large-scale sandwich passes the scale-aware default (#33)."""
         cov = self._large_scale_sandwich()
-        # The fixture must actually exercise the fix: its roundoff
-        # asymmetry exceeds the absolute tolerance on its own.
+        # The fixture must actually exercise the fix: its asymmetry
+        # exceeds the absolute tolerance on its own.
         assert float(np.max(np.abs(cov - cov.T))) > 1e-8
 
         psd(cov)  # must not raise
@@ -156,6 +170,20 @@ class TestPSD:
         # -1.0 against the same scale exceeds the floor (~ -1e-2): real.
         with pytest.raises(ValueError, match="positive semi-definite"):
             psd(np.diag([1e10, -1.0]))
+
+    def test_eigen_floor_condition_number_tradeoff_is_pinned(self) -> None:
+        """Beyond condition number ~1/rtol the floor absorbs real negatives (#33).
+
+        Documented trade-off, pinned so it stays a visible decision: at
+        max|eig| = 1e12 the default floor is ~1.0, so min_eig = -0.5
+        (-5e-13 relative — inside the jitter band at this tolerance) passes.
+        A caller validating such ill-conditioned matrices tightens rtol,
+        which restores the rejection.
+        """
+        ill_conditioned = np.diag([1e12, -0.5])
+        psd(ill_conditioned)  # default: within rtol of zero at this scale
+        with pytest.raises(ValueError, match="positive semi-definite"):
+            psd(ill_conditioned, rtol=1e-14)
 
     @pytest.mark.parametrize("bad_rtol", [-1e-12, np.nan, np.inf])
     def test_bad_rtol_raises(self, bad_rtol: float) -> None:
