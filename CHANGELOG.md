@@ -26,6 +26,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commas (`ARIMA(1,1,0)`). `jsonify_key` now refuses tuple keys outright (`TypeError`),
   so no silent-lossy tuple-key path survives; future tuple-keyed result dicts must emit
   an explicit lossless form.
+- **Purged splitters subclass `BaseCrossValidator`** (#25): `PurgedKFold`,
+  `CombinatorialPurgedCV`, and `PurgedWalkForward` now inherit from sklearn's
+  `BaseCrossValidator` like the `cv.py` forward-only family — first-class
+  `cross_val_score`/`Pipeline` interop and sklearn's param-aware `repr`. Split
+  geometry is golden-parity-gated: every `split()` index is bit-identical across the
+  realign (`tests/test_purged_base_class_parity.py`). The `cv_financial` module
+  docstring now documents the eval-toolkit boundary (#17): the classification-eval
+  purged K-fold stays a deliberate, attributed adaptation per the hub's
+  universal-vs-unique pattern.
 
 ### Fixed
 

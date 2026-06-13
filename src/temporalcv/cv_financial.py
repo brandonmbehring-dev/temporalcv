@@ -23,6 +23,16 @@ References
   Chapter 7: Cross-Validation in Finance.
 - Lopez de Prado & Lewis (2019). "Detection of False Investment Strategies
   Using Unsupervised Learning Methods."
+
+See Also
+--------
+eval-toolkit hosts an adapted purged K-fold (``eval_toolkit/splits.py``,
+"Adapted from temporalcv"). Both implement label-overlap purging; they differ
+in domain — classification-evaluation there, forecasting/financial time series
+here — so they make different assumptions about how the overlap window is
+defined and indexed. The two are deliberately kept separate per the hub
+pattern *universal-vs-unique.md* ("Two toolkits, same-named concept"):
+consolidate only a concept that is genuinely identical across domains (#17).
 """
 
 from __future__ import annotations
@@ -33,6 +43,7 @@ from itertools import combinations
 from typing import Any, ClassVar
 
 import numpy as np
+from sklearn.model_selection import BaseCrossValidator
 
 from temporalcv._serialization import result_to_dict
 from temporalcv._typing import ArrayLike
@@ -210,7 +221,7 @@ def _apply_purge_and_embargo(
     )
 
 
-class PurgedKFold:
+class PurgedKFold(BaseCrossValidator):  # type: ignore[misc]
     """Purged K-Fold cross-validation for overlapping labels.
 
     Removes samples from training set that are within purge_gap of any
@@ -399,7 +410,7 @@ class PurgedKFold:
         return iter(splits)
 
 
-class CombinatorialPurgedCV:
+class CombinatorialPurgedCV(BaseCrossValidator):  # type: ignore[misc]
     """Combinatorial Purged Cross-Validation (CPCV).
 
     Generates all (n choose k) combinations of groups for test sets,
@@ -564,7 +575,7 @@ class CombinatorialPurgedCV:
         return comb(self.n_splits, self.n_test_splits)
 
 
-class PurgedWalkForward:
+class PurgedWalkForward(BaseCrossValidator):  # type: ignore[misc]
     """Walk-forward cross-validation with purging for overlapping labels.
 
     Extends standard walk-forward CV with purge_gap and embargo to handle
