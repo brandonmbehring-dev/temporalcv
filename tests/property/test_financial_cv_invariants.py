@@ -3,7 +3,7 @@
 Tests invariants of PurgedKFold, CombinatorialPurgedCV, and PurgedWalkForward.
 """
 
-from math import comb
+from math import ceil, comb
 
 import numpy as np
 from hypothesis import assume, given, settings
@@ -62,10 +62,10 @@ def valid_walk_forward_params(draw: st.DrawFn) -> dict:
     Fold 0 has the smallest train window, ending at
     ``n_samples - n_splits * test_size - purge_gap``. Since #35 the fixed
     window is never truncated: fold 0 must fit the whole ``train_size``
-    (``train_end - train_size >= 0``) or the splitter raises. The symmetric
-    embargo (default ``embargo_pct=0.01``) additionally removes up to
-    ``max(0, int(0.01 * n_samples) - purge_gap)`` rows from the window's
-    right edge, which ``train_size >= 50`` always survives.
+    (``train_end - train_size >= 0``) or the splitter raises. Since #38 the
+    embargo is one-sided (after each test run); in this forward-only geometry
+    the train window precedes the test window, so the embargo removes nothing
+    and never shaves the right edge.
     """
     n_samples = draw(st.integers(min_value=200, max_value=1000))
     n_splits = draw(st.integers(min_value=2, max_value=10))
@@ -367,3 +367,97 @@ class TestEstimatePurgeGapInvariants:
         """Default decay factor of 1.0 should return horizon."""
         gap = estimate_purge_gap(horizon=horizon, decay_factor=1.0)
         assert gap == horizon
+
+
+def _embargo_after_each_run_respected(
+    train_idx: np.ndarray, test_idx: np.ndarray, n_samples: int, embargo_pct: float
+) -> bool:
+    """No train index falls within ceil(embargo_pct*n) after any contiguous test run.
+
+    The De Prado one-sided per-run embargo property (#38). The buggy pre-#38
+    code used a single global ``test_max``, so the interior boundaries of a
+    multi-block test set (CombinatorialPurgedCV, shuffled PurgedKFold) leaked
+    into the training set.
+    """
+    n_embargo = ceil(embargo_pct * n_samples)
+    if n_embargo == 0 or len(test_idx) == 0:
+        return True
+    sorted_test = np.unique(test_idx)
+    run_ends = sorted_test[np.append(np.diff(sorted_test) != 1, True)]
+    train_set = {int(i) for i in train_idx}
+    for end in run_ends:
+        for i in range(int(end) + 1, min(int(end) + 1 + n_embargo, n_samples)):
+            if i in train_set:
+                return False
+    return True
+
+
+class TestEmbargoInvariants:
+    """The one-sided per-run embargo holds for every fold (#38)."""
+
+    @given(
+        n_samples=st.integers(min_value=80, max_value=400),
+        n_splits=st.integers(min_value=3, max_value=6),
+        n_test_splits=st.integers(min_value=1, max_value=3),
+        embargo_pct=st.floats(min_value=0.0, max_value=0.15),
+        purge_gap=st.integers(min_value=0, max_value=5),
+    )
+    @settings(max_examples=150)
+    def test_cpcv_embargo_after_each_run(
+        self,
+        n_samples: int,
+        n_splits: int,
+        n_test_splits: int,
+        embargo_pct: float,
+        purge_gap: int,
+    ) -> None:
+        """Multi-block test sets embargo every interior boundary, not just the global max."""
+        assume(n_test_splits < n_splits)
+        cv = CombinatorialPurgedCV(
+            n_splits=n_splits,
+            n_test_splits=n_test_splits,
+            purge_gap=purge_gap,
+            embargo_pct=embargo_pct,
+        )
+        try:
+            splits = list(cv.split(np.zeros((n_samples, 1))))
+        except ValueError:
+            assume(False)  # under-provisioned config raised — not an embargo case
+            return
+        for train_idx, test_idx in splits:
+            assert _embargo_after_each_run_respected(train_idx, test_idx, n_samples, embargo_pct)
+
+    @given(
+        n_samples=st.integers(min_value=60, max_value=400),
+        n_splits=st.integers(min_value=2, max_value=8),
+        embargo_pct=st.floats(min_value=0.0, max_value=0.1),
+        purge_gap=st.integers(min_value=0, max_value=5),
+    )
+    @settings(max_examples=150)
+    def test_purged_kfold_embargo_after_each_run(
+        self, n_samples: int, n_splits: int, embargo_pct: float, purge_gap: int
+    ) -> None:
+        """Unshuffled PurgedKFold embargoes after each contiguous test fold."""
+        assume(n_samples // n_splits > purge_gap)
+        cv = PurgedKFold(n_splits=n_splits, purge_gap=purge_gap, embargo_pct=embargo_pct)
+        try:
+            splits = list(cv.split(np.zeros((n_samples, 1))))
+        except ValueError:
+            assume(False)
+            return
+        for train_idx, test_idx in splits:
+            assert _embargo_after_each_run_respected(train_idx, test_idx, n_samples, embargo_pct)
+
+    @given(params=valid_walk_forward_params())
+    @settings(max_examples=100)
+    def test_walk_forward_embargo_is_noop(self, params: dict) -> None:
+        """Forward-only geometry: the one-sided embargo removes nothing (#38)."""
+        cv = PurgedWalkForward(
+            n_splits=params["n_splits"],
+            train_size=params["train_size"],
+            test_size=params["test_size"],
+            purge_gap=params["purge_gap"],
+            embargo_pct=0.1,  # large embargo, still a no-op since train precedes test
+        )
+        for detailed in cv.split_detailed(np.zeros((params["n_samples"], 1))):
+            assert detailed.n_embargoed == 0

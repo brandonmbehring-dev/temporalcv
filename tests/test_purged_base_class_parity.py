@@ -9,6 +9,12 @@ single index. Same proof pattern as the A2 splitter ports.
 If a future change legitimately alters split geometry, regenerate the digests
 in the same change and say so in the commit — this file failing means "the
 indices moved", which must never happen silently.
+
+Regenerated at v2.2.0 for the #38 one-sided per-run embargo fix: 9 of 18
+``embargo_pct>0`` digests moved (the embargo output legitimately changed — see
+CHANGELOG). The ``embargo_pct=0.0`` configs and the purge-masked configs
+(``n_embargo <= purge_gap``) were re-derived to byte-identical values, so they
+still pin the #25 realign baseline (3ae04fb).
 """
 
 from __future__ import annotations
@@ -25,16 +31,17 @@ from temporalcv.cv_financial import (
 )
 
 # (constructor expression, n_samples, sha256[:16] of concatenated index bytes)
-# Digests generated on main @ 3ae04fb (pre-realign, post-#35/#36 hardening).
+# Baseline main @ 3ae04fb (#25 realign); embargo_pct>0 digests regenerated at
+# the #38 one-sided per-run embargo fix (v2.2.0) — see module docstring.
 PARITY_GRID: list[tuple[str, int, str]] = [
-    ("PurgedKFold(n_splits=5)", 120, "517be5af591e1806"),
-    ("PurgedKFold(n_splits=5)", 257, "b4c68f874d474ff0"),
+    ("PurgedKFold(n_splits=5)", 120, "45cf8260bde9d87f"),
+    ("PurgedKFold(n_splits=5)", 257, "8410c26c2f38f0d0"),
     ("PurgedKFold(n_splits=4, purge_gap=5, embargo_pct=0.02)", 120, "af09f50f394ac38c"),
-    ("PurgedKFold(n_splits=4, purge_gap=5, embargo_pct=0.02)", 257, "eaacc9ad07ee8bfd"),
+    ("PurgedKFold(n_splits=4, purge_gap=5, embargo_pct=0.02)", 257, "d51a243b03e803f7"),
     ("PurgedKFold(n_splits=3, purge_gap=10, embargo_pct=0.0)", 120, "bf19711573cdf00f"),
     ("PurgedKFold(n_splits=3, purge_gap=10, embargo_pct=0.0)", 257, "3887856d80cb8590"),
-    ("CombinatorialPurgedCV(n_splits=5, n_test_splits=2)", 120, "4c5ecc5f0d8b0114"),
-    ("CombinatorialPurgedCV(n_splits=5, n_test_splits=2)", 257, "514483205f906fbc"),
+    ("CombinatorialPurgedCV(n_splits=5, n_test_splits=2)", 120, "3c3e1cbfd0566fbc"),
+    ("CombinatorialPurgedCV(n_splits=5, n_test_splits=2)", 257, "842ff6bd009a3699"),
     (
         "CombinatorialPurgedCV(n_splits=6, n_test_splits=2, purge_gap=3)",
         120,
@@ -48,15 +55,15 @@ PARITY_GRID: list[tuple[str, int, str]] = [
     (
         "CombinatorialPurgedCV(n_splits=4, n_test_splits=1, embargo_pct=0.05)",
         120,
-        "1a8b830277d5d929",
+        "a50f5df50e619284",
     ),
     (
         "CombinatorialPurgedCV(n_splits=4, n_test_splits=1, embargo_pct=0.05)",
         257,
-        "0b16e0df94fee910",
+        "99612963040a7819",
     ),
-    ("PurgedWalkForward(n_splits=5)", 120, "4df391c4a8681582"),
-    ("PurgedWalkForward(n_splits=5)", 257, "4c7c04fa62b738b7"),
+    ("PurgedWalkForward(n_splits=5)", 120, "6b0dd043f04cd5fc"),
+    ("PurgedWalkForward(n_splits=5)", 257, "2bd4e387f7d6e14c"),
     (
         "PurgedWalkForward(n_splits=3, train_size=50, test_size=20, purge_gap=5)",
         120,
