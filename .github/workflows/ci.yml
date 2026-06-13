@@ -38,7 +38,9 @@ jobs:
       - name: Run cv_financial doctests
         # Scoped to cv_financial (#40): keeps its docstring examples honest in CI
         # without the unrelated viz/matplotlib doctest failures a global run surfaces.
-        run: pytest --doctest-modules src/temporalcv/cv_financial.py -q --no-cov
+        # Clear addopts (--override-ini) so the project --cov flags don't leak in and
+        # can't silently break this step if addopts changes later.
+        run: pytest --doctest-modules src/temporalcv/cv_financial.py --override-ini="addopts=" -q
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
