@@ -11,6 +11,64 @@ No unreleased changes.
 
 ---
 
+## [2.2.0] - 2026-06-13
+
+Purged-family hardening round 3, closing the embargo/doctest ledger surfaced by the
+2.1.0 review. **Behavior change:** the embargo is now one-sided per contiguous test run
+(canonical De Prado) instead of symmetric off a single global `test_max`, so embargo
+output moves for any `embargo_pct > 0` config — see Migration. `PurgedKFold(shuffle=True)`
+is deprecated. The #38 embargo-leakage fix received a full 4-agent adversarial review;
+#40 a single-pass review.
+
+### Fixed
+
+- **Interior test-block boundaries are no longer silently un-embargoed** (#38, CRITICAL
+  leakage): `_apply_purge_and_embargo` computed the embargo span from the global
+  `test_min`/`test_max`, assuming one contiguous test block. `CombinatorialPurgedCV`
+  builds multi-block test sets, so for `n=100, n_splits=5, n_test_splits=2,
+  embargo_pct=0.10` path `(g0,g2)` (test `[0..19] ∪ [40..59]`) left rows `20–29`
+  (immediately after the first test block) fully in train; only `60–69` were embargoed.
+  9 of 10 CPCV paths under-embargoed; `PurgedKFold(shuffle=True)` broke the same way.
+  Embargo is now applied **per contiguous test run, one-sided after each run**, with
+  `math.ceil` so a small nonzero `embargo_pct` can never truncate to zero rows (the old
+  `int()` silently dropped e.g. `embargo_pct=0.009, n=100` to no embargo).
+- **`estimate_purge_gap` no longer under-shoots** (#40): it used `int(horizon *
+  decay_factor)`, rounding a conservative purge-gap knob DOWN — `estimate_purge_gap(5,
+  1.5)` returned `7` while its own docstring claimed `8`. Now uses `math.ceil`.
+
+### Changed
+
+- **Embargo is one-sided (after each contiguous test run), not symmetric** (#38): the
+  pre-test embargo is dropped — `purge_gap` already guards a run's leading edge (label
+  overlap), while the embargo addresses serial correlation *after* the test period. In
+  forward-only `PurgedWalkForward` the embargo is now a principled no-op.
+- **Input validation replaces silent clamps** (#40): `estimate_purge_gap` raises on
+  `horizon < 1` / `decay_factor <= 0` (was a silent `max(1, ...)` clamp);
+  `compute_label_overlap` raises on `horizon < 1` / `n_samples < 0` (`n_samples == 0`
+  remains legal → `0×0` matrix).
+- **Doctests now run in CI**, scoped to `cv_financial.py` (#40): a global
+  `--doctest-modules` surfaces 154 unrelated viz/matplotlib failures, so the new step is
+  scoped and clears `addopts`. The module was made doctest-clean.
+
+### Deprecated
+
+- **`PurgedKFold(shuffle=True)`** (#39, removal in 3.0): it consumed the unseedable
+  global RNG, so two `split()` calls disagreed and `split()` described different folds
+  than `split_detailed()`. It now warns at construction and, during the deprecation
+  window, seeds a local `np.random.default_rng(0)` so the two methods agree and runs are
+  reproducible. De Prado's `PurgedKFold` has no shuffle.
+
+### Migration
+
+- Embargo output changes for any `embargo_pct > 0` configuration: `CombinatorialPurgedCV`
+  and `PurgedKFold(shuffle=True)` now embargo every interior run boundary (correct);
+  `PurgedWalkForward`'s embargo becomes a no-op (it shaved pre-test rows before — that was
+  non-canonical; `purge_gap`/`extra_gap` are unchanged). Configs with `embargo_pct=0` are
+  byte-identical. Downstream `dml_ts` uses `embargo_pct=0` throughout and is unaffected
+  (golden parity verified before this release).
+
+---
+
 ## [2.1.0] - 2026-06-12
 
 Clears the open `cv_financial`/validator/serialization ledger, completing the v2.0
