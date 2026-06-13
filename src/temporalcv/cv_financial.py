@@ -102,12 +102,18 @@ def compute_label_overlap(
         Boolean matrix (n_samples, n_samples) where entry (i,j) is True
         if labels at indices i and j share any underlying data points.
 
+    Raises
+    ------
+    ValueError
+        If ``horizon < 1`` (a forward-return label spans at least one step)
+        or ``n_samples < 0``.
+
     Examples
     --------
     >>> overlap = compute_label_overlap(10, horizon=3)
-    >>> overlap[0, 2]  # Samples 0 and 2 share data (within horizon)
+    >>> bool(overlap[0, 2])  # Samples 0 and 2 share data (within horizon)
     True
-    >>> overlap[0, 5]  # Samples 0 and 5 don't share data
+    >>> bool(overlap[0, 5])  # Samples 0 and 5 don't share data
     False
 
     Notes
@@ -116,6 +122,12 @@ def compute_label_overlap(
     For h-day forward returns: label_t uses data from t to t+h,
     so labels t1 and t2 overlap if |t1 - t2| < h.
     """
+    if horizon < 1:
+        raise ValueError(
+            f"horizon must be >= 1 (a forward-return label spans at least one step), got {horizon}"
+        )
+    if n_samples < 0:
+        raise ValueError(f"n_samples must be >= 0, got {n_samples}")
     indices = np.arange(n_samples)
     # Compute pairwise distances
     dist_matrix = np.abs(indices[:, np.newaxis] - indices[np.newaxis, :])
@@ -135,12 +147,18 @@ def estimate_purge_gap(
         Label horizon (e.g., 5 for 5-day forward returns).
     decay_factor : float
         Multiplier for horizon. Default 1.0 means purge_gap = horizon.
-        Use >1.0 for conservative purging.
+        Use >1.0 for conservative purging. The product is rounded UP
+        (``ceil``) so the gap never under-shoots the requested span.
 
     Returns
     -------
     int
-        Suggested purge gap.
+        Suggested purge gap (>= 1 for any valid input).
+
+    Raises
+    ------
+    ValueError
+        If ``horizon < 1`` or ``decay_factor <= 0``.
 
     Examples
     --------
@@ -154,7 +172,11 @@ def estimate_purge_gap(
     [T2] Rule of thumb: purge_gap >= horizon to prevent any overlap.
     The decay_factor allows for more aggressive (>1) or relaxed (<1) purging.
     """
-    return max(1, int(horizon * decay_factor))
+    if horizon < 1:
+        raise ValueError(f"horizon must be >= 1, got {horizon}")
+    if decay_factor <= 0:
+        raise ValueError(f"decay_factor must be > 0, got {decay_factor}")
+    return math.ceil(horizon * decay_factor)
 
 
 def _apply_purge_and_embargo(
@@ -257,7 +279,7 @@ class PurgedKFold(BaseCrossValidator):  # type: ignore[misc]
     Examples
     --------
     >>> cv = PurgedKFold(n_splits=5, purge_gap=5, embargo_pct=0.01)
-    >>> for train_idx, test_idx in cv.split(X, y):
+    >>> for train_idx, test_idx in cv.split(X, y):  # doctest: +SKIP
     ...     model.fit(X[train_idx], y[train_idx])
     ...     score = model.score(X[test_idx], y[test_idx])
 
@@ -463,9 +485,11 @@ class CombinatorialPurgedCV(BaseCrossValidator):  # type: ignore[misc]
     Examples
     --------
     >>> cv = CombinatorialPurgedCV(n_splits=5, n_test_splits=2, purge_gap=5)
-    >>> n_paths = cv.get_n_splits(X)  # C(5,2) = 10 paths
-    >>> for train_idx, test_idx in cv.split(X):
+    >>> cv.get_n_splits()  # C(5,2) = 10 paths
+    10
+    >>> for train_idx, test_idx in cv.split(X):  # doctest: +SKIP
     ...     # Each sample tested in C(4, 1) = 4 of the 10 paths
+    ...     pass
 
     Notes
     -----
@@ -640,7 +664,7 @@ class PurgedWalkForward(BaseCrossValidator):  # type: ignore[misc]
     ...     test_size=20,
     ...     purge_gap=5
     ... )
-    >>> for train_idx, test_idx in cv.split(X):
+    >>> for train_idx, test_idx in cv.split(X):  # doctest: +SKIP
     ...     model.fit(X[train_idx], y[train_idx])
     ...     predictions = model.predict(X[test_idx])
 

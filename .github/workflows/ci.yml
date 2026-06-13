@@ -35,6 +35,11 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v --cov=temporalcv --cov-report=xml --cov-fail-under=80 --ignore=tests/benchmarks/
 
+      - name: Run cv_financial doctests
+        # Scoped to cv_financial (#40): keeps its docstring examples honest in CI
+        # without the unrelated viz/matplotlib doctest failures a global run surfaces.
+        run: pytest --doctest-modules src/temporalcv/cv_financial.py -q --no-cov
+
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v5

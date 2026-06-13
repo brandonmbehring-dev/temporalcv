@@ -62,6 +62,23 @@ class TestComputeLabelOverlap:
 
         np.testing.assert_array_equal(overlap, overlap.T)
 
+    def test_invalid_horizon_raises(self) -> None:
+        """horizon < 1 raises instead of silently returning an all-False matrix (#40)."""
+        with pytest.raises(ValueError, match="horizon must be >= 1"):
+            compute_label_overlap(n_samples=10, horizon=0)
+        with pytest.raises(ValueError, match="horizon must be >= 1"):
+            compute_label_overlap(n_samples=10, horizon=-2)
+
+    def test_invalid_n_samples_raises(self) -> None:
+        """Negative n_samples raises instead of an empty matrix (#40)."""
+        with pytest.raises(ValueError, match="n_samples must be >= 0"):
+            compute_label_overlap(n_samples=-1, horizon=3)
+
+    def test_n_samples_zero_is_empty(self) -> None:
+        """n_samples=0 is a legal degenerate case: a 0x0 matrix, not a raise."""
+        overlap = compute_label_overlap(n_samples=0, horizon=3)
+        assert overlap.shape == (0, 0)
+
 
 class TestEstimatePurgeGap:
     """Tests for estimate_purge_gap function."""
@@ -72,13 +89,28 @@ class TestEstimatePurgeGap:
         assert estimate_purge_gap(horizon=10) == 10
 
     def test_custom_decay(self) -> None:
-        """Custom decay factor should scale horizon."""
-        assert estimate_purge_gap(horizon=5, decay_factor=1.5) == 7  # floor(5 * 1.5) = 7
-        assert estimate_purge_gap(horizon=10, decay_factor=0.5) == 5
+        """Custom decay factor scales horizon, rounded UP (#40)."""
+        # ceil(5 * 1.5) = 8 (the docstring example; int() wrongly gave 7)
+        assert estimate_purge_gap(horizon=5, decay_factor=1.5) == 8
+        assert estimate_purge_gap(horizon=10, decay_factor=0.5) == 5  # ceil(5.0) = 5
 
     def test_minimum_one(self) -> None:
         """Result should be at least 1."""
-        assert estimate_purge_gap(horizon=1, decay_factor=0.1) >= 1
+        assert estimate_purge_gap(horizon=1, decay_factor=0.1) >= 1  # ceil(0.1) = 1
+
+    def test_invalid_horizon_raises(self) -> None:
+        """horizon < 1 raises instead of silently clamping to 1 (#40)."""
+        with pytest.raises(ValueError, match="horizon must be >= 1"):
+            estimate_purge_gap(horizon=0)
+        with pytest.raises(ValueError, match="horizon must be >= 1"):
+            estimate_purge_gap(horizon=-3)
+
+    def test_invalid_decay_factor_raises(self) -> None:
+        """decay_factor <= 0 raises instead of silently clamping (#40)."""
+        with pytest.raises(ValueError, match="decay_factor must be > 0"):
+            estimate_purge_gap(horizon=5, decay_factor=0.0)
+        with pytest.raises(ValueError, match="decay_factor must be > 0"):
+            estimate_purge_gap(horizon=5, decay_factor=-1.0)
 
 
 class TestPurgedKFold:
