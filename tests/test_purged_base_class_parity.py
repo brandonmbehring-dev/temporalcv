@@ -10,11 +10,14 @@ If a future change legitimately alters split geometry, regenerate the digests
 in the same change and say so in the commit — this file failing means "the
 indices moved", which must never happen silently.
 
-Regenerated at v2.2.0 for the #38 one-sided per-run embargo fix: 9 of 18
-``embargo_pct>0`` digests moved (the embargo output legitimately changed — see
-CHANGELOG). The ``embargo_pct=0.0`` configs and the purge-masked configs
-(``n_embargo <= purge_gap``) were re-derived to byte-identical values, so they
-still pin the #25 realign baseline (3ae04fb).
+Regenerated at v2.2.0 for the #38 one-sided per-run embargo fix. The grid has
+20 entries: the 18 #25-realign baseline configs (3ae04fb) plus 2
+``PurgedKFold(purge_gap=0, embargo_pct=0.05)`` configs added here so a PurgedKFold
+embargo regression moves a digest (its only other PKF-with-embargo config is
+purge-masked). Among the 18 baseline digests, 9 moved at this fix — all 9 are
+``embargo_pct>0`` (14 of the 18 carry ``embargo_pct>0``); the other 9 are
+byte-identical (4 ``embargo_pct=0.0``, 5 ``embargo_pct>0`` but purge-masked or
+forward-only no-ops), so they still pin the realign baseline.
 """
 
 from __future__ import annotations
@@ -40,6 +43,9 @@ PARITY_GRID: list[tuple[str, int, str]] = [
     ("PurgedKFold(n_splits=4, purge_gap=5, embargo_pct=0.02)", 257, "d51a243b03e803f7"),
     ("PurgedKFold(n_splits=3, purge_gap=10, embargo_pct=0.0)", 120, "bf19711573cdf00f"),
     ("PurgedKFold(n_splits=3, purge_gap=10, embargo_pct=0.0)", 257, "3887856d80cb8590"),
+    # purge_gap=0: embargo is unmasked, so this digest moves with PKF embargo (#38).
+    ("PurgedKFold(n_splits=4, purge_gap=0, embargo_pct=0.05)", 120, "a50f5df50e619284"),
+    ("PurgedKFold(n_splits=4, purge_gap=0, embargo_pct=0.05)", 257, "99612963040a7819"),
     ("CombinatorialPurgedCV(n_splits=5, n_test_splits=2)", 120, "3c3e1cbfd0566fbc"),
     ("CombinatorialPurgedCV(n_splits=5, n_test_splits=2)", 257, "842ff6bd009a3699"),
     (

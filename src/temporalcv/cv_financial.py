@@ -180,7 +180,8 @@ def _apply_purge_and_embargo(
         Remove ``ceil(embargo_pct * n_samples)`` training samples immediately
         after each contiguous run of test indices (De Prado one-sided embargo).
         Applied per run, so interior boundaries of multi-block test sets are
-        embargoed too; purging already guards each run's leading edge.
+        embargoed too. The embargo is one-sided by design: a run's leading edge
+        is purging's responsibility (label overlap), not the embargo's.
 
     Returns
     -------
@@ -202,8 +203,9 @@ def _apply_purge_and_embargo(
                 purge_indices.add(idx)
 
     # Embargo (De Prado, one-sided): remove training samples immediately AFTER
-    # each *contiguous run* of test indices. Purge already guards the leading
-    # edge of every run, so no pre-test embargo is applied. The span is taken
+    # each *contiguous run* of test indices. The embargo is one-sided by design
+    # — a run's leading edge is purging's job (label overlap), not the
+    # embargo's — so no pre-test embargo is applied. The span is taken
     # from per-run maxima, NOT a single global test_max — that is what protects
     # the interior boundaries of multi-block test sets (CombinatorialPurgedCV,
     # shuffled PurgedKFold); a global span silently skips them. ``ceil`` rounds
@@ -853,8 +855,9 @@ class PurgedWalkForward(BaseCrossValidator):  # type: ignore[misc]
                 # geometric window itself was empty (already guarded above).
                 # Kept generic in case the geometry ever changes.
                 raise ValueError(
-                    f"PurgedWalkForward fold {split_idx}: purge/embargo removal emptied "
-                    f"the train window [{train_start}, {train_end}) for "
+                    f"PurgedWalkForward fold {split_idx}: train window "
+                    f"[{train_start}, {train_end}) is unexpectedly empty after "
+                    f"purge/embargo (geometry invariant violated) for "
                     f"n_samples={n_samples} (n_splits={self.n_splits}, "
                     f"test_size={test_size}, purge_gap={self.purge_gap}, "
                     f"embargo_pct={self.embargo_pct}, extra_gap={self.extra_gap}). "
