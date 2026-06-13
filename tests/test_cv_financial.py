@@ -9,6 +9,9 @@ Test categories:
 5. Edge cases
 """
 
+import math
+import warnings
+
 import numpy as np
 import pytest
 
@@ -104,6 +107,78 @@ class TestPurgedKFold:
         """Should raise for invalid embargo_pct."""
         with pytest.raises(ValueError, match="embargo_pct must be in"):
             PurgedKFold(embargo_pct=1.5)
+
+    def test_shuffle_deprecated_once_at_construction_not_split(self) -> None:
+        """shuffle=True warns exactly once, at construction, never in split() (#39).
+
+        Construction-time so the warning fires before any CV loop; pinning
+        ``len(record) == 1`` plus a warning-as-error pass over split()/
+        split_detailed() guards against a future per-fold warning regression.
+        """
+        with pytest.warns(DeprecationWarning, match="shuffle=True") as record:
+            cv = PurgedKFold(n_splits=4, shuffle=True)
+        assert len(record) == 1  # exactly once, at construction
+
+        X = np.arange(40).reshape(-1, 1)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)  # a 2nd warning would raise
+            list(cv.split(X))
+            list(cv.split_detailed(X))
+
+    def test_shuffle_no_warning_when_false(self) -> None:
+        """The default shuffle=False path is warning-free (#39)."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")  # any warning becomes an error
+            PurgedKFold(n_splits=4, shuffle=False)
+
+    def test_shuffle_seeded_reproducible_and_consistent(self) -> None:
+        """The deprecated shuffle is seeded: reproducible, split==split_detailed (#39).
+
+        The pre-#39 ``np.random.shuffle`` consumed the unseedable global RNG,
+        so two ``split()`` calls disagreed and ``split`` != ``split_detailed``.
+        """
+        X = np.arange(40).reshape(-1, 1)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            a = [(tr.tolist(), te.tolist()) for tr, te in PurgedKFold(4, shuffle=True).split(X)]
+            b = [(tr.tolist(), te.tolist()) for tr, te in PurgedKFold(4, shuffle=True).split(X)]
+            cv = PurgedKFold(4, shuffle=True)
+            via_split = [(tr.tolist(), te.tolist()) for tr, te in cv.split(X)]
+            via_detailed = [
+                (d.train_indices.tolist(), d.test_indices.tolist()) for d in cv.split_detailed(X)
+            ]
+        assert a == b  # reproducible across instances (seeded, not global RNG)
+        assert via_split == via_detailed  # the two methods describe the same folds
+        # shuffle actually scrambles order: at least one test fold is non-contiguous
+        assert any(te != list(range(min(te), max(te) + 1)) for _, te in a)
+
+    def test_shuffle_per_run_embargo_fires(self) -> None:
+        """Scattered (multi-run) shuffle folds get per-run embargo, not global-max (#38/#39).
+
+        shuffle=True is the second multi-run source besides CombinatorialPurgedCV:
+        it scatters each test fold into many contiguous runs, so the embargo must
+        fire after EACH run. A revert to a single global test_max would leave
+        interior run-ends in train — the exact #38 leak — and trip this test.
+        """
+        n_samples = 60
+        embargo_pct = 0.1
+        n_embargo = math.ceil(embargo_pct * n_samples)  # 6
+        X = np.arange(n_samples).reshape(-1, 1)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            cv = PurgedKFold(n_splits=4, purge_gap=0, embargo_pct=embargo_pct, shuffle=True)
+            folds = [(tr, te) for tr, te in cv.split(X)]
+
+        saw_multi_run = False
+        for train, test in folds:
+            sorted_test = np.unique(test)
+            run_ends = sorted_test[np.append(np.diff(sorted_test) != 1, True)]
+            saw_multi_run = saw_multi_run or len(run_ends) > 1
+            train_set = set(train.tolist())
+            for end in run_ends:
+                for i in range(int(end) + 1, min(int(end) + 1 + n_embargo, n_samples)):
+                    assert i not in train_set, f"row {i} after run-end {end} leaked into train"
+        assert saw_multi_run, "shuffle should scatter at least one fold into multiple runs"
 
     def test_splits_count(self) -> None:
         """Should generate correct number of splits."""
@@ -324,6 +399,29 @@ class TestCombinatorialPurgedCV:
 
         for train, _ in cv.split(X):
             assert np.issubdtype(train.dtype, np.integer)
+
+    def test_interior_block_embargo_fires(self) -> None:
+        """Every contiguous test run is embargoed, not just the global max (#38).
+
+        n=100, n_splits=5, n_test_splits=2, embargo_pct=0.10, purge_gap=0:
+        path (g0, g2) tests [0..19] u [40..59]. Pre-#38 the embargo used the
+        global test_max only, leaving rows 20-29 (right after the FIRST test
+        block) in train — the headline leak. The per-run fix embargoes
+        ceil(0.10*100)=10 rows after EACH run: 20-29 AND 60-69. This is the
+        byte-exact corrected-output pin for the bug.
+        """
+        X = np.arange(100).reshape(-1, 1)
+        cv = CombinatorialPurgedCV(n_splits=5, n_test_splits=2, purge_gap=0, embargo_pct=0.10)
+        target = set(range(0, 20)) | set(range(40, 60))
+        train = next(tr for tr, te in cv.split(X) if set(te.tolist()) == target)
+        train_set = set(train.tolist())
+
+        assert set(range(20, 30)).isdisjoint(train_set)  # interior boundary (was the leak)
+        assert set(range(60, 70)).isdisjoint(train_set)  # trailing boundary
+        assert set(range(30, 40)).issubset(train_set)  # beyond embargo span: kept
+        assert set(range(70, 100)).issubset(train_set)
+        # exact corrected train set for this path
+        assert sorted(train_set) == list(range(30, 40)) + list(range(70, 100))
 
 
 class TestPurgedWalkForward:
@@ -555,6 +653,44 @@ class TestEdgeCases:
         assert np.issubdtype(purged_train.dtype, np.integer)
         assert n_purged == 5
 
+    def test_apply_purge_and_embargo_one_sided_per_run(self) -> None:
+        """Embargo is one-sided (after) and per contiguous run (#38).
+
+        A two-block test set [10..14] u [30..34] with embargo_pct=0.10, n=50
+        (n_embargo = ceil(5.0) = 5) embargoes only the 5 rows AFTER each run —
+        [15..19] and [35..39] — and nothing before either run (purge_gap=0),
+        directly pinning the per-run one-sided semantics at the helper level.
+        """
+        test = np.concatenate([np.arange(10, 15), np.arange(30, 35)])
+        train = np.array([i for i in range(50) if i not in set(test.tolist())])
+        purged, n_purged, n_emb = _apply_purge_and_embargo(
+            train, test, n_samples=50, purge_gap=0, embargo_pct=0.10
+        )
+        removed = set(train.tolist()) - set(purged.tolist())
+
+        assert removed == set(range(15, 20)) | set(range(35, 40))
+        assert n_purged == 0  # purge_gap=0, test indices are not in train
+        assert n_emb == 10
+        assert purged.dtype == np.intp
+
+    def test_apply_purge_and_embargo_ceil_not_truncate_to_zero(self) -> None:
+        """A small nonzero embargo_pct embargoes >=1 row, never zero (#38).
+
+        n=50, embargo_pct=0.01 -> embargo_pct*n = 0.5. The old int() truncated
+        this to 0 (silent no-embargo from an explicit request — the #38
+        secondary defect); ceil(0.5) = 1. Pinned with a mid-data test block so
+        a row exists after it: the single row [25] must be embargoed.
+        """
+        test = np.arange(20, 25)
+        train = np.array([i for i in range(50) if i not in set(test.tolist())])
+        purged, _, n_emb = _apply_purge_and_embargo(
+            train, test, n_samples=50, purge_gap=0, embargo_pct=0.01
+        )
+        removed = set(train.tolist()) - set(purged.tolist())
+
+        assert n_emb == 1  # ceil(0.5) == 1, not int(0.5) == 0
+        assert removed == {25}
+
     def test_walk_forward_expanding_window_insufficient_data_raises(self) -> None:
         """The expanding-window branch raises on a squeezed train window (#32)."""
         X = np.arange(100).reshape(-1, 1)
@@ -563,20 +699,23 @@ class TestEdgeCases:
         with pytest.raises(ValueError, match="empty train window"):
             list(cv.split(X))
 
-    def test_walk_forward_embargo_empties_train_raises(self) -> None:
-        """An embargo that swallows the whole train window raises (#32).
+    def test_walk_forward_high_embargo_is_noop(self) -> None:
+        """In forward-only geometry the one-sided embargo is a no-op (#38).
 
-        The train window [70, 80) is geometrically valid, but the symmetric
-        embargo (int(0.5 * 100) = 50 rows before the test window) removes
-        all of it — the second raise path, distinct from the geometric one.
+        The train window [70, 80) precedes the test window [80, 100), so the
+        after-test embargo removes nothing even at embargo_pct=0.5 — the window
+        is delivered intact. (Pre-#38 a non-canonical *pre-test* embargo
+        swallowed all 10 rows and raised; the embargo is now one-sided/after
+        each test run, matching De Prado.)
         """
         X = np.arange(100).reshape(-1, 1)
         cv = PurgedWalkForward(
             n_splits=1, train_size=10, test_size=20, purge_gap=0, embargo_pct=0.5
         )
 
-        with pytest.raises(ValueError, match="purge/embargo removal emptied"):
-            list(cv.split(X))
+        (detailed,) = list(cv.split_detailed(X))
+        assert detailed.n_embargoed == 0
+        np.testing.assert_array_equal(detailed.train_indices, np.arange(70, 80))
 
     def test_walk_forward_provisioned_yields_all_splits(self) -> None:
         """A provisioned config yields exactly get_n_splits folds (#32)."""

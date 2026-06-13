@@ -8,7 +8,8 @@ Standard CV leaks information through this overlap.
 Key Concepts
 ------------
 - **Purging**: Remove training samples within `purge_gap` of any test sample
-- **Embargo**: Additional percentage of samples removed after test set
+- **Embargo**: Additional samples removed immediately after each contiguous
+  test run (one-sided, De Prado)
 - **Label overlap**: When labels use future data (e.g., forward returns)
 
 Classes
@@ -37,6 +38,8 @@ consolidate only a concept that is genuinely identical across domains (#17).
 
 from __future__ import annotations
 
+import math
+import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass
 from itertools import combinations
@@ -62,7 +65,7 @@ class PurgedSplit:
     n_purged : int
         Number of samples purged from training.
     n_embargoed : int
-        Number of samples embargoed after test set.
+        Number of samples embargoed after the contiguous test run(s).
     """
 
     SCHEMA_VERSION: ClassVar[int] = 1
@@ -174,7 +177,11 @@ def _apply_purge_and_embargo(
     purge_gap : int
         Remove training samples within purge_gap of test samples.
     embargo_pct : float
-        Remove additional embargo_pct * n_samples after test set.
+        Remove ``ceil(embargo_pct * n_samples)`` training samples immediately
+        after each contiguous run of test indices (De Prado one-sided embargo).
+        Applied per run, so interior boundaries of multi-block test sets are
+        embargoed too. The embargo is one-sided by design: a run's leading edge
+        is purging's responsibility (label overlap), not the embargo's.
 
     Returns
     -------
@@ -186,8 +193,6 @@ def _apply_purge_and_embargo(
         Number of samples removed by embargo.
     """
     train_set = set(train_indices)
-    test_min = int(np.min(test_indices))
-    test_max = int(np.max(test_indices))
 
     # Purging: remove training samples within purge_gap of any test sample
     purge_indices = set()
@@ -197,17 +202,26 @@ def _apply_purge_and_embargo(
             if idx in train_set:
                 purge_indices.add(idx)
 
-    # Embargo: remove additional samples after test set
-    n_embargo = int(embargo_pct * n_samples)
-    embargo_indices = set()
-    for i in range(test_max + 1, min(test_max + 1 + n_embargo, n_samples)):
-        if i in train_set:
-            embargo_indices.add(i)
-
-    # Also remove embargo samples from before test set (symmetric)
-    for i in range(max(0, test_min - n_embargo), test_min):
-        if i in train_set:
-            embargo_indices.add(i)
+    # Embargo (De Prado, one-sided): remove training samples immediately AFTER
+    # each *contiguous run* of test indices. The embargo is one-sided by design
+    # — a run's leading edge is purging's job (label overlap), not the
+    # embargo's — so no pre-test embargo is applied. The span is taken
+    # from per-run maxima, NOT a single global test_max — that is what protects
+    # the interior boundaries of multi-block test sets (CombinatorialPurgedCV,
+    # shuffled PurgedKFold); a global span silently skips them. ``ceil`` rounds
+    # the leakage guard toward MORE protection, so a small nonzero embargo_pct
+    # can never truncate to zero embargoed rows.
+    n_embargo = math.ceil(embargo_pct * n_samples)
+    embargo_indices: set[int] = set()
+    if n_embargo > 0 and len(test_indices) > 0:
+        sorted_test = np.unique(test_indices)
+        # Last index of each maximal contiguous run (a gap > 1 ends a run).
+        run_ends = sorted_test[np.append(np.diff(sorted_test) != 1, True)]
+        for end in run_ends:
+            stop = min(int(end) + 1 + n_embargo, n_samples)
+            for i in range(int(end) + 1, stop):
+                if i in train_set:
+                    embargo_indices.add(i)
 
     # Combine and remove. dtype is pinned because an empty list would
     # otherwise infer float64 — unusable as an index array downstream.
@@ -235,7 +249,8 @@ class PurgedKFold(BaseCrossValidator):  # type: ignore[misc]
     purge_gap : int
         Remove training samples within this distance of test samples.
     embargo_pct : float
-        Additional percentage of samples to remove after test set.
+        Fraction of samples (``ceil``) embargoed immediately after each
+        contiguous test run.
     shuffle : bool
         Whether to shuffle before splitting. Default False for time series.
 
@@ -277,6 +292,18 @@ class PurgedKFold(BaseCrossValidator):  # type: ignore[misc]
             raise ValueError(f"purge_gap must be >= 0, got {purge_gap}")
         if not 0 <= embargo_pct < 1:
             raise ValueError(f"embargo_pct must be in [0, 1), got {embargo_pct}")
+        if shuffle:
+            warnings.warn(
+                "PurgedKFold(shuffle=True) is deprecated and will be removed in "
+                "temporalcv 3.0. De Prado's PurgedKFold is a time-series splitter "
+                "with no shuffle: shuffling scatters the test blocks and breaks the "
+                "temporal ordering that purging and embargo assume. During the "
+                "deprecation window the shuffle is seeded (reproducible and "
+                "consistent between split() and split_detailed()); migrate to "
+                "shuffle=False or PurgedWalkForward.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         self.n_splits = n_splits
         self.purge_gap = purge_gap
@@ -366,9 +393,12 @@ class PurgedKFold(BaseCrossValidator):  # type: ignore[misc]
                 f"empty. Reduce n_splits or provide more samples."
             )
 
-        indices = np.arange(n_samples)
+        indices: np.ndarray = np.arange(n_samples)
         if self.shuffle:
-            np.random.shuffle(indices)
+            # Deprecated path (see __init__): seed a local generator so the
+            # shuffle is reproducible and identical across split()/split_detailed
+            # calls, instead of consuming the unseedable global RNG.
+            indices = np.random.default_rng(0).permutation(n_samples)
 
         fold_sizes = np.full(self.n_splits, n_samples // self.n_splits)
         fold_sizes[: n_samples % self.n_splits] += 1
@@ -427,7 +457,8 @@ class CombinatorialPurgedCV(BaseCrossValidator):  # type: ignore[misc]
     purge_gap : int
         Remove training samples within this distance of test samples.
     embargo_pct : float
-        Additional percentage of samples to remove after test set.
+        Fraction of samples (``ceil``) embargoed immediately after each
+        contiguous test run.
 
     Examples
     --------
@@ -594,7 +625,10 @@ class PurgedWalkForward(BaseCrossValidator):  # type: ignore[misc]
     purge_gap : int
         Remove training samples within this distance of test samples.
     embargo_pct : float
-        Additional percentage of samples to remove after test set.
+        Fraction of samples (``ceil``) embargoed after the test window. In this
+        forward-only geometry the train window precedes the test window, so the
+        one-sided embargo removes nothing (kept for API parity); widen the
+        train/test separation with purge_gap/extra_gap instead.
     extra_gap : int
         Additional separation between train and test (on top of purge_gap).
 
@@ -623,9 +657,10 @@ class PurgedWalkForward(BaseCrossValidator):  # type: ignore[misc]
     ``ValueError`` at ``split``/``split_detailed`` call time instead of
     silently dropping folds or truncating the window, so ``split`` always
     yields exactly ``n_splits`` folds whose geometric train window is
-    exactly ``train_size`` (when fixed). Purge/embargo removal may still
-    shave up to ``max(0, n_embargo - purge_gap - extra_gap)`` rows off a
-    window's right edge; only emptying it raises.
+    exactly ``train_size`` (when fixed). In this forward-only geometry purge
+    and the one-sided (after-test) embargo remove nothing — the train window
+    already sits ``purge_gap + extra_gap`` before the test window — so the
+    delivered train set equals the geometric window.
 
     See Also
     --------
@@ -813,19 +848,20 @@ class PurgedWalkForward(BaseCrossValidator):  # type: ignore[misc]
             )
 
             if len(purged_train) == 0:
-                # In this splitter's geometry the train window already sits
-                # total_gap before the test window, so the purge pass removes
-                # nothing — only the symmetric embargo can empty the window.
-                # Named generically in case the geometry ever changes.
+                # Defense-in-depth: in this forward-only geometry the train
+                # window sits total_gap before the test window, and the embargo
+                # is one-sided (after each test run), so neither purge nor
+                # embargo removes a train row — an empty result would mean the
+                # geometric window itself was empty (already guarded above).
+                # Kept generic in case the geometry ever changes.
                 raise ValueError(
-                    f"PurgedWalkForward fold {split_idx}: purge/embargo removal emptied "
-                    f"the train window [{train_start}, {train_end}) for "
+                    f"PurgedWalkForward fold {split_idx}: train window "
+                    f"[{train_start}, {train_end}) is unexpectedly empty after "
+                    f"purge/embargo (geometry invariant violated) for "
                     f"n_samples={n_samples} (n_splits={self.n_splits}, "
                     f"test_size={test_size}, purge_gap={self.purge_gap}, "
                     f"embargo_pct={self.embargo_pct}, extra_gap={self.extra_gap}). "
-                    f"Reduce embargo_pct, or increase purge_gap/extra_gap "
-                    f"(the embargo bite is max(0, n_embargo - purge_gap - "
-                    f"extra_gap))."
+                    f"Reduce n_splits/test_size or provide more samples."
                 )
 
             splits.append(
