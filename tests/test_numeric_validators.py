@@ -117,6 +117,79 @@ class TestPSD:
         with pytest.raises(ValueError, match="theta_cov"):
             psd([[-1.0]], name="theta_cov")
 
+    @staticmethod
+    def _large_scale_sandwich() -> np.ndarray:
+        """Large-scale SPD matrix with roundoff-scale asymmetry (the #33 fixture).
+
+        Models a sandwich covariance ``G_inv @ meat @ G_inv.T`` at
+        ``|cov| ~ 1e10``: one off-diagonal element carries a 1e-15 relative
+        (a few ULPs, ~1e-5 absolute) asymmetry — above the 1e-8 atol but
+        far below rtol. Injected deterministically rather than relying on
+        real dgemm roundoff, which is BLAS/platform-dependent and would
+        make the fixture's discrimination property flaky across CI runners.
+        """
+        base = (
+            np.array(
+                [
+                    [4.0, 1.2, -0.7, 0.3],
+                    [1.2, 3.5, 0.9, -0.4],
+                    [-0.7, 0.9, 5.1, 1.0],
+                    [0.3, -0.4, 1.0, 2.8],
+                ]
+            )
+            * 1e10
+        )  # diagonally dominant with positive diagonal -> SPD
+        cov = base.copy()
+        cov[0, 1] *= 1.0 + 1e-15  # roundoff-scale relative asymmetry
+        return cov
+
+    def test_large_scale_sandwich_passes_by_default(self) -> None:
+        """A healthy large-scale sandwich passes the scale-aware default (#33)."""
+        cov = self._large_scale_sandwich()
+        # The fixture must actually exercise the fix: its asymmetry
+        # exceeds the absolute tolerance on its own.
+        assert float(np.max(np.abs(cov - cov.T))) > 1e-8
+
+        psd(cov)  # must not raise
+
+    def test_rtol_zero_restores_absolute_strictness(self) -> None:
+        """rtol=0 reproduces the pre-#33 false positive on the same matrix."""
+        with pytest.raises(ValueError, match="not symmetric"):
+            psd(self._large_scale_sandwich(), rtol=0.0)
+
+    def test_genuine_relative_asymmetry_still_raises(self) -> None:
+        """Real asymmetry (~1e-6 relative) is caught at any scale (#33)."""
+        cov = np.array([[1.0, 0.2], [0.2 + 1e-6, 1.0]]) * 1e10
+        with pytest.raises(ValueError, match="not symmetric"):
+            psd(cov)
+
+    def test_eigen_floor_scales_with_magnitude(self) -> None:
+        """The eigenvalue floor is -(tol + rtol * max|eig|) (#33)."""
+        # -1e-4 against max|eig| = 1e10: relative -1e-14, jitter at scale.
+        psd(np.diag([1e10, -1e-4]))
+        # -1.0 against the same scale exceeds the floor (~ -1e-2): real.
+        with pytest.raises(ValueError, match="positive semi-definite"):
+            psd(np.diag([1e10, -1.0]))
+
+    def test_eigen_floor_condition_number_tradeoff_is_pinned(self) -> None:
+        """Beyond condition number ~1/rtol the floor absorbs real negatives (#33).
+
+        Documented trade-off, pinned so it stays a visible decision: at
+        max|eig| = 1e12 the default floor is ~1.0, so min_eig = -0.5
+        (-5e-13 relative — inside the jitter band at this tolerance) passes.
+        A caller validating such ill-conditioned matrices tightens rtol,
+        which restores the rejection.
+        """
+        ill_conditioned = np.diag([1e12, -0.5])
+        psd(ill_conditioned)  # default: within rtol of zero at this scale
+        with pytest.raises(ValueError, match="positive semi-definite"):
+            psd(ill_conditioned, rtol=1e-14)
+
+    @pytest.mark.parametrize("bad_rtol", [-1e-12, np.nan, np.inf])
+    def test_bad_rtol_raises(self, bad_rtol: float) -> None:
+        with pytest.raises(ValueError, match="rtol"):
+            psd([[1.0]], rtol=bad_rtol)
+
 
 # ---------------------------------------------------------------------------
 # ci_ordered
@@ -206,6 +279,15 @@ class TestCoverageInUnit:
     def test_name_in_message(self) -> None:
         with pytest.raises(ValueError, match="pi_coverage"):
             coverage_in_unit(1.5, name="pi_coverage")
+
+    def test_message_shows_boundary_violation_precisely(self) -> None:
+        """The message must not round 1.0000001 down to "1" (#33 nit).
+
+        %g formatting produced the self-contradictory "outside [0, 1]:
+        min = 1, max = 1"; repr keeps the violating digits visible.
+        """
+        with pytest.raises(ValueError, match="1.0000001"):
+            coverage_in_unit(1.0000001)
 
 
 # ---------------------------------------------------------------------------

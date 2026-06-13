@@ -113,18 +113,37 @@ def finite_se(se: ArrayLike, *, name: str = "se") -> np.ndarray:
     return arr
 
 
-def psd(cov: ArrayLike, *, tol: float = 1e-8, name: str = "cov") -> np.ndarray:
+def psd(cov: ArrayLike, *, tol: float = 1e-8, rtol: float = 1e-12, name: str = "cov") -> np.ndarray:
     """
     Validate that a covariance matrix is symmetric positive semi-definite.
+
+    Both checks are scale-aware: a sandwich covariance
+    ``G_inv @ meat @ G_inv.T`` is symmetric by construction but carries
+    float roundoff proportional to its magnitude (relative asymmetry
+    ~1e-19 on healthy fits), so a purely absolute tolerance false-positives
+    at ``|cov| >~ 1e8`` (#33).
 
     Parameters
     ----------
     cov : ArrayLike
         Square 2-D covariance matrix.
     tol : float, default 1e-8
-        Absolute tolerance for both the symmetry check and the minimum
-        eigenvalue (eigenvalues >= ``-tol`` pass, absorbing floating-point
-        jitter). Must be finite and >= 0.
+        Absolute tolerance for the symmetry check and the minimum-eigenvalue
+        floor. Must be finite and >= 0.
+    rtol : float, default 1e-12
+        Relative tolerance. Symmetry passes when
+        ``np.allclose(cov, cov.T, atol=tol, rtol=rtol)``; the eigenvalue
+        floor is ``-(tol + rtol * max|eigenvalue|)``. The default sits
+        orders of magnitude above healthy float roundoff (~1e-19 relative)
+        and below genuine asymmetry bugs (~1e-6 relative and up). Pass
+        ``rtol=0`` for the pre-#33 strictly absolute behavior. Must be
+        finite and >= 0.
+
+        Trade-off: a relative floor cannot distinguish a genuinely negative
+        eigenvalue from jitter once the condition number exceeds ~1/rtol —
+        ``diag([1e12, -0.5])`` passes at the default because -0.5 is -5e-13
+        *relative* to the top eigenvalue. Tighten ``rtol`` when validating
+        extremely ill-conditioned matrices (pinned by test).
     name : str, default "cov"
         Label used in error messages.
 
@@ -136,8 +155,8 @@ def psd(cov: ArrayLike, *, tol: float = 1e-8, name: str = "cov") -> np.ndarray:
     Raises
     ------
     ValueError
-        If empty, not 2-D square, non-finite, asymmetric beyond ``tol``,
-        or its minimum eigenvalue is below ``-tol``.
+        If empty, not 2-D square, non-finite, asymmetric beyond the
+        combined tolerance, or its minimum eigenvalue is below the floor.
 
     Examples
     --------
@@ -146,22 +165,29 @@ def psd(cov: ArrayLike, *, tol: float = 1e-8, name: str = "cov") -> np.ndarray:
     """
     if not np.isfinite(tol) or tol < 0:
         raise ValueError(f"tol must be finite and >= 0, got {tol}")
+    if not np.isfinite(rtol) or rtol < 0:
+        raise ValueError(f"rtol must be finite and >= 0, got {rtol}")
     arr = _as_nonempty_float_array(cov, name)
     if arr.ndim != 2 or arr.shape[0] != arr.shape[1]:
         raise ValueError(f"{name} must be a square 2-D matrix, got shape {arr.shape}")
     if not np.all(np.isfinite(arr)):
         raise ValueError(f"{name} contains non-finite values")
-    if not np.allclose(arr, arr.T, atol=tol, rtol=0.0):
+    if not np.allclose(arr, arr.T, atol=tol, rtol=rtol):
         max_asym = float(np.max(np.abs(arr - arr.T)))
+        scale = float(np.max(np.abs(arr)))
+        rel_asym = max_asym / scale if scale > 0 else 0.0
         raise ValueError(
-            f"{name} is not symmetric: max |cov - cov.T| = {max_asym:.3e} > tol = {tol:g}"
+            f"{name} is not symmetric: max |cov - cov.T| = {max_asym:.3e} "
+            f"(relative {rel_asym:.3e}) exceeds tol = {tol:g} with rtol = {rtol:g}"
         )
     # Symmetrize before eigvalsh to absorb within-tol asymmetry.
-    min_eig = float(np.linalg.eigvalsh((arr + arr.T) / 2.0).min())
-    if min_eig < -tol:
+    eigs = np.linalg.eigvalsh((arr + arr.T) / 2.0)
+    min_eig = float(eigs.min())
+    eig_floor = tol + rtol * float(np.max(np.abs(eigs)))
+    if min_eig < -eig_floor:
         raise ValueError(
-            f"{name} is not positive semi-definite: "
-            f"min eigenvalue = {min_eig:.3e} < -tol = {-tol:g}"
+            f"{name} is not positive semi-definite: min eigenvalue = "
+            f"{min_eig:.3e} < -(tol + rtol * max|eig|) = {-eig_floor:.3e}"
         )
     return arr
 
@@ -245,8 +271,10 @@ def coverage_in_unit(coverage: ArrayLike, *, name: str = "coverage") -> np.ndarr
     if not np.all(np.isfinite(arr)):
         raise ValueError(f"{name} contains non-finite values")
     if np.any(arr < 0) or np.any(arr > 1):
+        # repr (shortest round-trip) instead of %g: %g rendered 1.0000001
+        # as "1", making the message contradict itself (#33).
         raise ValueError(
-            f"{name} outside [0, 1]: min = {arr.min():g}, max = {arr.max():g} "
-            f"(a coverage rate is a proportion)"
+            f"{name} outside [0, 1]: min = {float(arr.min())!r}, "
+            f"max = {float(arr.max())!r} (a coverage rate is a proportion)"
         )
     return arr

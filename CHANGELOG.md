@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`validators.psd` is scale-aware** (#33): new `rtol` parameter (default `1e-12`)
+  for the symmetry check (`allclose(cov, cov.T, atol=tol, rtol=rtol)`) and the
+  eigenvalue floor (`-(tol + rtol * max|eigenvalue|)`). Healthy sandwich covariances
+  at `|cov| ~ 1e10` no longer false-positive on float roundoff (~1e-19 relative
+  asymmetry); `rtol=0` restores the previous strictly absolute behavior. The
+  `coverage_in_unit` violation message now uses repr formatting, so p = 1.0000001 is
+  no longer reported as the self-contradictory "outside [0, 1]: min = 1, max = 1".
+
 ### Fixed
 
 - **Purged-family hardening round 2** (#35, #36), completing the #32 contract across
