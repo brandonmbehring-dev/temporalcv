@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+No unreleased changes.
+
+---
+
+## [2.1.0] - 2026-06-12
+
+Clears the open `cv_financial`/validator/serialization ledger, completing the v2.0
+fold-drop hardening across the purged family. **Behavior change:** under-provisioned
+`PurgedKFold`/`CombinatorialPurgedCV`/`PurgedWalkForward` configurations that previously
+degraded folds silently (or crashed opaquely mid-iteration) now raise `ValueError` at
+`split()` call time (#35, #36) — see Fixed. The serialized shape of
+`MultiModelComparisonResult.to_dict()` changes (schema v2, #21). Every PR received
+independent review before merge (a full 4-agent adversarial pass on the #35/#36 CV
+hardening, single-pass on the rest).
+
 ### Added
 
 - **`validators.psd` is scale-aware** (#33): new `rtol` parameter (default `1e-12`)
