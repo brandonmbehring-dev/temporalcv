@@ -393,7 +393,7 @@ class PurgedKFold(BaseCrossValidator):  # type: ignore[misc]
                 f"empty. Reduce n_splits or provide more samples."
             )
 
-        indices = np.arange(n_samples)
+        indices: np.ndarray = np.arange(n_samples)
         if self.shuffle:
             # Deprecated path (see __init__): seed a local generator so the
             # shuffle is reproducible and identical across split()/split_detailed
