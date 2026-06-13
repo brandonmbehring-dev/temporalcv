@@ -17,6 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `coverage_in_unit` violation message now uses repr formatting, so p = 1.0000001 is
   no longer reported as the self-contradictory "outside [0, 1]: min = 1, max = 1".
 
+### Changed
+
+- **`MultiModelComparisonResult.to_dict()` schema v2** (#21): `pairwise_results` is now
+  a list of records `{"models": [model_a, model_b], "result": {...}}` instead of a
+  comma-joined-key object — the old flat keys collided (`("AR","RW")` vs `("AR,RW",)`,
+  silently overwriting a comparison) and could not round-trip model names containing
+  commas (`ARIMA(1,1,0)`). `jsonify_key` now refuses tuple keys outright (`TypeError`),
+  so no silent-lossy tuple-key path survives; future tuple-keyed result dicts must emit
+  an explicit lossless form.
+
 ### Fixed
 
 - **Purged-family hardening round 2** (#35, #36), completing the #32 contract across

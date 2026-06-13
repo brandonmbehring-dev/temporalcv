@@ -577,12 +577,50 @@ def test_registry_is_exhaustive() -> None:
     )
 
 
-def test_multimodel_to_dict_stringifies_tuple_keys_and_nests() -> None:
-    """Tuple-key path: dict[tuple[str, str], DMTestResult] -> {"A,B": {...}}; values preserved."""
+def test_multimodel_to_dict_emits_pairwise_records() -> None:
+    """Tuple-keyed dict -> list of {"models": [a, b], "result": {...}} records (#21)."""
     d = _multi_model().to_dict()
-    assert "A,B" in d["pairwise_results"]  # tuple ("A", "B") -> "A,B"
-    assert d["pairwise_results"]["A,B"]["schema_version"] == DMTestResult.SCHEMA_VERSION
+    assert d["schema_version"] == 2  # shape change marker
+    assert d["pairwise_results"] == [
+        {"models": ["A", "B"], "result": _dm().to_dict()},
+    ]
     assert d["model_rankings"] == [["A", 0.1], ["B", 0.2]]  # tuples -> lists
+    assert d["significant_pairs"] == [["A", "B"]]  # tuples -> lists, not joined
+    json.dumps(d)  # whole document remains JSON-serializable
+
+
+def test_multimodel_pairwise_records_roundtrip_comma_names() -> None:
+    """Model names containing commas survive serialization exactly (#21).
+
+    The former comma-joined key made ("ARIMA(1,1,0)", "ARIMA(2,1,2)")
+    unrecoverable (key.split(",") gave 6 parts) and collided pairs like
+    ("AR", "RW") vs ("AR,RW",), silently overwriting one DMTestResult.
+    """
+    result = MultiModelComparisonResult(
+        pairwise_results={
+            ("ARIMA(1,1,0)", "ARIMA(2,1,2)"): _dm(),
+            ("AR,RW", "naive"): _dm(),
+        },
+        best_model="ARIMA(1,1,0)",
+        bonferroni_alpha=0.025,
+        original_alpha=0.05,
+        model_rankings=[("ARIMA(1,1,0)", 0.1), ("ARIMA(2,1,2)", 0.2)],
+        significant_pairs=[],
+    )
+
+    records = result.to_dict()["pairwise_results"]
+    assert len(records) == 2  # nothing silently overwritten
+    assert records[0]["models"] == ["ARIMA(1,1,0)", "ARIMA(2,1,2)"]
+    assert records[1]["models"] == ["AR,RW", "naive"]
+
+
+def test_jsonify_key_refuses_tuples() -> None:
+    """No silent-lossy tuple-key path survives anywhere (#21)."""
+    from temporalcv._serialization import jsonify_key
+
+    with pytest.raises(TypeError, match="list of records"):
+        jsonify_key(("A", "B"))
+    assert jsonify_key(1) == "1"  # scalar keys unchanged
 
 
 def test_multihorizon_to_dict_stringifies_int_keys_and_preserves_values() -> None:

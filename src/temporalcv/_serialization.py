@@ -3,8 +3,8 @@
 The v2.0 result-object pattern (see ``STYLE.md``): every result is a frozen, slotted value
 object with an explicit JSON-serializable ``to_dict()`` carrying a ``SCHEMA_VERSION``. These
 helpers centralize the recurring conversions so every module serializes the same way —
-datetime → ISO string, ndarray → nested list, and non-string mapping keys → string (JSON
-object keys must be strings).
+datetime → ISO string, ndarray → nested list, and non-string scalar mapping keys → string
+(JSON object keys must be strings; tuple keys are refused — see ``jsonify_key``).
 """
 
 from __future__ import annotations
@@ -39,11 +39,21 @@ def array_to_list(value: ArrayLike) -> Any:
 def jsonify_key(key: Any) -> str:
     """Render a mapping key as a JSON-safe string.
 
-    JSON object keys must be strings. Tuples become a comma-joined string
-    (e.g. ``("AR", "RW") -> "AR,RW"``); everything else falls back to ``str()``.
+    JSON object keys must be strings; scalars fall back to ``str()``.
+
+    Tuple keys are REFUSED: the former comma-join (``("AR", "RW") ->
+    "AR,RW"``) collided with ``("AR,RW",)`` and could not round-trip model
+    names that legitimately contain commas (``ARIMA(1,1,0)``), silently
+    overwriting entries on collision (#21). A result object with a
+    tuple-keyed dict must hand-write ``to_dict()`` and emit a list of
+    records instead — see ``MultiModelComparisonResult.to_dict``.
     """
     if isinstance(key, tuple):
-        return ",".join(str(part) for part in key)
+        raise TypeError(
+            f"tuple mapping key {key!r} cannot serialize losslessly as a JSON "
+            f"object key — emit a list of records instead (see "
+            f"MultiModelComparisonResult.to_dict, #21)"
+        )
     return str(key)
 
 

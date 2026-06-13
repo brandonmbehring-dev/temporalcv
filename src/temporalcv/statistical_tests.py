@@ -68,7 +68,7 @@ from typing import Any, ClassVar, Literal, cast
 import numpy as np
 from scipy import stats
 
-from temporalcv._serialization import result_to_dict
+from temporalcv._serialization import _jsonify, result_to_dict
 from temporalcv._typing import ArrayLike, as_array
 
 # =============================================================================
@@ -1752,7 +1752,7 @@ class MultiModelComparisonResult:
     ...     print(f"{pair[0]} significantly better than {pair[1]}")
     """
 
-    SCHEMA_VERSION: ClassVar[int] = 1
+    SCHEMA_VERSION: ClassVar[int] = 2
 
     pairwise_results: dict[tuple[str, str], DMTestResult]
     best_model: str
@@ -1762,8 +1762,29 @@ class MultiModelComparisonResult:
     significant_pairs: list[tuple[str, str]]
 
     def to_dict(self) -> dict[str, Any]:
-        """Return a JSON-serializable mapping of this result."""
-        return result_to_dict(self)
+        """Return a JSON-serializable mapping of this result.
+
+        Hand-written (the ``result_to_dict`` escape hatch): the tuple-keyed
+        ``pairwise_results`` is emitted as a list of records
+        ``{"models": [model_a, model_b], "result": {...}}`` rather than a
+        comma-joined-key object — model names legitimately contain commas
+        (``ARIMA(1,1,0)``), which made the old flat keys collide (silently
+        dropping comparisons) and unrecoverable (#21). ``SCHEMA_VERSION`` 2
+        marks the shape change. ``model_rankings`` and ``significant_pairs``
+        serialize as lists of two-element lists (tuples are never joined).
+        """
+        return {
+            "schema_version": self.SCHEMA_VERSION,
+            "pairwise_results": [
+                {"models": list(pair), "result": dm.to_dict()}
+                for pair, dm in self.pairwise_results.items()
+            ],
+            "best_model": self.best_model,
+            "bonferroni_alpha": _jsonify(self.bonferroni_alpha),
+            "original_alpha": _jsonify(self.original_alpha),
+            "model_rankings": _jsonify(self.model_rankings),
+            "significant_pairs": _jsonify(self.significant_pairs),
+        }
 
     @property
     def n_comparisons(self) -> int:
