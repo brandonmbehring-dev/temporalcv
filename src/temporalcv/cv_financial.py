@@ -26,12 +26,13 @@ References
 
 See Also
 --------
-eval-toolkit hosts an adapted purged K-fold for the classification-evaluation
-domain (``eval_toolkit/splits.py``, "Adapted from temporalcv"). The two are
-deliberately separate per the hub pattern *universal-vs-unique.md* ("Two
-toolkits, same-named concept"): same mechanism, different domain assumptions
-(label-overlap windows vs temporal leakage) — consolidate only a concept that
-is genuinely identical across domains (#17).
+eval-toolkit hosts an adapted purged K-fold (``eval_toolkit/splits.py``,
+"Adapted from temporalcv"). Both implement label-overlap purging; they differ
+in domain — classification-evaluation there, forecasting/financial time series
+here — so they make different assumptions about how the overlap window is
+defined and indexed. The two are deliberately kept separate per the hub
+pattern *universal-vs-unique.md* ("Two toolkits, same-named concept"):
+consolidate only a concept that is genuinely identical across domains (#17).
 """
 
 from __future__ import annotations
