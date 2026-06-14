@@ -446,3 +446,43 @@ class TestMethodConsistency:
         # BIC is more parsimonious, should be <= AIC
         # Allow some tolerance for sampling variability
         assert bic_lag <= aic_lag + 2
+
+
+class TestFixedSampleSelection:
+    """Regression tests for the fixed-sample (hold_back) fix (temporalcv #49).
+
+    Before the fix, ``select_lag_aic``/``select_lag_bic`` compared information
+    criteria across ``AutoReg`` fits with different ``nobs`` (each dropped a
+    different number of initial rows), biasing selection toward larger lags.
+    """
+
+    def test_aic_no_longer_pins_max_lag(self) -> None:
+        """#49: seed-42 AR(1) AIC was pinned to max_lag=20; now it recovers a small order."""
+        ar1 = generate_ar(100, [0.7], seed=42)
+        # Buggy code returned 20 (the maximum). ar_select_order gives [1, 2, 3].
+        assert select_lag_aic(ar1, max_lag=20).optimal_lag < 20
+
+    def test_bic_recovers_ar1_order(self) -> None:
+        """#49: seed-42 AR(1) BIC selected lag 6; the fixed-sample BIC recovers lag 1."""
+        ar1 = generate_ar(100, [0.7], seed=42)
+        # Matches statsmodels ar_select_order(ic="bic") -> [1] on this series.
+        assert select_lag_bic(ar1, max_lag=20).optimal_lag == 1
+
+    def test_aic_not_systematically_pinned_across_seeds(self) -> None:
+        """#49: buggy AIC pinned max_lag on every AR(1) seed (10/10); fixed recovers small orders."""
+        picks = [
+            select_lag_aic(generate_ar(200, [0.5], seed=s), max_lag=10).optimal_lag
+            for s in range(10)
+        ]
+        # Before the fix this was [10] * 10; the fixed-sample selector recovers the true order on most.
+        assert sum(p == 10 for p in picks) <= 3
+        assert sum(p <= 2 for p in picks) >= 5
+
+    def test_bic_matches_statsmodels_ar_select_order(self) -> None:
+        """#49: the fixed-sample BIC agrees with statsmodels ar_select_order (the reference)."""
+        from statsmodels.tsa.ar_model import ar_select_order
+
+        ar1 = generate_ar(100, [0.7], seed=42)
+        ours = select_lag_bic(ar1, max_lag=20).optimal_lag
+        ref = ar_select_order(ar1, maxlag=20, ic="bic", old_names=False).ar_lags
+        assert ours == max(ref)  # both select lag 1
