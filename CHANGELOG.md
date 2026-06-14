@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+No unreleased changes.
+
+---
+
+## [2.3.0] - 2026-06-14
+
 ### Fixed
 
 - **`lag_selection.select_lag_aic` / `select_lag_bic` biased toward larger lags** (#49).
