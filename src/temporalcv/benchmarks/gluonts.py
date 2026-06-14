@@ -8,8 +8,9 @@ Requires: gluonts (optional dependency)
 Example
 -------
 >>> from temporalcv.benchmarks import load_electricity, load_traffic
->>> elec = load_electricity()
->>> traffic = load_traffic()
+>>> # SKIP reason: needs network + the gluonts package (downloads UCI/PEMS data)
+>>> elec = load_electricity()  # doctest: +SKIP
+>>> traffic = load_traffic()  # doctest: +SKIP
 """
 
 from __future__ import annotations

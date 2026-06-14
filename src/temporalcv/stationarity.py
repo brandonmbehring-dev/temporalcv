@@ -151,15 +151,15 @@ def adf_test(
     Examples
     --------
     >>> import numpy as np
-    >>> rng = np.random.default_rng(42)
+    >>> rng = np.random.default_rng(0)
     >>> stationary = rng.normal(0, 1, 100)
     >>> result = adf_test(stationary)
-    >>> result.is_stationary
+    >>> result.is_stationary  # ADF rejects the unit root
     True
 
     >>> random_walk = np.cumsum(rng.normal(0, 1, 100))
     >>> result = adf_test(random_walk)
-    >>> result.is_stationary
+    >>> result.is_stationary  # fails to reject the unit root
     False
 
     Notes
@@ -373,7 +373,7 @@ def check_stationarity(
     Examples
     --------
     >>> import numpy as np
-    >>> rng = np.random.default_rng(42)
+    >>> rng = np.random.default_rng(0)
     >>> stationary = rng.normal(0, 1, 100)
     >>> result = check_stationarity(stationary)
     >>> result.conclusion

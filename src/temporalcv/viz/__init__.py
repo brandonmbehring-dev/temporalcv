@@ -50,21 +50,28 @@ COLORS
 
 Examples
 --------
+>>> import numpy as np
+>>> import matplotlib.pyplot as plt
+>>> from temporalcv import WalkForwardCV
+>>> X = np.random.default_rng(0).standard_normal((100, 3))
+>>> y = np.random.default_rng(1).standard_normal(100)
+>>> cv = WalkForwardCV(n_splits=4, test_size=15)
+>>>
 >>> # sklearn-style (Display classes)
 >>> from temporalcv.viz import CVFoldsDisplay
 >>> display = CVFoldsDisplay.from_cv(cv, X, y)
->>> display.plot()
+>>> _ = display.plot()
 >>>
 >>> # statsmodels-style (functions)
 >>> from temporalcv.viz import plot_cv_folds
->>> plot_cv_folds(cv, X)
->>> plt.show()
+>>> ax = plot_cv_folds(cv, X)
 >>>
 >>> # Custom styling
 >>> from temporalcv.viz import apply_tufte_style
 >>> fig, ax = plt.subplots()
->>> ax.plot(x, y)
->>> apply_tufte_style(ax)
+>>> _ = ax.plot(np.arange(10), np.arange(10))
+>>> ax = apply_tufte_style(ax)
+>>> plt.close("all")
 
 References
 ----------

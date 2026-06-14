@@ -21,18 +21,27 @@ Knowledge Tiers
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.metrics.financial import (
 ...     compute_sharpe_ratio,
 ...     compute_max_drawdown,
 ...     compute_hit_rate,
 ...     compute_profit_factor,
 ... )
+>>> rng = np.random.default_rng(0)
+>>> returns = rng.standard_normal(252) * 0.01  # daily returns
+>>> predicted_changes = rng.standard_normal(252) * 0.01
+>>> actual_changes = returns
 >>>
 >>> # Risk-adjusted return
->>> sharpe = compute_sharpe_ratio(returns, risk_free_rate=0.02/252)
+>>> sharpe = compute_sharpe_ratio(returns, risk_free_rate=0.02 / 252)
+>>> bool(np.isfinite(sharpe))
+True
 >>>
 >>> # Trading metrics
 >>> hit_rate = compute_hit_rate(predicted_changes, actual_changes)
+>>> bool(0.0 <= hit_rate <= 1.0)
+True
 >>> profit = compute_profit_factor(predicted_changes, actual_changes, returns)
 
 References
@@ -172,12 +181,16 @@ def compute_max_drawdown(
 
     Examples
     --------
+    >>> import numpy as np
     >>> cumulative = np.array([100, 110, 105, 120, 108, 125])
     >>> mdd = compute_max_drawdown(cumulative_returns=cumulative)
-    >>> print(f"Max drawdown: {mdd:.1%}")  # From 120 to 108 = 10%
+    >>> f"Max drawdown: {mdd:.1%}"  # From 120 to 108 = 10%
+    'Max drawdown: 10.0%'
 
     >>> returns = np.array([0.10, -0.05, 0.15, -0.10, 0.16])
     >>> mdd = compute_max_drawdown(returns=returns)
+    >>> bool(0.0 <= mdd <= 1.0)
+    True
 
     See Also
     --------
@@ -244,9 +257,11 @@ def compute_cumulative_return(
 
     Examples
     --------
+    >>> import numpy as np
     >>> returns = np.array([0.05, 0.03, -0.02, 0.04])
     >>> cum_ret = compute_cumulative_return(returns)
-    >>> print(f"Total return: {cum_ret:.2%}")
+    >>> f"Total return: {cum_ret:.2%}"
+    'Total return: 10.23%'
 
     See Also
     --------
@@ -396,10 +411,12 @@ def compute_hit_rate(
 
     Examples
     --------
+    >>> import numpy as np
     >>> predicted = np.array([0.01, -0.02, 0.01, 0.02, -0.01])
     >>> actual = np.array([0.02, -0.01, -0.01, 0.03, -0.02])
     >>> hr = compute_hit_rate(predicted, actual)
-    >>> print(f"Hit rate: {hr:.1%}")  # 4/5 = 80%
+    >>> f"Hit rate: {hr:.1%}"  # 4/5 = 80%
+    'Hit rate: 80.0%'
 
     See Also
     --------

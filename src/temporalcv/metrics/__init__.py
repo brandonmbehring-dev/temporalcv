@@ -9,6 +9,7 @@ Comprehensive metrics covering:
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.metrics import (
 ...     compute_rmse,
 ...     compute_mape,
@@ -16,6 +17,10 @@ Example
 ...     compute_naive_error,
 ...     compute_direction_brier,
 ... )
+>>>
+>>> actuals = np.array([100.0, 101.0, 102.0, 103.0])
+>>> predictions = np.array([100.5, 100.5, 102.5, 102.5])
+>>> train_values = np.array([97.0, 98.0, 99.0, 100.0])
 >>>
 >>> # Basic metrics
 >>> rmse = compute_rmse(predictions, actuals)
@@ -26,8 +31,11 @@ Example
 >>> mase = compute_mase(predictions, actuals, naive_mae)
 >>>
 >>> # Direction prediction
+>>> pred_probs = np.array([0.8, 0.2, 0.6, 0.9])
+>>> actual_directions = np.array([1, 0, 1, 1])
 >>> result = compute_direction_brier(pred_probs, actual_directions)
 >>> print(f"Brier: {result.brier_score:.4f}")
+Brier: 0.0625
 
 References
 ----------
@@ -135,8 +143,12 @@ def mc_skill_score(
 
     Examples
     --------
+    >>> import numpy as np
     >>> from temporalcv.metrics import mc_skill_score
+    >>> actual = np.array([1.0, -1.0, 2.0, -2.0, 1.5, -1.5, 1.0, -1.0])
+    >>> predicted = np.array([0.9, -0.8, 1.8, -1.9, 1.4, -1.3, 0.9, -0.9])
     >>> print(f"MC-SS: {mc_skill_score(actual, predicted):.3f}")
+    MC-SS: 0.925
     """
     import numpy as np
 

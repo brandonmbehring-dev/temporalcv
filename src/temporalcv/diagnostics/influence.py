@@ -133,14 +133,17 @@ def compute_dm_influence(
 
     Example
     -------
-    >>> errors1 = model1_predictions - actuals
-    >>> errors2 = baseline_predictions - actuals
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> actuals = rng.standard_normal(40)
+    >>> # model 1 is slightly better (smaller errors) than the baseline
+    >>> errors1 = 0.5 * rng.standard_normal(40)
+    >>> errors2 = 1.0 * rng.standard_normal(40)
     >>> diag = compute_dm_influence(errors1, errors2, h=4)
-    >>> print(f"High-influence blocks: {diag.n_high_influence_blocks}")
-    >>> # Check which blocks are driving the DM result
-    >>> for i, (start, end) in enumerate(diag.block_indices):
-    ...     if diag.block_high_mask[i]:
-    ...         print(f"Block {i} (indices {start}:{end}): influence={diag.block_influence[i]:.3f}")
+    >>> diag.observation_influence.shape
+    (40,)
+    >>> bool(diag.n_high_influence_blocks >= 0)
+    True
 
     See Also
     --------

@@ -6,6 +6,7 @@ interface across all benchmark loaders.
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.benchmarks import TimeSeriesDataset, DatasetMetadata
 >>>
 >>> metadata = DatasetMetadata(
@@ -14,9 +15,12 @@ Example
 ...     horizon=2,
 ...     n_series=1,
 ...     total_observations=100,
+...     train_end_idx=80,
 ... )
->>> dataset = TimeSeriesDataset(metadata=metadata, values=np.random.randn(100))
+>>> dataset = TimeSeriesDataset(metadata=metadata, values=np.zeros(100))
 >>> train, test = dataset.get_train_test_split()
+>>> len(train), len(test)
+(80, 20)
 """
 
 from __future__ import annotations
@@ -45,11 +49,15 @@ class DatasetNotFoundError(FileNotFoundError):
 
     Examples
     --------
-    >>> raise DatasetNotFoundError(
+    >>> err = DatasetNotFoundError(
     ...     dataset_name="M5",
     ...     download_url="https://kaggle.com/...",
-    ...     instructions="Download from Kaggle and extract to ~/data/m5/"
+    ...     instructions="Download from Kaggle and extract to ~/data/m5/",
     ... )
+    >>> err.dataset_name
+    'M5'
+    >>> isinstance(err, FileNotFoundError)
+    True
     """
 
     def __init__(
@@ -209,6 +217,7 @@ class TimeSeriesDataset:
 
     Examples
     --------
+    >>> import numpy as np
     >>> metadata = DatasetMetadata(
     ...     name="test",
     ...     frequency="W",
@@ -217,7 +226,7 @@ class TimeSeriesDataset:
     ...     total_observations=100,
     ...     train_end_idx=80,
     ... )
-    >>> dataset = TimeSeriesDataset(metadata=metadata, values=np.random.randn(100))
+    >>> dataset = TimeSeriesDataset(metadata=metadata, values=np.zeros(100))
     >>> train, test = dataset.get_train_test_split()
     >>> print(f"Train: {len(train)}, Test: {len(test)}")
     Train: 80, Test: 20
@@ -356,7 +365,8 @@ def create_synthetic_dataset(
     Examples
     --------
     >>> dataset = create_synthetic_dataset(n_obs=100, ar_coef=0.95)
-    >>> print(f"Shape: {dataset.values.shape}")
+    >>> dataset.values.shape
+    (100,)
     """
     rng = np.random.default_rng(seed)
 

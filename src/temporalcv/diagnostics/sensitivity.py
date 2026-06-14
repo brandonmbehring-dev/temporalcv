@@ -135,18 +135,22 @@ def gap_sensitivity_analysis(
 
     Example
     -------
+    >>> import numpy as np
     >>> from sklearn.linear_model import Ridge
+    >>> rng = np.random.default_rng(0)
+    >>> X = rng.standard_normal((120, 3))
+    >>> y = X @ np.array([1.0, -0.5, 0.25]) + 0.1 * rng.standard_normal(120)
     >>> result = gap_sensitivity_analysis(
     ...     Ridge(alpha=1.0), X, y,
     ...     gap_range=range(0, 8),
-    ...     metric="mae"
+    ...     metric="mae",
     ... )
-    >>> print(f"Break-even gap: {result.break_even_gap}")
-    >>> print(f"Sensitivity score: {result.sensitivity_score:.3f}")
-    >>> # Plot metrics vs gap
-    >>> import matplotlib.pyplot as plt
-    >>> plt.plot(result.gap_values, result.metrics)
-    >>> plt.xlabel("Gap"); plt.ylabel("MAE")
+    >>> result.metric_name
+    'mae'
+    >>> result.gap_values.tolist()
+    [0, 1, 2, 3, 4, 5, 6, 7]
+    >>> bool(result.sensitivity_score >= 0.0)
+    True
 
     Complexity: O(|gap_range| × n_splits × model_fit_time)
 

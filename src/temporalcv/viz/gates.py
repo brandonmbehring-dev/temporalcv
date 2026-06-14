@@ -6,12 +6,19 @@ validation gate results (HALT/WARN/PASS).
 
 Examples
 --------
->>> from temporalcv.gates import gate_signal_verification, run_gates
+>>> import numpy as np
+>>> from sklearn.linear_model import LinearRegression
+>>> from temporalcv.gates import gate_signal_verification
 >>> from temporalcv.viz import GateResultDisplay
 >>>
->>> result = gate_signal_verification(model, X, y)
+>>> rng = np.random.default_rng(0)
+>>> X = rng.standard_normal((60, 3))
+>>> y = rng.standard_normal(60)
+>>> result = gate_signal_verification(
+...     LinearRegression(), X, y, method="effect_size", n_shuffles=5, random_state=0
+... )
 >>> display = GateResultDisplay.from_gate(result)
->>> display.plot()
+>>> _ = display.plot()
 """
 
 from __future__ import annotations
@@ -63,12 +70,19 @@ class GateResultDisplay(BaseDisplay):
 
     Examples
     --------
+    >>> import numpy as np
+    >>> from sklearn.linear_model import LinearRegression
     >>> from temporalcv.gates import gate_signal_verification
     >>> from temporalcv.viz import GateResultDisplay
     >>>
-    >>> result = gate_signal_verification(model, X, y, n_shuffles=100)
+    >>> rng = np.random.default_rng(0)
+    >>> X = rng.standard_normal((60, 3))
+    >>> y = rng.standard_normal(60)
+    >>> result = gate_signal_verification(
+    ...     LinearRegression(), X, y, method="effect_size", n_shuffles=5, random_state=0
+    ... )
     >>> display = GateResultDisplay.from_gate(result)
-    >>> display.plot()
+    >>> _ = display.plot()
     """
 
     def __init__(
@@ -101,7 +115,15 @@ class GateResultDisplay(BaseDisplay):
 
         Examples
         --------
-        >>> result = gate_signal_verification(model, X, y)
+        >>> import numpy as np
+        >>> from sklearn.linear_model import LinearRegression
+        >>> from temporalcv.gates import gate_signal_verification
+        >>> rng = np.random.default_rng(0)
+        >>> X = rng.standard_normal((60, 3))
+        >>> y = rng.standard_normal(60)
+        >>> result = gate_signal_verification(
+        ...     LinearRegression(), X, y, method="effect_size", n_shuffles=5, random_state=0
+        ... )
         >>> display = GateResultDisplay.from_gate(result)
         """
         # Extract status string from enum
@@ -114,8 +136,11 @@ class GateResultDisplay(BaseDisplay):
         if hasattr(gate_result, "details") and gate_result.details:
             metrics = gate_result.details
 
+        # GateResult exposes ``name``; accept legacy ``gate_name`` too.
+        name = getattr(gate_result, "name", None) or gate_result.gate_name
+
         return cls(
-            name=gate_result.gate_name,
+            name=name,
             status=status_str,
             message=gate_result.message,
             metrics=metrics,
@@ -233,16 +258,27 @@ class GateComparisonDisplay(BaseDisplay):
 
     Examples
     --------
-    >>> from temporalcv.gates import run_gates, gate_signal_verification
+    >>> import numpy as np
+    >>> from sklearn.linear_model import LinearRegression
+    >>> from temporalcv.gates import (
+    ...     run_gates,
+    ...     gate_signal_verification,
+    ...     gate_suspicious_improvement,
+    ... )
     >>> from temporalcv.viz import GateComparisonDisplay
     >>>
+    >>> rng = np.random.default_rng(0)
+    >>> X = rng.standard_normal((60, 3))
+    >>> y = rng.standard_normal(60)
     >>> gates = [
-    ...     gate_signal_verification(model, X, y),
-    ...     gate_suspicious_improvement(model_mae, baseline_mae),
+    ...     gate_signal_verification(
+    ...         LinearRegression(), X, y, method="effect_size", n_shuffles=5, random_state=0
+    ...     ),
+    ...     gate_suspicious_improvement(model_metric=0.12, baseline_metric=0.20),
     ... ]
     >>> report = run_gates(gates)
     >>> display = GateComparisonDisplay.from_report(report)
-    >>> display.plot()
+    >>> _ = display.plot()
     """
 
     def __init__(
@@ -276,7 +312,8 @@ class GateComparisonDisplay(BaseDisplay):
         messages = []
 
         for result in gate_results:
-            names.append(result.gate_name)
+            # GateResult exposes ``name``; accept legacy ``gate_name`` too.
+            names.append(getattr(result, "name", None) or result.gate_name)
             status_str = str(result.status)
             if "." in status_str:
                 status_str = status_str.split(".")[-1]
@@ -292,7 +329,7 @@ class GateComparisonDisplay(BaseDisplay):
 
         Parameters
         ----------
-        report : GateReport
+        report : ValidationReport
             Report from run_gates().
 
         Returns
@@ -300,7 +337,11 @@ class GateComparisonDisplay(BaseDisplay):
         GateComparisonDisplay
             The display object.
         """
-        return cls.from_gates(report.results)
+        # ValidationReport exposes ``gates``; accept legacy ``results`` too.
+        gates = getattr(report, "gates", None)
+        if gates is None:
+            gates = report.results
+        return cls.from_gates(gates)
 
     def plot(
         self,

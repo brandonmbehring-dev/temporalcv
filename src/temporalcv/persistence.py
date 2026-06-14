@@ -22,18 +22,25 @@ Knowledge Tiers
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.persistence import (
 ...     compute_move_threshold,
 ...     compute_move_conditional_metrics,
 ... )
+>>> rng = np.random.default_rng(0)
+>>> train_actuals = rng.standard_normal(150) * 0.02  # changes/returns
+>>> actuals = rng.standard_normal(100) * 0.02
+>>> predictions = actuals * 0.5 + rng.standard_normal(100) * 0.01
 >>>
 >>> # Compute threshold from training data (CRITICAL: training only!)
 >>> threshold = compute_move_threshold(train_actuals, percentile=70.0)
 >>>
 >>> # Evaluate on test data
 >>> mc = compute_move_conditional_metrics(predictions, actuals, threshold=threshold)
->>> print(f"MC-SS: {mc.skill_score:.3f}")
->>> print(f"Reliable: {mc.is_reliable}")
+>>> bool(mc.skill_score > 0)  # model beats persistence on moves
+True
+>>> mc.is_reliable
+True
 
 References
 ----------
@@ -205,9 +212,11 @@ def compute_move_threshold(
 
     Examples
     --------
+    >>> import numpy as np
     >>> train_actuals = np.array([-0.1, -0.05, 0.0, 0.02, 0.05, 0.1])
     >>> threshold = compute_move_threshold(train_actuals, percentile=70)
-    >>> print(f"Threshold: {threshold:.4f}")
+    >>> f"{threshold:.4f}"
+    '0.0750'
 
     See Also
     --------
@@ -258,9 +267,11 @@ def classify_moves(
 
     Examples
     --------
+    >>> import numpy as np
     >>> values = np.array([0.1, -0.1, 0.02, -0.02, 0.0])
     >>> moves = classify_moves(values, threshold=0.05)
-    >>> print([m.value for m in moves])  # ['up', 'down', 'flat', 'flat', 'flat']
+    >>> [m.value for m in moves]
+    ['up', 'down', 'flat', 'flat', 'flat']
     """
     values = np.asarray(values)
 
@@ -374,12 +385,19 @@ def compute_move_conditional_metrics(
 
     Examples
     --------
-    >>> # Compute threshold from training
-    >>> threshold = compute_move_threshold(train_actuals)
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> train_actuals = rng.standard_normal(150) * 0.02
+    >>> actuals = rng.standard_normal(100) * 0.02
+    >>> preds = actuals * 0.5 + rng.standard_normal(100) * 0.01
     >>>
-    >>> # Evaluate on test
+    >>> # Compute threshold from training, then evaluate on test
+    >>> threshold = compute_move_threshold(train_actuals)
     >>> mc = compute_move_conditional_metrics(preds, actuals, threshold=threshold)
-    >>> print(f"MC-SS: {mc.skill_score:.3f}")
+    >>> bool(mc.skill_score > 0)
+    True
+    >>> mc.n_moves == mc.n_up + mc.n_down
+    True
     """
     if target_mode == "level":
         raise ValueError(
@@ -565,12 +583,22 @@ def compute_direction_accuracy(
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> train_actuals = rng.standard_normal(150) * 0.02
+    >>> actuals = rng.standard_normal(100) * 0.02
+    >>> preds = actuals * 0.5 + rng.standard_normal(100) * 0.01
+    >>>
     >>> # 2-class (sign-based)
     >>> acc = compute_direction_accuracy(preds, actuals)
+    >>> bool(0.0 <= acc <= 1.0)
+    True
     >>>
     >>> # 3-class (with threshold)
     >>> threshold = compute_move_threshold(train_actuals)
-    >>> acc = compute_direction_accuracy(preds, actuals, move_threshold=threshold)
+    >>> acc3 = compute_direction_accuracy(preds, actuals, move_threshold=threshold)
+    >>> bool(0.0 <= acc3 <= 1.0)
+    True
 
     See Also
     --------
@@ -640,9 +668,15 @@ def compute_move_only_mae(
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> actuals = rng.standard_normal(100) * 0.1
+    >>> preds = actuals * 0.5 + rng.standard_normal(100) * 0.02
     >>> mae, n = compute_move_only_mae(preds, actuals, threshold=0.05)
-    >>> if n >= 20:
-    ...     print(f"Move-only MAE: {mae:.4f} (n={n})")
+    >>> n
+    64
+    >>> bool(mae > 0)
+    True
     """
     predictions = np.asarray(predictions)
     actuals = np.asarray(actuals)
@@ -690,8 +724,12 @@ def compute_persistence_mae(
 
     Examples
     --------
-    >>> persistence_mae = compute_persistence_mae(actuals)
-    >>> persistence_mae_moves = compute_persistence_mae(actuals, threshold=0.05)
+    >>> import numpy as np
+    >>> actuals = np.array([0.1, -0.1, 0.02, -0.02, 0.0])
+    >>> float(round(compute_persistence_mae(actuals), 4))
+    0.048
+    >>> float(round(compute_persistence_mae(actuals, threshold=0.05), 4))
+    0.1
     """
     actuals = np.asarray(actuals)
 

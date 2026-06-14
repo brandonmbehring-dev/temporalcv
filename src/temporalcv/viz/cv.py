@@ -6,13 +6,15 @@ cross-validation fold structures, including gap enforcement for time series.
 
 Examples
 --------
+>>> import numpy as np
 >>> from temporalcv import WalkForwardCV
 >>> from temporalcv.viz import CVFoldsDisplay
 >>>
+>>> X = np.random.default_rng(0).standard_normal((200, 5))
+>>> y = np.random.default_rng(1).standard_normal(200)
 >>> cv = WalkForwardCV(n_splits=5, test_size=20, extra_gap=1)
 >>> display = CVFoldsDisplay.from_cv(cv, X, y)
->>> display.plot()
->>> plt.show()
+>>> _ = display.plot()
 """
 
 from __future__ import annotations
@@ -72,18 +74,18 @@ class CVFoldsDisplay(BaseDisplay):
     >>> from temporalcv.viz import CVFoldsDisplay
     >>> import numpy as np
     >>>
-    >>> X = np.random.randn(200, 5)
-    >>> y = np.random.randn(200)
+    >>> X = np.random.default_rng(0).standard_normal((200, 5))
+    >>> y = np.random.default_rng(1).standard_normal(200)
     >>> cv = WalkForwardCV(n_splits=5, test_size=20, extra_gap=1)
     >>>
     >>> # From cross-validator
     >>> display = CVFoldsDisplay.from_cv(cv, X, y)
-    >>> display.plot()
+    >>> _ = display.plot()
     >>>
     >>> # Or from pre-computed splits
     >>> splits = list(cv.split(X, y))
-    >>> display = CVFoldsDisplay.from_splits(splits)
-    >>> display.plot()
+    >>> display = CVFoldsDisplay.from_splits(splits, n_samples=len(X))
+    >>> _ = display.plot()
     """
 
     def __init__(
@@ -137,7 +139,10 @@ class CVFoldsDisplay(BaseDisplay):
 
         Examples
         --------
+        >>> import numpy as np
         >>> from temporalcv import WalkForwardCV
+        >>> X = np.random.default_rng(0).standard_normal((100, 5))
+        >>> y = np.random.default_rng(1).standard_normal(100)
         >>> cv = WalkForwardCV(n_splits=5, test_size=20)
         >>> display = CVFoldsDisplay.from_cv(cv, X, y)
         """
@@ -194,6 +199,11 @@ class CVFoldsDisplay(BaseDisplay):
 
         Examples
         --------
+        >>> import numpy as np
+        >>> from temporalcv import WalkForwardCV
+        >>> X = np.random.default_rng(0).standard_normal((100, 5))
+        >>> y = np.random.default_rng(1).standard_normal(100)
+        >>> cv = WalkForwardCV(n_splits=5, test_size=20)
         >>> splits = list(cv.split(X, y))
         >>> display = CVFoldsDisplay.from_splits(splits, n_samples=len(X))
         """
@@ -253,9 +263,12 @@ class CVFoldsDisplay(BaseDisplay):
 
         Examples
         --------
-        >>> display.plot(title="Walk-Forward CV Folds")
-        >>> plt.tight_layout()
-        >>> plt.show()
+        >>> import numpy as np
+        >>> from temporalcv import WalkForwardCV
+        >>> X = np.random.default_rng(0).standard_normal((100, 5))
+        >>> cv = WalkForwardCV(n_splits=4, test_size=15)
+        >>> display = CVFoldsDisplay.from_cv(cv, X)
+        >>> _ = display.plot(title="Walk-Forward CV Folds")
         """
         ax = self._get_ax_or_create(ax, figsize=(10, max(3, self.n_splits * 0.8)))
 

@@ -7,10 +7,16 @@ resampled series.
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.bagging import StationaryBootstrap
 >>>
+>>> rng = np.random.default_rng(0)
+>>> X = rng.standard_normal((100, 3))
+>>> y = rng.standard_normal(100)
 >>> strategy = StationaryBootstrap(expected_block_length=10.0)
 >>> samples = strategy.generate_samples(X, y, n_samples=20, rng=rng)
+>>> len(samples)
+20
 
 References
 ----------

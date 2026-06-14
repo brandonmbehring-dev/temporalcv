@@ -16,11 +16,16 @@ Knowledge Tiers
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.metrics.asymmetric import (
 ...     compute_linex_loss,
 ...     compute_asymmetric_mape,
 ...     compute_directional_loss,
 ... )
+>>>
+>>> predictions = np.array([100.0, 200.0, 300.0])
+>>> actuals = np.array([110.0, 180.0, 280.0])
+>>> previous = np.array([105.0, 195.0, 305.0])
 >>>
 >>> # LinEx: penalize under-predictions exponentially
 >>> loss = compute_linex_loss(predictions, actuals, a=1.0)
@@ -29,7 +34,9 @@ Example
 >>> mape = compute_asymmetric_mape(predictions, actuals, alpha=0.7)
 >>>
 >>> # Directional: missing an UP move costs 2x vs missing DOWN
->>> loss = compute_directional_loss(predictions, actuals, up_miss_weight=2.0)
+>>> loss = compute_directional_loss(
+...     predictions, actuals, up_miss_weight=2.0, previous_actuals=previous
+... )
 
 References
 ----------
@@ -199,6 +206,7 @@ def compute_asymmetric_mape(
     >>> # Penalize under-predictions more (alpha=0.7)
     >>> amape = compute_asymmetric_mape(predictions, actuals, alpha=0.7)
     >>> print(f"Asymmetric MAPE: {amape:.2%}")
+    Asymmetric MAPE: 4.89%
 
     See Also
     --------

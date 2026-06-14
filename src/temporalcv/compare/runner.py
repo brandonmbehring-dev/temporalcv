@@ -13,6 +13,7 @@ Example
 >>> adapters = [NaiveAdapter(), StatsforecastAdapter("AutoARIMA")]
 >>> result = run_comparison(dataset, adapters)
 >>> print(result.best_model)
+Naive
 """
 
 from __future__ import annotations
@@ -107,8 +108,11 @@ def run_comparison(
     Example
     -------
     >>> from temporalcv.compare.adapters import NaiveAdapter
+    >>> from temporalcv.benchmarks import create_synthetic_dataset
+    >>> dataset = create_synthetic_dataset()
     >>> result = run_comparison(dataset, [NaiveAdapter()])
     >>> print(f"Best model: {result.best_model}")
+    Best model: Naive
     """
     if not adapters:
         raise ValueError("adapters list cannot be empty")
@@ -335,18 +339,23 @@ def run_benchmark_suite(
 
     Examples
     --------
+    >>> from temporalcv.compare.adapters import NaiveAdapter
     >>> from temporalcv.benchmarks import create_synthetic_dataset
     >>> datasets = [create_synthetic_dataset(seed=i) for i in range(3)]
     >>> report = run_benchmark_suite(datasets, [NaiveAdapter()])
-    >>> print(report.to_markdown())
+    >>> report.summary["n_datasets"]
+    3
 
     With progress callback:
 
     >>> def on_progress(current, total, name):
     ...     print(f"[{current}/{total}] Completed {name}")
     >>> report = run_benchmark_suite(
-    ...     datasets, adapters, progress_callback=on_progress
+    ...     datasets, [NaiveAdapter()], progress_callback=on_progress
     ... )
+    [1/3] Completed synthetic_ar1
+    [2/3] Completed synthetic_ar1
+    [3/3] Completed synthetic_ar1
     """
     if not datasets:
         raise ValueError("datasets list cannot be empty")
@@ -433,8 +442,15 @@ def compare_to_baseline(
 
     Example
     -------
+    >>> from temporalcv.compare import SeasonalNaiveAdapter
+    >>> from temporalcv.benchmarks import create_synthetic_dataset
+    >>> dataset = create_synthetic_dataset()
+    >>> my_adapter = SeasonalNaiveAdapter(season_length=52)
     >>> result = compare_to_baseline(dataset, my_adapter)
-    >>> print(f"Improvement: {result['improvement_pct']:.1f}%")
+    >>> result["baseline_name"]
+    'Naive'
+    >>> isinstance(result["improvement_pct"], float)
+    True
     """
     from temporalcv.compare.base import NaiveAdapter
 

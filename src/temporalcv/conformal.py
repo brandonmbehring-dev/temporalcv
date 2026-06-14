@@ -23,18 +23,26 @@ Knowledge Tiers
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.conformal import (
 ...     SplitConformalPredictor,
 ...     walk_forward_conformal,
 ... )
 >>>
+>>> rng = np.random.default_rng(0)
+>>> cal_predictions = rng.standard_normal(100)
+>>> cal_actuals = cal_predictions + rng.standard_normal(100) * 0.5
+>>> test_predictions = rng.standard_normal(50)
+>>> test_actuals = test_predictions + rng.standard_normal(50) * 0.5
+>>>
 >>> # Calibrate on held-out predictions
 >>> conformal = SplitConformalPredictor(alpha=0.05)
->>> conformal.calibrate(cal_predictions, cal_actuals)
+>>> _ = conformal.calibrate(cal_predictions, cal_actuals)
 >>>
 >>> # Generate intervals for new predictions
 >>> intervals = conformal.predict_interval(test_predictions)
->>> print(f"Coverage: {intervals.coverage(test_actuals):.1%}")
+>>> bool(0.0 <= intervals.coverage(test_actuals) <= 1.0)
+True
 
 References
 ----------
@@ -81,6 +89,7 @@ class PredictionInterval:
 
     Examples
     --------
+    >>> import numpy as np
     >>> interval = PredictionInterval(
     ...     point=np.array([1.0, 2.0]),
     ...     lower=np.array([0.5, 1.5]),
@@ -89,6 +98,7 @@ class PredictionInterval:
     ...     method="split_conformal"
     ... )
     >>> print(f"Mean width: {interval.mean_width:.3f}")
+    Mean width: 1.000
     """
 
     SCHEMA_VERSION: ClassVar[int] = 1
@@ -164,10 +174,16 @@ class SplitConformalPredictor:
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> cal_preds = rng.standard_normal(100)
+    >>> cal_actuals = cal_preds + rng.standard_normal(100) * 0.5
+    >>> test_preds = rng.standard_normal(50)
     >>> scp = SplitConformalPredictor(alpha=0.10)  # 90% intervals
-    >>> scp.calibrate(cal_preds, cal_actuals)
+    >>> _ = scp.calibrate(cal_preds, cal_actuals)
     >>> intervals = scp.predict_interval(test_preds)
-    >>> print(f"Quantile: {scp.quantile_:.4f}")
+    >>> bool(scp.quantile_ > 0)
+    True
 
     References
     ----------
@@ -373,13 +389,21 @@ class AdaptiveConformalPredictor:
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> initial_preds = rng.standard_normal(100)
+    >>> initial_actuals = initial_preds + rng.standard_normal(100) * 0.5
     >>> acp = AdaptiveConformalPredictor(alpha=0.10, gamma=0.1)
-    >>> acp.initialize(initial_preds, initial_actuals)
+    >>> _ = acp.initialize(initial_preds, initial_actuals)
     >>>
-    >>> # Online updates
-    >>> for pred, actual in stream:
+    >>> # Online updates over a stream of (prediction, actual) pairs
+    >>> stream_preds = rng.standard_normal(20)
+    >>> stream_actuals = stream_preds + rng.standard_normal(20) * 0.5
+    >>> for pred, actual in zip(stream_preds, stream_actuals):
     ...     lower, upper = acp.predict_interval(pred)
-    ...     acp.update(pred, actual)
+    ...     _ = acp.update(pred, actual)
+    >>> bool(len(acp.quantile_history) == 21)  # 1 initial + 20 updates
+    True
 
     References
     ----------
@@ -583,16 +607,23 @@ class BellmanConformalPredictor:
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> cal_preds = rng.standard_normal(100)
+    >>> cal_actuals = cal_preds + rng.standard_normal(100) * 0.5
+    >>> test_preds = rng.standard_normal(50)
     >>> bcp = BellmanConformalPredictor(alpha=0.10, horizon=10)
-    >>> bcp.initialize(cal_preds, cal_actuals)
+    >>> _ = bcp.initialize(cal_preds, cal_actuals)
     >>>
     >>> # Get optimal quantile sequence for test predictions
     >>> quantiles = bcp.solve_optimal_sequence(test_preds, n_steps=20)
+    >>> bool(len(quantiles) == 20)
+    True
     >>>
-    >>> # Or use online mode
-    >>> for pred, actual in stream:
+    >>> # Or use online mode over a stream of (prediction, actual) pairs
+    >>> for pred, actual in zip(test_preds[:5], cal_actuals[:5]):
     ...     lower, upper = bcp.predict_interval(pred)
-    ...     bcp.update(pred, actual)
+    ...     _ = bcp.update(pred, actual)
 
     References
     ----------
@@ -1043,9 +1074,16 @@ class BootstrapUncertainty:
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> cal_preds = rng.standard_normal(100)
+    >>> cal_actuals = cal_preds + rng.standard_normal(100) * 0.5
+    >>> test_preds = rng.standard_normal(50)
     >>> boot = BootstrapUncertainty(n_bootstrap=100, alpha=0.10)
-    >>> boot.fit(cal_preds, cal_actuals)
+    >>> _ = boot.fit(cal_preds, cal_actuals)
     >>> intervals = boot.predict_interval(test_preds)
+    >>> bool(intervals.mean_width > 0)
+    True
 
     Complexity: O(n_bootstrap × n_predictions)
 
@@ -1190,9 +1228,20 @@ def evaluate_interval_quality(
 
     Examples
     --------
-    >>> quality = evaluate_interval_quality(intervals, actuals)
-    >>> print(f"Coverage: {quality['coverage']:.1%}")
-    >>> print(f"Gap: {quality['coverage_gap']:+.1%}")
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> cal_preds = rng.standard_normal(100)
+    >>> cal_actuals = cal_preds + rng.standard_normal(100) * 0.5
+    >>> test_preds = rng.standard_normal(50)
+    >>> test_actuals = test_preds + rng.standard_normal(50) * 0.5
+    >>> scp = SplitConformalPredictor(alpha=0.05)
+    >>> _ = scp.calibrate(cal_preds, cal_actuals)
+    >>> intervals = scp.predict_interval(test_preds)
+    >>> quality = evaluate_interval_quality(intervals, test_actuals)
+    >>> bool(0.0 <= quality["coverage"] <= 1.0)
+    True
+    >>> "coverage_gap" in quality
+    True
 
     See Also
     --------
@@ -1306,9 +1355,15 @@ def walk_forward_conformal(
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> predictions = rng.standard_normal(200)
+    >>> actuals = predictions + rng.standard_normal(200) * 0.5
     >>> intervals, quality = walk_forward_conformal(predictions, actuals)
-    >>> print(f"Coverage (holdout only): {quality['coverage']:.1%}")
-    >>> print(f"Calibration size: {quality['calibration_size']}")
+    >>> bool(0.0 <= quality["coverage"] <= 1.0)
+    True
+    >>> quality["calibration_size"]
+    60
 
     See Also
     --------
@@ -1449,16 +1504,24 @@ def compute_coverage_diagnostics(
 
     Examples
     --------
+    >>> import numpy as np
     >>> from temporalcv.conformal import (
     ...     SplitConformalPredictor,
     ...     compute_coverage_diagnostics,
     ... )
+    >>> rng = np.random.default_rng(0)
+    >>> cal_preds = rng.standard_normal(100)
+    >>> cal_actuals = cal_preds + rng.standard_normal(100) * 0.5
+    >>> test_preds = rng.standard_normal(50)
+    >>> test_actuals = test_preds + rng.standard_normal(50) * 0.5
     >>> conformal = SplitConformalPredictor(alpha=0.05)
-    >>> conformal.calibrate(cal_preds, cal_actuals)
+    >>> _ = conformal.calibrate(cal_preds, cal_actuals)
     >>> intervals = conformal.predict_interval(test_preds)
     >>> diag = compute_coverage_diagnostics(intervals, test_actuals)
-    >>> print(f"Coverage: {diag.overall_coverage:.1%}, "
-    ...       f"Target: {diag.target_coverage:.1%}")
+    >>> bool(0.0 <= diag.overall_coverage <= 1.0)
+    True
+    >>> diag.target_coverage
+    0.95
 
     Notes
     -----

@@ -8,8 +8,9 @@ Requires: datasetsforecast (optional dependency)
 Example
 -------
 >>> from temporalcv.benchmarks import load_m3, load_m4
->>> m3 = load_m3(subset="monthly")
->>> m4 = load_m4(subset="weekly", sample_size=100)
+>>> # SKIP reason: needs network + the datasetsforecast package (downloads M3/M4)
+>>> m3 = load_m3(subset="monthly")  # doctest: +SKIP
+>>> m4 = load_m4(subset="weekly", sample_size=100)  # doctest: +SKIP
 """
 
 from __future__ import annotations

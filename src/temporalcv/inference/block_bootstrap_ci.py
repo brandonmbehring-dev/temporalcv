@@ -23,19 +23,22 @@ References
 
 Example
 -------
->>> from temporalcv.inference import moving_block_bootstrap
 >>> import numpy as np
+>>> from temporalcv.inference import moving_block_bootstrap
 >>>
->>> # Time series data
->>> data = np.random.randn(100)
+>>> # Time series data (fixed seed for a reproducible doctest)
+>>> data = np.arange(100, dtype=float)
 >>> result = moving_block_bootstrap(
 ...     data,
 ...     statistic_fn=np.mean,
 ...     n_bootstrap=200,
 ...     alpha=0.05,
+...     random_state=42,
 ... )
->>> print(f"Estimate: {result.estimate:.3f}")
->>> print(f"95% CI: [{result.ci_lower:.3f}, {result.ci_upper:.3f}]")
+>>> round(result.estimate, 1)  # mean of 0..99 is exactly 49.5
+49.5
+>>> bool(result.ci_lower < result.estimate < result.ci_upper)
+True
 """
 
 from __future__ import annotations
@@ -250,17 +253,18 @@ def moving_block_bootstrap(
     Example
     -------
     >>> import numpy as np
-    >>> # AR(1) process
-    >>> np.random.seed(42)
+    >>> # AR(1) process (fixed seed for a reproducible doctest)
+    >>> rng = np.random.default_rng(42)
     >>> n = 200
     >>> phi = 0.7
     >>> data = np.zeros(n)
     >>> for t in range(1, n):
-    ...     data[t] = phi * data[t-1] + np.random.randn()
-    >>> result = moving_block_bootstrap(data, np.mean, n_bootstrap=500)
-    >>> print(f"Mean: {result.estimate:.3f}")
-    >>> print(f"SE: {result.std_error:.3f}")
-    >>> print(f"95% CI: [{result.ci_lower:.3f}, {result.ci_upper:.3f}]")
+    ...     data[t] = phi * data[t - 1] + rng.standard_normal()
+    >>> result = moving_block_bootstrap(data, np.mean, n_bootstrap=500, random_state=0)
+    >>> bool(result.std_error > 0)
+    True
+    >>> bool(result.ci_lower < result.estimate < result.ci_upper)
+    True
 
     References
     ----------

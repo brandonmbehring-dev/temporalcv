@@ -14,32 +14,47 @@ including:
 
 Example
 -------
->>> from temporalcv import run_gates, WalkForwardCV
+>>> import numpy as np
+>>> from sklearn.linear_model import Ridge
+>>> from temporalcv import run_gates
 >>> from temporalcv.gates import gate_signal_verification
 >>>
->>> # Signal verification: does model have predictive power?
->>> result = gate_signal_verification(model=my_model, X=X, y=y, random_state=42)
->>> if result.status.name == "HALT":
-...     # Model has signal - could be legitimate or leakage
-...     print("Model has signal - investigate source")
+>>> # A model with genuine predictive power (synthetic, fixed seed)
+>>> rng = np.random.default_rng(0)
+>>> X = rng.standard_normal((120, 3))
+>>> y = X @ np.array([1.0, -0.5, 0.25]) + 0.1 * rng.standard_normal(120)
 >>>
->>> # Aggregate multiple gates
+>>> # Signal verification: does the model have predictive power?
+>>> result = gate_signal_verification(model=Ridge(), X=X, y=y, random_state=42)
+>>> result.status.name  # HALT means signal found (legitimate OR leakage)
+'HALT'
+>>>
+>>> # Aggregate multiple gates into a single report
 >>> report = run_gates([result])
->>> if report.status == "HALT":
-...     print(f"Investigation needed: {report.failures}")
+>>> report.status
+'HALT'
 
 >>> # Move-conditional metrics for high-persistence series
 >>> from temporalcv import compute_move_threshold, compute_move_conditional_metrics
+>>> train_actuals = rng.standard_normal(100)
 >>> threshold = compute_move_threshold(train_actuals)  # From training only!
+>>> predictions = rng.standard_normal(50)
+>>> actuals = rng.standard_normal(50)
 >>> mc = compute_move_conditional_metrics(predictions, actuals, threshold=threshold)
->>> print(f"MC-SS: {mc.skill_score:.3f}")
+>>> bool(np.isfinite(mc.skill_score))
+True
 
 >>> # Conformal prediction intervals
 >>> from temporalcv import SplitConformalPredictor
 >>> conformal = SplitConformalPredictor(alpha=0.05)
->>> conformal.calibrate(cal_preds, cal_actuals)
+>>> cal_preds = rng.standard_normal(50)
+>>> cal_actuals = cal_preds + 0.1 * rng.standard_normal(50)
+>>> _ = conformal.calibrate(cal_preds, cal_actuals)
+>>> test_preds = rng.standard_normal(20)
+>>> test_actuals = test_preds + 0.1 * rng.standard_normal(20)
 >>> intervals = conformal.predict_interval(test_preds)
->>> print(f"Coverage: {intervals.coverage(test_actuals):.1%}")
+>>> bool(0.0 <= intervals.coverage(test_actuals) <= 1.0)
+True
 """
 
 from __future__ import annotations

@@ -6,10 +6,16 @@ Samples overlapping blocks of fixed length to preserve local autocorrelation.
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.bagging import MovingBlockBootstrap
 >>>
+>>> rng = np.random.default_rng(0)
+>>> X = rng.standard_normal((100, 3))
+>>> y = rng.standard_normal(100)
 >>> strategy = MovingBlockBootstrap(block_length=10)
 >>> samples = strategy.generate_samples(X, y, n_samples=20, rng=rng)
+>>> len(samples)
+20
 
 References
 ----------

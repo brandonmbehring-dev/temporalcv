@@ -5,12 +5,17 @@ Wraps single-series adapters to handle multi-series datasets.
 
 Example
 -------
->>> from temporalcv.compare.adapters import StatsforecastAdapter
+>>> import numpy as np
+>>> from temporalcv.compare.adapters import NaiveAdapter
 >>> from temporalcv.compare.adapters.multi_series import MultiSeriesAdapter
 >>>
->>> base = StatsforecastAdapter("AutoARIMA")
->>> adapter = MultiSeriesAdapter(base, n_jobs=4)
+>>> # 3 series, 40 observations each
+>>> rng = np.random.default_rng(0)
+>>> multi_series_train = rng.normal(0, 1, (3, 40)).cumsum(axis=1) + 100.0
+>>> adapter = MultiSeriesAdapter(NaiveAdapter(), n_jobs=1)
 >>> predictions = adapter.fit_predict(multi_series_train, test_size=10, horizon=2)
+>>> predictions.shape
+(3, 10)
 """
 
 from __future__ import annotations
@@ -54,6 +59,7 @@ class MultiSeriesAdapter(ForecastAdapter):
 
     Example
     -------
+    >>> import numpy as np
     >>> from temporalcv.compare.adapters import StatsforecastAdapter
     >>> from temporalcv.compare.adapters.multi_series import MultiSeriesAdapter
     >>>
@@ -61,12 +67,14 @@ class MultiSeriesAdapter(ForecastAdapter):
     >>> arima = StatsforecastAdapter("AutoARIMA", season_length=12)
     >>>
     >>> # Wrap for multi-series
-    >>> multi_arima = MultiSeriesAdapter(arima, n_jobs=4)
+    >>> multi_arima = MultiSeriesAdapter(arima, n_jobs=1)
     >>>
-    >>> # Now works with 2D arrays
-    >>> train = np.random.randn(100, 200)  # 100 series, 200 observations each
+    >>> # Now works with 2D arrays: 3 series, 40 observations each
+    >>> rng = np.random.default_rng(0)
+    >>> train = rng.normal(0, 1, (3, 40)).cumsum(axis=1) + 100.0
     >>> preds = multi_arima.fit_predict(train, test_size=10, horizon=2)
-    >>> print(preds.shape)  # (100, 10)
+    >>> print(preds.shape)  # (3, 10)
+    (3, 10)
     """
 
     def __init__(self, base_adapter: SupportsForecast, n_jobs: int = 1):
@@ -228,10 +236,18 @@ class ProgressAdapter(ForecastAdapter):
 
     Example
     -------
+    >>> import numpy as np
+    >>> from temporalcv.compare.adapters import NaiveAdapter
     >>> def on_series(idx, total):
-    ...     if idx % 100 == 0:
-    ...         print(f"Series {idx}/{total}")
-    >>> adapter = ProgressAdapter(base, progress_callback=on_series)
+    ...     print(f"Series {idx}/{total}")
+    >>> adapter = ProgressAdapter(NaiveAdapter(), progress_callback=on_series)
+    >>> rng = np.random.default_rng(0)
+    >>> train = rng.normal(0, 1, (2, 40)).cumsum(axis=1) + 100.0
+    >>> preds = adapter.fit_predict(train, test_size=5, horizon=1)
+    Series 1/2
+    Series 2/2
+    >>> preds.shape
+    (2, 5)
     """
 
     def __init__(
