@@ -6,14 +6,21 @@ prediction intervals from conformal prediction.
 
 Examples
 --------
+>>> import numpy as np
 >>> from temporalcv.conformal import SplitConformalPredictor
 >>> from temporalcv.viz import PredictionIntervalDisplay
 >>>
+>>> rng = np.random.default_rng(0)
+>>> cal_preds = rng.standard_normal(50)
+>>> cal_actuals = cal_preds + rng.standard_normal(50) * 0.1
+>>> test_preds = rng.standard_normal(30)
+>>> test_actuals = test_preds + rng.standard_normal(30) * 0.1
+>>>
 >>> conformal = SplitConformalPredictor(alpha=0.10)
->>> conformal.calibrate(cal_preds, cal_actuals)
+>>> _ = conformal.calibrate(cal_preds, cal_actuals)
 >>> intervals = conformal.predict_interval(test_preds)
 >>> display = PredictionIntervalDisplay.from_conformal(intervals, test_actuals)
->>> display.plot()
+>>> _ = display.plot()
 """
 
 from __future__ import annotations
@@ -72,15 +79,22 @@ class PredictionIntervalDisplay(BaseDisplay):
 
     Examples
     --------
+    >>> import numpy as np
     >>> from temporalcv.conformal import SplitConformalPredictor
     >>> from temporalcv.viz import PredictionIntervalDisplay
     >>>
+    >>> rng = np.random.default_rng(0)
+    >>> cal_preds = rng.standard_normal(50)
+    >>> cal_actuals = cal_preds + rng.standard_normal(50) * 0.1
+    >>> test_preds = rng.standard_normal(30)
+    >>> test_actuals = test_preds + rng.standard_normal(30) * 0.1
+    >>>
     >>> conformal = SplitConformalPredictor(alpha=0.10)
-    >>> conformal.calibrate(cal_preds, cal_actuals)
+    >>> _ = conformal.calibrate(cal_preds, cal_actuals)
     >>> intervals = conformal.predict_interval(test_preds)
     >>>
     >>> display = PredictionIntervalDisplay.from_conformal(intervals, test_actuals)
-    >>> display.plot()
+    >>> _ = display.plot()
     """
 
     coverage_: float | None
@@ -139,6 +153,15 @@ class PredictionIntervalDisplay(BaseDisplay):
 
         Examples
         --------
+        >>> import numpy as np
+        >>> from temporalcv.conformal import SplitConformalPredictor
+        >>> rng = np.random.default_rng(0)
+        >>> cal_preds = rng.standard_normal(50)
+        >>> cal_actuals = cal_preds + rng.standard_normal(50) * 0.1
+        >>> test_preds = rng.standard_normal(30)
+        >>> test_actuals = test_preds + rng.standard_normal(30) * 0.1
+        >>> conformal = SplitConformalPredictor(alpha=0.10)
+        >>> _ = conformal.calibrate(cal_preds, cal_actuals)
         >>> intervals = conformal.predict_interval(test_preds)
         >>> display = PredictionIntervalDisplay.from_conformal(intervals, test_actuals)
         """

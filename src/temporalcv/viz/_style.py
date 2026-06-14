@@ -120,10 +120,11 @@ def apply_tufte_style(ax: Axes) -> Axes:
 
     Examples
     --------
+    >>> import matplotlib.pyplot as plt
+    >>> from temporalcv.viz import apply_tufte_style
     >>> fig, ax = plt.subplots()
-    >>> ax.plot([1, 2, 3], [1, 4, 2])
-    >>> apply_tufte_style(ax)
-    >>> plt.show()
+    >>> _ = ax.plot([1, 2, 3], [1, 4, 2])
+    >>> ax = apply_tufte_style(ax)
     """
     # Remove top and right spines
     ax.spines["top"].set_visible(False)
@@ -268,8 +269,10 @@ def direct_label(
 
     Examples
     --------
+    >>> import matplotlib.pyplot as plt
+    >>> from temporalcv.viz import direct_label
     >>> fig, ax = plt.subplots()
-    >>> ax.plot([1, 2, 3], [1, 4, 2])
+    >>> _ = ax.plot([1, 2, 3], [1, 4, 2])
     >>> direct_label(ax, 2, 4, "Peak", offset=(5, 5))
     """
     defaults = {

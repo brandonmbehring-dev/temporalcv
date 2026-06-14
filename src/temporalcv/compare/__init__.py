@@ -12,7 +12,10 @@ Example
 >>> dataset = create_synthetic_dataset()
 >>> result = run_comparison(dataset, [NaiveAdapter()])
 >>> print(f"Best model: {result.best_model}")
->>> print(f"MAE: {result.models[0].get_metric('mae'):.4f}")
+Best model: Naive
+>>> mae = result.models[0].get_metric("mae")
+>>> bool(mae > 0)
+True
 
 .. rubric:: Available Classes
 

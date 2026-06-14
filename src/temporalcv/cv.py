@@ -15,18 +15,26 @@ Knowledge Tiers
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv import WalkForwardCV
 >>> from sklearn.model_selection import cross_val_score
 >>> from sklearn.linear_model import Ridge
 >>>
->>> cv = WalkForwardCV(n_splits=5, gap=2, window_type="sliding", window_size=104)
->>> scores = cross_val_score(Ridge(), X, y, cv=cv)
+>>> rng = np.random.default_rng(0)
+>>> X = rng.standard_normal((300, 3))
+>>> y = X[:, 0] * 0.5 + rng.standard_normal(300) * 0.1
 >>>
->>> # Manual iteration with gap verification
+>>> # horizon=2 enforces a 2-step gap; sliding window needs window_size
+>>> cv = WalkForwardCV(
+...     n_splits=5, horizon=2, window_type="sliding", window_size=104, test_size=10
+... )
+>>> scores = cross_val_score(Ridge(), X, y, cv=cv)
+>>> bool(len(scores) == 5)
+True
+>>>
+>>> # Manual iteration with gap verification (separation >= horizon)
 >>> for train_idx, test_idx in cv.split(X):
-...     assert train_idx[-1] + cv.gap < test_idx[0]  # Gap enforced
-...     model.fit(X[train_idx], y[train_idx])
-...     preds = model.predict(X[test_idx])
+...     assert test_idx[0] - train_idx[-1] - 1 >= cv.horizon  # Gap enforced
 
 References
 ----------
@@ -99,6 +107,7 @@ class SplitInfo:
     ...     test_start=102, test_end=111,
     ... )
     >>> print(f"Gap: {info.gap}, Train size: {info.train_size}")
+    Gap: 2, Train size: 100
     """
 
     SCHEMA_VERSION: ClassVar[int] = 1
@@ -195,14 +204,16 @@ class SplitResult:
 
     Example
     -------
+    >>> import numpy as np
     >>> result = SplitResult(
     ...     split_idx=0,
     ...     train_start=0, train_end=99,
     ...     test_start=102, test_end=111,
-    ...     predictions=np.array([1.0, 1.1, ...]),
-    ...     actuals=np.array([1.05, 1.08, ...]),
+    ...     predictions=np.array([1.0, 1.1, 1.2]),
+    ...     actuals=np.array([1.05, 1.08, 1.25]),
     ... )
     >>> print(f"Split {result.split_idx}: MAE={result.mae:.4f}")
+    Split 0: MAE=0.0400
     """
 
     SCHEMA_VERSION: ClassVar[int] = 1
@@ -331,12 +342,17 @@ class WalkForwardResults:
 
     Example
     -------
+    >>> import numpy as np
+    >>> from sklearn.linear_model import Ridge
     >>> from temporalcv import walk_forward_evaluate
-    >>> results = walk_forward_evaluate(model, X, y, n_splits=5)
-    >>> print(f"Overall MAE: {results.mae:.4f}")
-    >>> print(f"Overall RMSE: {results.rmse:.4f}")
-    >>> for split in results.splits:
-    ...     print(f"  Split {split.split_idx}: MAE={split.mae:.4f}")
+    >>> rng = np.random.default_rng(0)
+    >>> X = rng.standard_normal((200, 5))
+    >>> y = X[:, 0] * 0.5 + rng.standard_normal(200) * 0.1
+    >>> results = walk_forward_evaluate(Ridge(), X, y, n_splits=5, extra_gap=2)
+    >>> bool(results.mae >= 0) and bool(results.rmse >= results.mae)
+    True
+    >>> results.n_splits
+    5
     """
 
     SCHEMA_VERSION: ClassVar[int] = 1
@@ -527,12 +543,26 @@ class NestedCVResult:
 
     Example
     -------
+    >>> import numpy as np
+    >>> from sklearn.linear_model import Ridge
+    >>> from temporalcv import NestedWalkForwardCV
+    >>> rng = np.random.default_rng(0)
+    >>> X = rng.standard_normal((200, 3))
+    >>> y = X[:, 0] * 0.5 + rng.standard_normal(200) * 0.1
+    >>> nested_cv = NestedWalkForwardCV(
+    ...     estimator=Ridge(),
+    ...     param_grid={"alpha": [0.1, 1.0]},
+    ...     n_outer_splits=3,
+    ...     n_inner_splits=5,
+    ...     horizon=2,
+    ... )
     >>> nested_cv.fit(X, y)  # fit() returns the estimator (self), not the result
+    NestedWalkForwardCV(search='grid', n_outer=3, n_inner=5, horizon=2, extra_gap=0)
     >>> result = nested_cv.get_result()  # NestedCVResult
-    >>> print(f"Best params: {result.best_params}")
-    >>> print(f"Score: {result.mean_outer_score:.4f} ± {result.std_outer_score:.4f}")
-    >>> if result.params_stability < 0.6:
-    ...     print("Warning: High hyperparameter instability across folds")
+    >>> bool(0.0 <= result.params_stability <= 1.0)
+    True
+    >>> "alpha" in result.best_params
+    True
 
     See Also
     --------
@@ -620,13 +650,22 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
 
     Examples
     --------
-    >>> cv = WalkForwardCV(n_splits=5, extra_gap=2)
+    >>> import numpy as np
+    >>> X = np.arange(200).reshape(-1, 1)
+    >>> cv = WalkForwardCV(n_splits=3, extra_gap=2)
     >>> for train, test in cv.split(X):
-    ...     print(f"Train: {train[0]}-{train[-1]}, Test: {test[0]}-{test[-1]}")
+    ...     assert train[-1] < test[0]  # forward-only, gap enforced
+    >>> cv.get_n_splits(X)
+    3
 
-    >>> # With sklearn
+    >>> # With sklearn (test_size > 1 so each fold scores on multiple points)
+    >>> from sklearn.linear_model import Ridge
     >>> from sklearn.model_selection import cross_val_score
-    >>> scores = cross_val_score(model, X, y, cv=cv)
+    >>> y = X[:, 0] * 0.5 + 1.0
+    >>> cv_scored = WalkForwardCV(n_splits=3, extra_gap=2, test_size=10)
+    >>> scores = cross_val_score(Ridge(), X, y, cv=cv_scored)
+    >>> bool(len(scores) == 3)
+    True
 
     Notes
     -----
@@ -806,10 +845,14 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
 
         Examples
         --------
+        >>> import numpy as np
+        >>> X = np.arange(200).reshape(-1, 1)
+        >>> y = X[:, 0] * 0.5 + 1.0
         >>> cv = WalkForwardCV(n_splits=3, extra_gap=2)
         >>> for train, test in cv.split(X):
         ...     X_train, X_test = X[train], X[test]
         ...     y_train, y_test = y[train], y[test]
+        ...     assert X_train.shape[0] == y_train.shape[0]
         """
         n_samples = self._get_n_samples(X)
         splits = self._calculate_splits(n_samples)
@@ -887,10 +930,15 @@ class WalkForwardCV(BaseCrossValidator):  # type: ignore[misc]
 
         Examples
         --------
+        >>> import numpy as np
+        >>> X = np.arange(200).reshape(-1, 1)
         >>> cv = WalkForwardCV(n_splits=3, extra_gap=2)
         >>> for info in cv.get_split_info(X):
         ...     print(f"Split {info.split_idx}: train {info.train_start}-{info.train_end}, "
         ...           f"test {info.test_start}-{info.test_end}, gap={info.gap}")
+        Split 0: train 0-194, test 197-197, gap=2
+        Split 1: train 0-195, test 198-198, gap=2
+        Split 2: train 0-196, test 199-199, gap=2
         """
         n_samples = self._get_n_samples(X)
         splits = self._calculate_splits(n_samples)
@@ -960,6 +1008,8 @@ class TimeSeriesCrossValidator(BaseCrossValidator):  # type: ignore[misc]
 
     Examples
     --------
+    >>> import numpy as np
+    >>> X = np.arange(200).reshape(-1, 1)
     >>> cv = TimeSeriesCrossValidator(n_splits=5, gap=10, purge_length=5)
     >>> for train, test in cv.split(X):
     ...     assert train[-1] < test[0]  # forward-only
@@ -1174,6 +1224,8 @@ class BlockedTimeSeriesCV(BaseCrossValidator):  # type: ignore[misc]
 
     Examples
     --------
+    >>> import numpy as np
+    >>> X = np.arange(200).reshape(-1, 1)
     >>> cv = BlockedTimeSeriesCV(n_splits=3, block_size=20, gap_blocks=1)
     >>> for train, test in cv.split(X):
     ...     assert train[-1] < test[0]
@@ -1364,9 +1416,15 @@ class CrossFitCV(BaseCrossValidator):  # type: ignore[misc]
 
     Example
     -------
+    >>> import numpy as np
+    >>> X = np.arange(200).reshape(-1, 1)
     >>> cv = CrossFitCV(n_splits=5, extra_gap=2)
     >>> for train_idx, test_idx in cv.split(X):
     ...     print(f"Train: 0-{train_idx[-1]}, Test: {test_idx[0]}-{test_idx[-1]}")
+    Train: 0-37, Test: 40-79
+    Train: 0-77, Test: 80-119
+    Train: 0-117, Test: 120-159
+    Train: 0-157, Test: 160-199
 
     References
     ----------
@@ -1814,18 +1872,22 @@ def walk_forward_evaluate(
     >>> import numpy as np
     >>>
     >>> # Generate sample data
-    >>> np.random.seed(42)
-    >>> X = np.random.randn(200, 5)
-    >>> y = X[:, 0] * 0.5 + np.random.randn(200) * 0.1
+    >>> rng = np.random.default_rng(42)
+    >>> X = rng.standard_normal((200, 5))
+    >>> y = X[:, 0] * 0.5 + rng.standard_normal(200) * 0.1
     >>>
     >>> # Evaluate model
     >>> results = walk_forward_evaluate(Ridge(), X, y, n_splits=5, extra_gap=2)
-    >>> print(f"MAE: {results.mae:.4f}")
-    >>> print(f"RMSE: {results.rmse:.4f}")
+    >>> bool(results.mae >= 0)
+    True
+    >>> bool(results.rmse >= results.mae)  # RMSE >= MAE always
+    True
     >>>
     >>> # Access per-split details
-    >>> for split in results.splits:
-    ...     print(f"Split {split.split_idx}: MAE={split.mae:.4f}")
+    >>> bool(len(results.splits) == 5)
+    True
+    >>> all(s.mae >= 0 for s in results.splits)
+    True
 
     Notes
     -----
@@ -2005,8 +2067,13 @@ class NestedWalkForwardCV:
 
     Examples
     --------
+    >>> import numpy as np
     >>> from temporalcv import NestedWalkForwardCV
     >>> from sklearn.linear_model import Ridge
+    >>>
+    >>> rng = np.random.default_rng(0)
+    >>> X = rng.standard_normal((200, 3))
+    >>> y = X[:, 0] * 0.5 + rng.standard_normal(200) * 0.1
     >>>
     >>> # Grid search
     >>> nested_cv = NestedWalkForwardCV(
@@ -2017,8 +2084,11 @@ class NestedWalkForwardCV:
     ...     horizon=4,
     ... )
     >>> nested_cv.fit(X, y)
-    >>> print(f"Best alpha: {nested_cv.best_params_['alpha']}")
-    >>> print(f"Score: {nested_cv.mean_outer_score_:.4f}")
+    NestedWalkForwardCV(search='grid', n_outer=3, n_inner=5, horizon=4, extra_gap=0)
+    >>> "alpha" in nested_cv.best_params_
+    True
+    >>> bool(np.isfinite(nested_cv.mean_outer_score_))
+    True
     >>>
     >>> # Randomized search with distributions
     >>> from scipy.stats import loguniform

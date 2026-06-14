@@ -26,19 +26,30 @@ Knowledge Tiers
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.statistical_tests import dm_test, gw_test, pt_test
+>>> rng = np.random.default_rng(0)
+>>> n = 100
+>>> # Model has smaller errors than the baseline (lower loss)
+>>> model_errors = rng.normal(0.0, 1.0, n)
+>>> baseline_errors = rng.normal(0.0, 1.5, n)
 >>>
 >>> # Compare model to baseline (unconditional)
 >>> result = dm_test(model_errors, baseline_errors, h=2)
->>> print(f"DM statistic: {result.statistic:.3f}, p-value: {result.pvalue:.4f}")
+>>> isinstance(result.statistic, float) and 0.0 <= result.pvalue <= 1.0
+True
 >>>
 >>> # Test conditional predictive ability
 >>> gw_result = gw_test(model_errors, baseline_errors, n_lags=1)
->>> print(f"GW R²: {gw_result.r_squared:.3f}, p-value: {gw_result.pvalue:.4f}")
+>>> 0.0 <= gw_result.r_squared <= 1.0 and 0.0 <= gw_result.pvalue <= 1.0
+True
 >>>
 >>> # Test directional accuracy
+>>> actual_changes = rng.normal(0.0, 1.0, n)
+>>> predicted_changes = actual_changes + rng.normal(0.0, 0.5, n)
 >>> pt_result = pt_test(actual_changes, predicted_changes, move_threshold=0.01)
->>> print(f"Direction accuracy: {pt_result.accuracy:.2%}")
+>>> 0.0 <= pt_result.accuracy <= 1.0
+True
 
 References
 ----------
@@ -745,14 +756,22 @@ def dm_test(
 
     Example
     -------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 100
+    >>> # Model errors are smaller than the persistence baseline's
+    >>> model_errors = rng.normal(0.0, 1.0, n)
+    >>> persistence_errors = rng.normal(0.0, 1.5, n)
     >>> # Test if model beats persistence baseline (using HAC variance)
     >>> result = dm_test(model_errors, persistence_errors, h=2, alternative="less")
-    >>> if result.significant_at_05:
-    ...     print("Model significantly better than baseline")
+    >>> result.significant_at_05  # model has lower loss
+    True
 
     >>> # Use self-normalized variance for robustness
+    >>> baseline_errors = persistence_errors
     >>> result = dm_test(model_errors, baseline_errors, variance_method="self_normalized")
-    >>> print(f"DM stat: {result.statistic:.3f}, p-value: {result.pvalue:.4f}")
+    >>> isinstance(result.statistic, float) and 0.0 <= result.pvalue <= 1.0
+    True
 
     See Also
     --------
@@ -1041,17 +1060,25 @@ def gw_test(
 
     Example
     -------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 100
+    >>> model_errors = rng.normal(0.0, 1.0, n)
+    >>> baseline_errors = rng.normal(0.0, 1.5, n)
     >>> # Test if past performance predicts future superiority
     >>> result = gw_test(model_errors, baseline_errors, n_lags=1)
-    >>> if result.conditional_predictability:
-    ...     print("Past loss differential predicts future performance")
-    ...     print(f"R-squared: {result.r_squared:.3f}")
+    >>> isinstance(result.conditional_predictability, bool)
+    True
+    >>> 0.0 <= result.r_squared <= 1.0
+    True
 
     >>> # Compare DM (unconditional) vs GW (conditional)
     >>> dm_result = dm_test(model_errors, baseline_errors)
     >>> gw_result = gw_test(model_errors, baseline_errors)
-    >>> if not dm_result.significant_at_05 and gw_result.significant_at_05:
-    ...     print("Equal average accuracy, but performance is predictable!")
+    >>> isinstance(dm_result.significant_at_05, bool)
+    True
+    >>> isinstance(gw_result.significant_at_05, bool)
+    True
 
     See Also
     --------
@@ -1324,6 +1351,15 @@ def cw_test(
 
     Example
     -------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 100
+    >>> actual = rng.normal(0.0, 1.0, n)
+    >>> # Unrestricted (AR(2)) forecasts are slightly better than restricted (AR(1))
+    >>> ar2_preds = actual + rng.normal(0.0, 1.0, n)
+    >>> ar1_preds = actual + rng.normal(0.0, 1.2, n)
+    >>> ar2_errors = actual - ar2_preds
+    >>> ar1_errors = actual - ar1_preds
     >>> # Compare AR(2) vs AR(1) - nested models
     >>> result = cw_test(
     ...     errors_unrestricted=ar2_errors,
@@ -1332,14 +1368,13 @@ def cw_test(
     ...     predictions_restricted=ar1_preds,
     ...     alternative="less",  # Test if AR(2) is better
     ... )
-    >>> print(f"CW statistic: {result.statistic:.3f}")
-    >>> print(f"P-value: {result.pvalue:.4f}")
-    >>> print(f"Adjustment magnitude: {result.adjustment_magnitude:.4f}")
+    >>> isinstance(result.statistic, float) and 0.0 <= result.pvalue <= 1.0
+    True
 
     >>> # Compare with DM test to see the bias
     >>> dm_result = dm_test(ar2_errors, ar1_errors, alternative="less")
-    >>> print(f"DM p-value: {dm_result.pvalue:.4f} (may be biased)")
-    >>> print(f"CW p-value: {result.pvalue:.4f} (corrected)")
+    >>> isinstance(dm_result.pvalue, float)  # DM may be biased for nested models
+    True
 
     See Also
     --------
@@ -1563,9 +1598,16 @@ def pt_test(
 
     Example
     -------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 100
+    >>> actual_changes = rng.normal(0.0, 1.0, n)
+    >>> # Predictions agree with actual direction most of the time
+    >>> pred_changes = actual_changes + rng.normal(0.0, 0.3, n)
     >>> # Test with 3-class (UP/DOWN/FLAT)
     >>> result = pt_test(actual_changes, pred_changes, move_threshold=0.01)
-    >>> print(f"Accuracy: {result.accuracy:.1%}, Skill: {result.skill:.1%}")
+    >>> 0.0 <= result.accuracy <= 1.0 and isinstance(result.skill, float)
+    True
 
     See Also
     --------
@@ -1746,10 +1788,17 @@ class MultiModelComparisonResult:
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 100
+    >>> errors_a = rng.normal(0.0, 1.0, n)  # smallest loss -> best
+    >>> errors_b = rng.normal(0.0, 1.5, n)
+    >>> errors_c = rng.normal(0.0, 2.0, n)
     >>> result = compare_multiple_models({"A": errors_a, "B": errors_b, "C": errors_c})
-    >>> print(f"Best model: {result.best_model}")
-    >>> for pair in result.significant_pairs:
-    ...     print(f"{pair[0]} significantly better than {pair[1]}")
+    >>> result.best_model
+    'A'
+    >>> all(isinstance(p, tuple) and len(p) == 2 for p in result.significant_pairs)
+    True
     """
 
     SCHEMA_VERSION: ClassVar[int] = 2
@@ -1883,23 +1932,21 @@ def compare_multiple_models(
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 100
     >>> errors = {
-    ...     "Ridge": model_ridge_errors,
-    ...     "Lasso": model_lasso_errors,
-    ...     "Persistence": baseline_errors,
+    ...     "Ridge": rng.normal(0.0, 1.0, n),       # smallest loss -> best
+    ...     "Lasso": rng.normal(0.0, 1.1, n),
+    ...     "Persistence": rng.normal(0.0, 2.0, n),
     ... }
     >>> result = compare_multiple_models(errors, h=2)
-    >>> print(result.summary())
-    Multi-Model Comparison (3 models, 3 pairs)
-    Bonferroni-corrected α = 0.0167 (original α = 0.05)
-
-    Model Rankings (by mean loss):
-      1. Ridge: 0.012345 ← best
-      2. Lasso: 0.013456
-      3. Persistence: 0.025678
-
-    Significant differences (1):
-      Ridge > Persistence: p=0.0034
+    >>> result.best_model
+    'Ridge'
+    >>> [name for name, _ in result.model_rankings]
+    ['Ridge', 'Lasso', 'Persistence']
+    >>> abs(result.bonferroni_alpha - 0.05 / 3) < 1e-12  # 3 pairwise comparisons
+    True
 
     See Also
     --------
@@ -2022,10 +2069,16 @@ class MultiHorizonResult:
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 200
+    >>> model_errors = rng.normal(0.0, 1.0, n)
+    >>> baseline_errors = rng.normal(0.0, 1.5, n)
     >>> result = compare_horizons(model_errors, baseline_errors, horizons=(1, 2, 4, 8))
-    >>> print(result.significant_horizons)      # [1, 2, 4]
-    >>> print(result.first_insignificant_horizon)  # 8
-    >>> print(result.degradation_pattern)       # "degrading"
+    >>> set(result.significant_horizons).issubset({1, 2, 4, 8})
+    True
+    >>> result.degradation_pattern in {"consistent", "degrading", "none", "irregular"}
+    True
 
     See Also
     --------
@@ -2220,12 +2273,19 @@ class MultiModelHorizonResult:
 
     Examples
     --------
-    >>> result = compare_models_horizons(
-    ...     {"ARIMA": arima_errors, "RF": rf_errors, "Naive": naive_errors},
-    ...     horizons=(1, 4, 12),
-    ... )
-    >>> print(result.best_model_by_horizon)  # {1: 'RF', 4: 'ARIMA', 12: 'ARIMA'}
-    >>> print(result.consistent_best)        # None (varies by horizon)
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 300
+    >>> errors = {
+    ...     "ARIMA": rng.normal(0.0, 1.0, n),
+    ...     "RF": rng.normal(0.0, 1.2, n),
+    ...     "Naive": rng.normal(0.0, 2.0, n),
+    ... }
+    >>> result = compare_models_horizons(errors, horizons=(1, 4, 12))
+    >>> sorted(result.best_model_by_horizon)
+    [1, 4, 12]
+    >>> result.consistent_best is None or result.consistent_best in errors
+    True
 
     See Also
     --------
@@ -2345,16 +2405,23 @@ def compare_horizons(
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 200
+    >>> model_errors = rng.normal(0.0, 1.0, n)
+    >>> baseline_errors = rng.normal(0.0, 1.5, n)
     >>> # Compare model to persistence baseline across horizons
     >>> result = compare_horizons(
     ...     model_errors, baseline_errors,
     ...     horizons=(1, 2, 4, 8, 12),
     ...     alternative="less",  # Test if model is better
     ... )
-    >>> print(result.significant_horizons)      # [1, 2, 4]
-    >>> print(result.first_insignificant_horizon)  # 8
-    >>> print(result.degradation_pattern)       # "degrading"
-    >>> print(result.to_markdown())
+    >>> set(result.significant_horizons).issubset({1, 2, 4, 8, 12})
+    True
+    >>> result.degradation_pattern in {"consistent", "degrading", "none", "irregular"}
+    True
+    >>> isinstance(result.to_markdown(), str) and len(result.to_markdown()) > 0
+    True
 
     Notes
     -----
@@ -2455,12 +2522,19 @@ def compare_models_horizons(
 
     Examples
     --------
-    >>> matrix = compare_models_horizons(
-    ...     {"ARIMA": arima_errors, "RF": rf_errors, "Naive": naive_errors},
-    ...     horizons=(1, 4, 12),
-    ... )
-    >>> print(matrix.best_model_by_horizon)  # {1: 'RF', 4: 'ARIMA', 12: 'ARIMA'}
-    >>> print(matrix.consistent_best)        # None (varies by horizon)
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 300
+    >>> errors = {
+    ...     "ARIMA": rng.normal(0.0, 1.0, n),
+    ...     "RF": rng.normal(0.0, 1.2, n),
+    ...     "Naive": rng.normal(0.0, 2.0, n),
+    ... }
+    >>> matrix = compare_models_horizons(errors, horizons=(1, 4, 12))
+    >>> sorted(matrix.best_model_by_horizon)
+    [1, 4, 12]
+    >>> matrix.consistent_best is None or matrix.consistent_best in errors
+    True
 
     Notes
     -----
@@ -2645,11 +2719,17 @@ def forecast_encompassing_test(
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 100
+    >>> y_test = rng.normal(0.0, 1.0, n)
+    >>> y_pred_arima = y_test + rng.normal(0.0, 1.0, n)
+    >>> y_pred_rf = y_test + rng.normal(0.0, 1.0, n)
     >>> result = forecast_encompassing_test(y_test, y_pred_arima, y_pred_rf)
-    >>> if result.encompasses:
-    ...     print("ARIMA encompasses Random Forest - use ARIMA only")
-    >>> else:
-    ...     print(f"Combine with weight {result.optimal_weight_b:.2f} on RF")
+    >>> bool(result.encompasses) in (True, False)
+    True
+    >>> isinstance(result.optimal_weight_b, float)
+    True
 
     References
     ----------
@@ -2767,10 +2847,17 @@ def forecast_encompassing_bidirectional(
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 100
+    >>> y = rng.normal(0.0, 1.0, n)
+    >>> y_arima = y + rng.normal(0.0, 1.0, n)
+    >>> y_rf = y + rng.normal(0.0, 1.0, n)
     >>> result = forecast_encompassing_bidirectional(y, y_arima, y_rf)
-    >>> print(f"Recommendation: {result.recommendation}")
-    >>> if result.recommendation == "combine":
-    ...     combined = (1 - result.combined_weight_b) * y_arima + result.combined_weight_b * y_rf
+    >>> result.recommendation in {"use_a", "use_b", "combine", "equivalent"}
+    True
+    >>> result.combined_weight_b is None or isinstance(result.combined_weight_b, float)
+    True
     """
     # Test A encompasses B
     a_enc_b = forecast_encompassing_test(actual, forecast_a, forecast_b, h, alpha)
@@ -3021,12 +3108,22 @@ def reality_check_test(
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 100
+    >>> persistence_errors = rng.normal(0.0, 1.5, n)  # benchmark
+    >>> models = {
+    ...     "ARIMA": rng.normal(0.0, 1.0, n),
+    ...     "RF": rng.normal(0.0, 1.1, n),
+    ...     "LSTM": rng.normal(0.0, 1.2, n),
+    ... }
     >>> result = reality_check_test(
-    ...     persistence_errors,
-    ...     {"ARIMA": arima_errors, "RF": rf_errors, "LSTM": lstm_errors}
+    ...     persistence_errors, models, n_bootstrap=200, random_state=0
     ... )
-    >>> if result.pvalue < 0.05:
-    ...     print(f"At least one model beats persistence: {result.best_model}")
+    >>> 0.0 <= result.pvalue <= 1.0
+    True
+    >>> result.best_model in models
+    True
 
     References
     ----------
@@ -3168,12 +3265,19 @@ def spa_test(
 
     Examples
     --------
-    >>> result = spa_test(
-    ...     persistence_errors,
-    ...     {"ARIMA": arima_errors, "RF": rf_errors}
-    ... )
-    >>> print(f"SPA p-value: {result.pvalue:.4f}")
-    >>> print(f"Best model: {result.best_model}")
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> n = 100
+    >>> persistence_errors = rng.normal(0.0, 1.5, n)  # benchmark
+    >>> models = {
+    ...     "ARIMA": rng.normal(0.0, 1.0, n),
+    ...     "RF": rng.normal(0.0, 1.1, n),
+    ... }
+    >>> result = spa_test(persistence_errors, models, n_bootstrap=200, random_state=0)
+    >>> 0.0 <= result.pvalue <= 1.0
+    True
+    >>> result.best_model in models
+    True
 
     References
     ----------

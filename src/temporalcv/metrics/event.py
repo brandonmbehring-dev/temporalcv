@@ -12,17 +12,24 @@ Note: MC-SS and move-only MAE already exist in persistence.py.
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.metrics.event import (
 ...     compute_direction_brier,
 ...     compute_pr_auc,
 ...     compute_calibrated_direction_brier,
 ... )
+>>> pred_probs = np.array([0.7, 0.3, 0.8, 0.2])  # P(UP) per sample
+>>> actual_directions = np.array([1, 0, 1, 0])   # 1=UP, 0=DOWN
 >>>
 >>> # Basic Brier score for direction
 >>> brier = compute_direction_brier(pred_probs, actual_directions)
+>>> bool(0.0 <= brier.brier_score <= 1.0)
+True
 >>>
 >>> # PR-AUC for imbalanced UP/DOWN classification
->>> prauc = compute_pr_auc(pred_probs_up, actual_up)
+>>> prauc = compute_pr_auc(pred_probs, actual_directions)
+>>> bool(prauc.pr_auc >= prauc.baseline)
+True
 
 References
 ----------
@@ -308,16 +315,20 @@ def compute_direction_brier(
 
     Examples
     --------
+    >>> import numpy as np
     >>> # 2-class: predict probability of UP
     >>> probs = np.array([0.7, 0.3, 0.8, 0.2])  # P(UP)
     >>> actuals = np.array([1, 0, 1, 0])  # 1=UP, 0=DOWN
     >>> result = compute_direction_brier(probs, actuals, n_classes=2)
-    >>> print(f"Brier: {result.brier_score:.4f}")
+    >>> f"{result.brier_score:.4f}"
+    '0.0650'
 
     >>> # 3-class: predict probability vector [P(DOWN), P(FLAT), P(UP)]
     >>> probs_3 = np.array([[0.1, 0.2, 0.7], [0.6, 0.3, 0.1]])
     >>> actuals_3 = np.array([2, 0])  # 2=UP, 0=DOWN
     >>> result_3 = compute_direction_brier(probs_3, actuals_3, n_classes=3)
+    >>> result_3.n_classes
+    3
     """
     pred_probs = np.asarray(pred_probs, dtype=np.float64)
     actual_directions = np.asarray(actual_directions)
@@ -467,10 +478,12 @@ def compute_pr_auc(
 
     Examples
     --------
+    >>> import numpy as np
     >>> probs = np.array([0.9, 0.8, 0.3, 0.1, 0.7])
     >>> actuals = np.array([1, 1, 0, 0, 1])
     >>> result = compute_pr_auc(probs, actuals)
-    >>> print(f"PR-AUC: {result.pr_auc:.3f} (baseline: {result.baseline:.3f})")
+    >>> f"PR-AUC: {result.pr_auc:.3f} (baseline: {result.baseline:.3f})"
+    'PR-AUC: 0.933 (baseline: 0.600)'
 
     See Also
     --------
@@ -538,8 +551,12 @@ def compute_pr_auc(
     recall_extended = np.concatenate([[0], recall])
     precision_extended = np.concatenate([[baseline], precision])
 
-    # Use trapezoidal integration (recall is ascending, so positive result)
-    pr_auc = float(np.trapezoid(precision_extended, recall_extended))
+    # Use trapezoidal integration (recall is ascending, so positive result).
+    # np.trapezoid (NumPy >= 2.0) replaced np.trapz; fall back for NumPy 1.x,
+    # which the package still supports (numpy>=1.21) and which the [compare]
+    # extra can pin on some platforms.
+    trapezoid = np.trapezoid if hasattr(np, "trapezoid") else np.trapz  # type: ignore[attr-defined]
+    pr_auc = float(trapezoid(precision_extended, recall_extended))
 
     # Precision at 50% recall
     recall_50_idx = np.argmin(np.abs(recall - 0.5))
@@ -594,13 +611,22 @@ def compute_calibrated_direction_brier(
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> pred_probs = rng.uniform(0, 1, 50)
+    >>> actuals = (rng.uniform(0, 1, 50) < pred_probs).astype(int)
     >>> brier, bin_means, bin_fracs = compute_calibrated_direction_brier(
     ...     pred_probs, actuals, n_bins=10
     ... )
-    >>> # Plot reliability diagram
+    >>> bool(0.0 <= brier <= 1.0)
+    True
+    >>> bin_means.shape
+    (10,)
+    >>> # Plot a reliability diagram (bin_means vs bin_fracs) against the y=x
+    >>> # diagonal; empty bins are NaN and simply leave gaps in the curve:
     >>> import matplotlib.pyplot as plt
-    >>> plt.plot(bin_means, bin_fracs, 'o-')
-    >>> plt.plot([0, 1], [0, 1], 'k--')  # Perfect calibration
+    >>> _ = plt.plot(bin_means, bin_fracs, 'o-')
+    >>> _ = plt.plot([0, 1], [0, 1], 'k--')  # perfect calibration
     """
     pred_probs = np.asarray(pred_probs, dtype=np.float64)
     actual_directions = np.asarray(actual_directions, dtype=np.float64)
@@ -676,9 +702,14 @@ def convert_predictions_to_direction_probs(
 
     Examples
     --------
-    >>> from temporalcv import TimeSeriesBagger
-    >>> mean, std = bagger.predict_with_uncertainty(X_test)
+    >>> import numpy as np
+    >>> # mean, std typically come from an ensemble or conformal predictor,
+    >>> # e.g. mean, std = bagger.predict_with_uncertainty(X_test)
+    >>> mean = np.array([0.02, -0.01, 0.0, 0.05])
+    >>> std = np.array([0.01, 0.01, 0.02, 0.03])
     >>> p_up = convert_predictions_to_direction_probs(mean, std, threshold=0.01)
+    >>> np.round(p_up, 4).tolist()
+    [0.8413, 0.0228, 0.3085, 0.9088]
     """
     from scipy import stats
 

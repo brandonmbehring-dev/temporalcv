@@ -24,14 +24,16 @@ References
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.inference import wild_cluster_bootstrap
 >>>
 >>> # Per-fold DM test statistics
 >>> fold_statistics = np.array([0.15, 0.22, -0.05, 0.18, 0.12])
->>> result = wild_cluster_bootstrap(fold_statistics, n_bootstrap=999)
->>> print(f"Estimate: {result.estimate:.3f}, SE: {result.se:.3f}")
->>> print(f"95% CI: [{result.ci_lower:.3f}, {result.ci_upper:.3f}]")
->>> print(f"p-value: {result.p_value:.3f}")
+>>> result = wild_cluster_bootstrap(fold_statistics, n_bootstrap=999, random_state=0)
+>>> round(result.estimate, 3)  # mean of the fold statistics
+0.124
+>>> bool(0.0 <= result.p_value <= 1.0)
+True
 """
 
 from __future__ import annotations
@@ -218,11 +220,14 @@ def wild_cluster_bootstrap(
 
     Example
     -------
+    >>> import numpy as np
     >>> # Per-fold error differences from DM test
     >>> fold_diffs = np.array([0.15, 0.22, -0.05, 0.18, 0.12])
-    >>> result = wild_cluster_bootstrap(fold_diffs)
-    >>> if result.p_value < 0.05:
-    ...     print("Significant difference between models")
+    >>> result = wild_cluster_bootstrap(fold_diffs, random_state=0)
+    >>> result.n_clusters
+    5
+    >>> bool(result.se > 0)
+    True
 
     References
     ----------

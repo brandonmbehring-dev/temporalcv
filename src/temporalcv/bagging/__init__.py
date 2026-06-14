@@ -18,14 +18,25 @@ Factory Functions
 
 Example
 -------
+>>> import numpy as np
 >>> from sklearn.linear_model import Ridge
 >>> from temporalcv.bagging import create_block_bagger
 >>>
->>> # Create bagged Ridge model
->>> bagged_ridge = create_block_bagger(Ridge(), n_estimators=20)
->>> bagged_ridge.fit(X_train, y_train)
+>>> # Synthetic train/test split (fixed seed for a reproducible doctest)
+>>> rng = np.random.default_rng(0)
+>>> X_train = rng.standard_normal((100, 3))
+>>> y_train = X_train @ np.array([1.0, -0.5, 0.25]) + 0.1 * rng.standard_normal(100)
+>>> X_test = rng.standard_normal((10, 3))
+>>>
+>>> # Create and fit a bagged Ridge model
+>>> bagged_ridge = create_block_bagger(Ridge(), n_estimators=20, random_state=42)
+>>> _ = bagged_ridge.fit(X_train, y_train)
 >>> predictions = bagged_ridge.predict(X_test)
+>>> predictions.shape
+(10,)
 >>> mean, lower, upper = bagged_ridge.predict_interval(X_test)
+>>> bool(np.all(lower <= upper))
+True
 
 References
 ----------
@@ -79,9 +90,15 @@ def create_block_bagger(
 
     Examples
     --------
+    >>> import numpy as np
     >>> from sklearn.linear_model import Ridge
-    >>> bagger = create_block_bagger(Ridge(), n_estimators=50)
-    >>> bagger.fit(X_train, y_train)
+    >>> rng = np.random.default_rng(0)
+    >>> X_train = rng.standard_normal((80, 3))
+    >>> y_train = X_train[:, 0] + 0.1 * rng.standard_normal(80)
+    >>> bagger = create_block_bagger(Ridge(), n_estimators=50, random_state=42)
+    >>> _ = bagger.fit(X_train, y_train)
+    >>> bagger.is_fitted
+    True
 
     See Also
     --------
@@ -131,6 +148,8 @@ def create_stationary_bagger(
     --------
     >>> from sklearn.linear_model import ElasticNet
     >>> bagger = create_stationary_bagger(ElasticNet(), n_estimators=50)
+    >>> bagger.n_estimators
+    50
 
     See Also
     --------
@@ -179,6 +198,8 @@ def create_feature_bagger(
     --------
     >>> from sklearn.linear_model import Ridge
     >>> bagger = create_feature_bagger(Ridge(), max_features=0.6)
+    >>> bagger.strategy.max_features
+    0.6
 
     See Also
     --------

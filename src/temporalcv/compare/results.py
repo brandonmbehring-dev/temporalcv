@@ -5,12 +5,20 @@ Provides JSON serialization and metadata collection for benchmark results.
 
 Example
 -------
+>>> import tempfile
+>>> from pathlib import Path
 >>> from temporalcv.compare.results import save_benchmark_results, load_benchmark_results
->>> from temporalcv.compare import run_benchmark_suite
+>>> from temporalcv.compare import run_benchmark_suite, NaiveAdapter
+>>> from temporalcv.benchmarks import create_synthetic_dataset
 >>>
->>> report = run_benchmark_suite(datasets, adapters)
->>> save_benchmark_results(report, Path("results.json"))
->>> loaded = load_benchmark_results(Path("results.json"))
+>>> datasets = [create_synthetic_dataset(seed=i) for i in range(2)]
+>>> report = run_benchmark_suite(datasets, [NaiveAdapter()])
+>>> with tempfile.TemporaryDirectory() as tmp:
+...     path = Path(tmp) / "results.json"
+...     save_benchmark_results(report, path)
+...     loaded_report, metadata = load_benchmark_results(path)
+>>> loaded_report.summary["n_datasets"]
+2
 """
 
 from __future__ import annotations

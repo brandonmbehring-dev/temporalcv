@@ -99,11 +99,12 @@ def theoretical_ar1_mse_bound(
     >>> theoretical_ar1_mse_bound(phi=0.0, sigma_sq=1.0, h=10)
     1.0
 
-    >>> # High persistence (phi=0.9): MSE grows with horizon
+    >>> # High persistence (phi=0.9): MSE grows with horizon toward the
+    >>> # unconditional variance sigma_sq / (1 - phi**2) = 5.263...
     >>> theoretical_ar1_mse_bound(phi=0.9, sigma_sq=1.0, h=1)
     1.0
     >>> theoretical_ar1_mse_bound(phi=0.9, sigma_sq=1.0, h=5)  # doctest: +ELLIPSIS
-    4.0...
+    3.428...
     """
     # Validation
     if abs(phi) >= 1.0:

@@ -5,9 +5,14 @@ Provides unified interface to statsforecast, sktime, etc.
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.compare.adapters import StatsforecastAdapter
+>>> rng = np.random.default_rng(0)
+>>> train_data = rng.normal(0, 1, 50).cumsum() + 100.0
 >>> adapter = StatsforecastAdapter(model="AutoARIMA")
 >>> predictions = adapter.fit_predict(train_data, test_size=10, horizon=2)
+>>> predictions.shape
+(10,)
 """
 
 from __future__ import annotations

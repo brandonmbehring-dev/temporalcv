@@ -8,8 +8,9 @@ Requires: fredapi (optional dependency)
 Example
 -------
 >>> from temporalcv.benchmarks import load_fred_rates
->>> dataset = load_fred_rates(series="DGS10", start="2010-01-01")
->>> train, test = dataset.get_train_test_split()
+>>> # SKIP reason: needs network + a FRED API key (live download)
+>>> dataset = load_fred_rates(series="DGS10", start="2010-01-01")  # doctest: +SKIP
+>>> train, test = dataset.get_train_test_split()  # doctest: +SKIP
 
 Notes
 -----
@@ -112,12 +113,13 @@ def load_fred_rates(
 
     Examples
     --------
+    >>> # SKIP reason: needs network + a FRED API key (live download)
     >>> # Reproducible (date-pinned)
-    >>> dataset = load_fred_rates("DGS10", start="2010-01-01", end="2023-12-31")
-    >>> train, test = dataset.get_train_test_split()
+    >>> dataset = load_fred_rates("DGS10", start="2010-01-01", end="2023-12-31")  # doctest: +SKIP
+    >>> train, test = dataset.get_train_test_split()  # doctest: +SKIP
     >>>
     >>> # Non-reproducible (changes daily)
-    >>> dataset = load_fred_rates("DGS10", frequency="W")  # end defaults to today
+    >>> dataset = load_fred_rates("DGS10", frequency="W")  # doctest: +SKIP
     """
     _check_fredapi()
 

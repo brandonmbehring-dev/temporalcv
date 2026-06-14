@@ -27,20 +27,35 @@ Knowledge Tiers
 
 Example
 -------
->>> from temporalcv.gates import run_gates, gate_signal_verification
+>>> import numpy as np
+>>> from sklearn.linear_model import Ridge
+>>> from temporalcv.gates import (
+...     run_gates,
+...     gate_signal_verification,
+...     gate_suspicious_improvement,
+... )
+>>>
+>>> # AR(1) series with a lag-1 feature, so the model has genuine signal
+>>> rng = np.random.default_rng(0)
+>>> series = np.zeros(300)
+>>> for t in range(1, 300):
+...     series[t] = 0.7 * series[t - 1] + rng.standard_normal()
+>>> X = series[:-1].reshape(-1, 1)
+>>> y = series[1:]
+>>> model = Ridge()
 >>>
 >>> # Signal verification: does model have predictive power?
->>> signal_result = gate_signal_verification(model, X, y)
->>> if signal_result.status.name == "HALT":
-...     print("Model has signal - investigate if legitimate or leakage")
+>>> signal_result = gate_signal_verification(model, X, y, random_state=0)
+>>> signal_result.status.name in {"HALT", "WARN", "PASS"}
+True
 >>>
 >>> # Run multiple gates
 >>> report = run_gates(gates=[
-...     gate_signal_verification(model, X, y),
-...     gate_suspicious_improvement(model_mae, baseline_mae, threshold=0.20),
+...     signal_result,
+...     gate_suspicious_improvement(0.8, 1.0, threshold=0.20),
 ... ])
->>> if report.status == "HALT":
-...     raise ValueError(f"Validation failed: {report.failures}")
+>>> report.status in {"HALT", "WARN", "PASS"}
+True
 
 References
 ----------
@@ -426,24 +441,42 @@ def gate_signal_verification(
 
     Examples
     --------
+    Build an AR(1) series with a lag-1 feature so the model has genuine signal:
+
+    >>> import numpy as np
+    >>> from sklearn.linear_model import Ridge
+    >>> rng = np.random.default_rng(0)
+    >>> series = np.zeros(300)
+    >>> for t in range(1, 300):
+    ...     series[t] = 0.7 * series[t - 1] + rng.standard_normal()
+    >>> X = series[:-1].reshape(-1, 1)
+    >>> y = series[1:]
+    >>> model = Ridge()
+
     Quick check during development (effect size mode):
 
-    >>> result = gate_signal_verification(model, X, y, method="effect_size")
-    >>> print(f"Improvement: {result.metric_value:.1%}")
+    >>> result = gate_signal_verification(model, X, y, method="effect_size", random_state=0)
+    >>> bool(np.isfinite(result.metric_value))
+    True
 
     Rigorous testing for publication (permutation mode, default):
 
-    >>> result = gate_signal_verification(model, X, y, method="permutation", strict=True)
-    >>> print(f"p-value: {result.details['pvalue']:.4f}")
+    >>> result = gate_signal_verification(
+    ...     model, X, y, method="permutation", n_shuffles=99, random_state=0
+    ... )
+    >>> bool(0.0 < result.details["pvalue"] <= 1.0)
+    True
 
     Interpreting results:
 
     >>> if result.status == GateStatus.HALT:
     ...     # Model has signal - could be legitimate or leakage
-    ...     print("Model has signal - investigate source")
+    ...     msg = "Model has signal - investigate source"
     ... else:
     ...     # Model has NO signal - concerning
-    ...     print("Model learned nothing from features")
+    ...     msg = "Model learned nothing from features"
+    >>> isinstance(msg, str)
+    True
 
     See Also
     --------
@@ -1165,10 +1198,16 @@ def gate_residual_diagnostics(
 
     Example
     -------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> y_actual = rng.standard_normal(100)
+    >>> y_predicted = y_actual + rng.standard_normal(100) * 0.1
     >>> residuals = y_actual - y_predicted
     >>> result = gate_residual_diagnostics(residuals, max_lag=10)
-    >>> if result.status == GateStatus.WARN:
-    ...     print("Check:", result.details["failing_tests"])
+    >>> result.status.name in {"PASS", "WARN", "HALT", "SKIP"}
+    True
+    >>> isinstance(result.details["failing_tests"], list)
+    True
 
     See Also
     --------
@@ -1369,10 +1408,17 @@ def gate_theoretical_bounds(
 
     Example
     -------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> y_train = np.zeros(300)
+    >>> for t in range(1, 300):
+    ...     y_train[t] = 0.7 * y_train[t - 1] + rng.standard_normal()
     >>> # After computing out-of-sample MAE
-    >>> result = gate_theoretical_bounds(model_mae=0.15, y_train=y_train)
+    >>> result = gate_theoretical_bounds(model_mae=0.85, y_train=y_train)
+    >>> result.status.name in {"PASS", "HALT", "SKIP"}
+    True
     >>> if result.status == GateStatus.HALT:
-    ...     print("Model MAE beats theoretical minimum - investigate!")
+    ...     msg = "Model MAE beats theoretical minimum - investigate!"
 
     See Also
     --------
@@ -1500,12 +1546,14 @@ def run_gates(
     Example
     -------
     >>> results = [
-    ...     gate_signal_verification(model, X, y),
-    ...     gate_suspicious_improvement(model_mae, persistence_mae),
+    ...     gate_suspicious_improvement(model_metric=0.8, baseline_metric=1.0),
+    ...     gate_temporal_boundary(train_end_idx=99, test_start_idx=105, horizon=5),
     ... ]
     >>> report = run_gates(results)
-    >>> if report.status == "HALT":
-    ...     print(report.summary())
+    >>> report.status in {"HALT", "WARN", "PASS"}
+    True
+    >>> len(report.gates)
+    2
     """
     return ValidationReport(gates=gates)
 
@@ -1674,15 +1722,19 @@ def run_gates_stratified(
 
     Example
     -------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> actuals = rng.standard_normal(200)
+    >>> predictions = actuals + rng.standard_normal(200) * 0.3
     >>> overall = [
-    ...     gate_signal_verification(model, X, y),
-    ...     gate_suspicious_improvement(model_mae, persistence_mae),
+    ...     gate_suspicious_improvement(model_metric=0.8, baseline_metric=1.0),
     ... ]
     >>> report = run_gates_stratified(
     ...     overall, actuals, predictions, regimes="auto"
     ... )
-    >>> if report.status == "HALT":
-    ...     print(report.summary())
+    >>> report.status in {"HALT", "WARN", "PASS"}
+    True
+
     """
     from temporalcv.regimes import (
         classify_volatility_regime,

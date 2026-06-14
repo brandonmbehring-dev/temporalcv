@@ -6,17 +6,21 @@ following the statsmodels pattern where ax=None creates a new figure.
 
 Examples
 --------
->>> from temporalcv.viz import plot_cv_folds, plot_prediction_intervals
+>>> import numpy as np
+>>> import matplotlib.pyplot as plt
+>>> from temporalcv import WalkForwardCV
+>>> from temporalcv.viz import plot_cv_folds
+>>>
+>>> X = np.random.default_rng(0).standard_normal((100, 3))
+>>> cv = WalkForwardCV(n_splits=4, test_size=15)
 >>>
 >>> # Simple one-liner
->>> plot_cv_folds(cv, X)
->>> plt.show()
+>>> ax = plot_cv_folds(cv, X)
 >>>
 >>> # With custom axes
 >>> fig, (ax1, ax2) = plt.subplots(1, 2)
->>> plot_cv_folds(cv, X, ax=ax1)
->>> plot_prediction_intervals(intervals, actuals, ax=ax2)
->>> plt.show()
+>>> ax1 = plot_cv_folds(cv, X, ax=ax1)
+>>> plt.close("all")
 """
 
 from __future__ import annotations
@@ -78,12 +82,13 @@ def plot_cv_folds(
 
     Examples
     --------
+    >>> import numpy as np
     >>> from temporalcv import WalkForwardCV
     >>> from temporalcv.viz import plot_cv_folds
     >>>
+    >>> X = np.random.default_rng(0).standard_normal((100, 5))
     >>> cv = WalkForwardCV(n_splits=5, test_size=20)
-    >>> plot_cv_folds(cv, X, title="Walk-Forward CV")
-    >>> plt.show()
+    >>> ax = plot_cv_folds(cv, X, title="Walk-Forward CV")
 
     See Also
     --------
@@ -133,15 +138,21 @@ def plot_prediction_intervals(
 
     Examples
     --------
+    >>> import numpy as np
     >>> from temporalcv.conformal import SplitConformalPredictor
     >>> from temporalcv.viz import plot_prediction_intervals
     >>>
+    >>> rng = np.random.default_rng(0)
+    >>> cal_preds = rng.standard_normal(50)
+    >>> cal_actuals = cal_preds + rng.standard_normal(50) * 0.1
+    >>> test_preds = rng.standard_normal(30)
+    >>> test_actuals = test_preds + rng.standard_normal(30) * 0.1
+    >>>
     >>> conformal = SplitConformalPredictor(alpha=0.10)
-    >>> conformal.calibrate(cal_preds, cal_actuals)
+    >>> _ = conformal.calibrate(cal_preds, cal_actuals)
     >>> intervals = conformal.predict_interval(test_preds)
     >>>
-    >>> plot_prediction_intervals(intervals, test_actuals)
-    >>> plt.show()
+    >>> ax = plot_prediction_intervals(intervals, test_actuals)
 
     See Also
     --------
@@ -185,13 +196,19 @@ def plot_interval_width(
 
     Examples
     --------
-    >>> from temporalcv.conformal import AdaptiveConformalPredictor
+    >>> import numpy as np
+    >>> from temporalcv.conformal import SplitConformalPredictor
     >>> from temporalcv.viz import plot_interval_width
     >>>
-    >>> adaptive = AdaptiveConformalPredictor(alpha=0.10, gamma=0.01)
-    >>> # ... fit and predict ...
-    >>> plot_interval_width(intervals)
-    >>> plt.show()
+    >>> rng = np.random.default_rng(0)
+    >>> cal_preds = rng.standard_normal(50)
+    >>> cal_actuals = cal_preds + rng.standard_normal(50) * 0.1
+    >>> test_preds = rng.standard_normal(30)
+    >>>
+    >>> conformal = SplitConformalPredictor(alpha=0.10)
+    >>> _ = conformal.calibrate(cal_preds, cal_actuals)
+    >>> intervals = conformal.predict_interval(test_preds)
+    >>> ax = plot_interval_width(intervals)
 
     See Also
     --------
@@ -242,8 +259,7 @@ def plot_metric_comparison(
     ...     "Model A": {"MAE": 0.15, "RMSE": 0.22},
     ...     "Model B": {"MAE": 0.12, "RMSE": 0.19},
     ... }
-    >>> plot_metric_comparison(results, baseline="Model A")
-    >>> plt.show()
+    >>> ax = plot_metric_comparison(results, baseline="Model A")
 
     See Also
     --------

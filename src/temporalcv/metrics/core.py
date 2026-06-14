@@ -16,7 +16,13 @@ Knowledge Tiers
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.metrics import compute_rmse, compute_mape, compute_mase
+>>> from temporalcv.metrics import compute_naive_error
+>>>
+>>> actuals = np.array([100.0, 101.0, 102.0, 103.0])
+>>> predictions = np.array([100.5, 100.5, 102.5, 102.5])
+>>> train_actuals = np.array([97.0, 98.0, 99.0, 100.0])
 >>>
 >>> rmse = compute_rmse(predictions, actuals)
 >>> mape = compute_mape(predictions, actuals)
@@ -24,6 +30,8 @@ Example
 >>> # Scale-invariant comparison
 >>> naive_mae = compute_naive_error(train_actuals)
 >>> mase = compute_mase(predictions, actuals, naive_mae)
+>>> print(f"RMSE={rmse:.2f}, MASE={mase:.2f}")
+RMSE=0.50, MASE=0.50
 
 References
 ----------

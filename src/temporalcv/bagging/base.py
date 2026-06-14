@@ -6,14 +6,22 @@ model with fit/predict interface using time-series-aware resampling strategies.
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.bagging import TimeSeriesBagger, MovingBlockBootstrap
 >>> from sklearn.linear_model import Ridge
 >>>
+>>> rng = np.random.default_rng(0)
+>>> X_train = rng.standard_normal((100, 3))
+>>> y_train = X_train[:, 0] + 0.1 * rng.standard_normal(100)
+>>> X_test = rng.standard_normal((10, 3))
+>>>
 >>> strategy = MovingBlockBootstrap(block_length=10)
->>> bagger = TimeSeriesBagger(Ridge(), strategy, n_estimators=20)
->>> bagger.fit(X_train, y_train)
+>>> bagger = TimeSeriesBagger(Ridge(), strategy, n_estimators=20, random_state=42)
+>>> _ = bagger.fit(X_train, y_train)
 >>> predictions = bagger.predict(X_test)
 >>> mean, std = bagger.predict_with_uncertainty(X_test)
+>>> bool(np.all(std >= 0))
+True
 
 References
 ----------
@@ -164,16 +172,25 @@ class TimeSeriesBagger:
 
     Examples
     --------
+    >>> import numpy as np
     >>> from temporalcv.bagging import TimeSeriesBagger, MovingBlockBootstrap
     >>> from sklearn.linear_model import Ridge
+    >>>
+    >>> rng = np.random.default_rng(0)
+    >>> X_train = rng.standard_normal((100, 3))
+    >>> y_train = X_train[:, 0] + 0.1 * rng.standard_normal(100)
+    >>> X_test = rng.standard_normal((10, 3))
     >>>
     >>> bagger = TimeSeriesBagger(
     ...     Ridge(alpha=1.0),
     ...     MovingBlockBootstrap(block_length=10),
-    ...     n_estimators=50
+    ...     n_estimators=50,
+    ...     random_state=42,
     ... )
-    >>> bagger.fit(X_train, y_train)
+    >>> _ = bagger.fit(X_train, y_train)
     >>> predictions = bagger.predict(X_test)
+    >>> predictions.shape
+    (10,)
 
     References
     ----------

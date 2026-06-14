@@ -72,10 +72,18 @@ class ResidualBootstrap(BootstrapStrategy):
     >>> from temporalcv.bagging import TimeSeriesBagger, ResidualBootstrap
     >>> from sklearn.linear_model import Ridge
     >>>
-    >>> # Weekly data with yearly seasonality
+    >>> # Weekly data (3 years) with yearly seasonality, fixed seed
+    >>> rng = np.random.default_rng(0)
+    >>> t = np.arange(156)
+    >>> y_train = np.sin(2 * np.pi * t / 52) + 0.01 * t + 0.1 * rng.standard_normal(156)
+    >>> X_train = np.column_stack(
+    ...     [np.sin(2 * np.pi * t / 52), np.cos(2 * np.pi * t / 52), t / 156.0]
+    ... )
     >>> strategy = ResidualBootstrap(seasonal_period=52, block_length=8)
-    >>> bagger = TimeSeriesBagger(Ridge(), strategy, n_estimators=20)
-    >>> bagger.fit(X_train, y_train)
+    >>> bagger = TimeSeriesBagger(Ridge(), strategy, n_estimators=20, random_state=42)
+    >>> _ = bagger.fit(X_train, y_train)
+    >>> bagger.is_fitted
+    True
 
     Notes
     -----
@@ -278,17 +286,28 @@ def create_residual_bagger(
 
     Examples
     --------
+    >>> import numpy as np
     >>> from temporalcv.bagging import create_residual_bagger
     >>> from sklearn.linear_model import Ridge
     >>>
+    >>> # Weekly data (3 years) with yearly seasonality, fixed seed
+    >>> rng = np.random.default_rng(0)
+    >>> t = np.arange(156)
+    >>> y_train = np.sin(2 * np.pi * t / 52) + 0.01 * t + 0.1 * rng.standard_normal(156)
+    >>> X_train = np.column_stack(
+    ...     [np.sin(2 * np.pi * t / 52), np.cos(2 * np.pi * t / 52), t / 156.0]
+    ... )
+    >>> X_test = X_train[-10:]
     >>> bagger = create_residual_bagger(
     ...     Ridge(),
     ...     seasonal_period=52,
     ...     n_estimators=100,
-    ...     random_state=42
+    ...     random_state=42,
     ... )
-    >>> bagger.fit(X_train, y_train)
+    >>> _ = bagger.fit(X_train, y_train)
     >>> predictions = bagger.predict(X_test)
+    >>> predictions.shape
+    (10,)
     """
     from temporalcv.bagging.base import TimeSeriesBagger
 

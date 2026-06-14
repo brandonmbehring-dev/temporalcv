@@ -6,11 +6,18 @@ following the statsmodels pattern where ax=None creates a new figure.
 
 Examples
 --------
->>> from temporalcv.viz import plot_gate_result, plot_gate_comparison
+>>> import numpy as np
+>>> from sklearn.linear_model import LinearRegression
+>>> from temporalcv.gates import gate_signal_verification
+>>> from temporalcv.viz import plot_gate_result
 >>>
->>> result = gate_signal_verification(model, X, y)
->>> plot_gate_result(result)
->>> plt.show()
+>>> rng = np.random.default_rng(0)
+>>> X = rng.standard_normal((60, 3))
+>>> y = rng.standard_normal(60)
+>>> result = gate_signal_verification(
+...     LinearRegression(), X, y, method="effect_size", n_shuffles=5, random_state=0
+... )
+>>> ax = plot_gate_result(result)
 """
 
 from __future__ import annotations
@@ -57,12 +64,18 @@ def plot_gate_result(
 
     Examples
     --------
+    >>> import numpy as np
+    >>> from sklearn.linear_model import LinearRegression
     >>> from temporalcv.gates import gate_signal_verification
     >>> from temporalcv.viz import plot_gate_result
     >>>
-    >>> result = gate_signal_verification(model, X, y, n_shuffles=100)
-    >>> plot_gate_result(result)
-    >>> plt.show()
+    >>> rng = np.random.default_rng(0)
+    >>> X = rng.standard_normal((60, 3))
+    >>> y = rng.standard_normal(60)
+    >>> result = gate_signal_verification(
+    ...     LinearRegression(), X, y, method="effect_size", n_shuffles=5, random_state=0
+    ... )
+    >>> ax = plot_gate_result(result)
 
     See Also
     --------
@@ -89,8 +102,8 @@ def plot_gate_comparison(
 
     Parameters
     ----------
-    gate_results : list of GateResult or GateReport
-        Results from gate functions or a GateReport from run_gates().
+    gate_results : list of GateResult or ValidationReport
+        Results from gate functions or a ValidationReport from run_gates().
     ax : matplotlib.axes.Axes, optional
         Axes to plot on.
     tufte : bool
@@ -107,25 +120,35 @@ def plot_gate_comparison(
 
     Examples
     --------
-    >>> from temporalcv.gates import run_gates, gate_signal_verification
+    >>> import numpy as np
+    >>> from sklearn.linear_model import LinearRegression
+    >>> from temporalcv.gates import (
+    ...     run_gates,
+    ...     gate_signal_verification,
+    ...     gate_suspicious_improvement,
+    ... )
     >>> from temporalcv.viz import plot_gate_comparison
     >>>
+    >>> rng = np.random.default_rng(0)
+    >>> X = rng.standard_normal((60, 3))
+    >>> y = rng.standard_normal(60)
     >>> gates = [
-    ...     gate_signal_verification(model, X, y),
-    ...     gate_suspicious_improvement(model_mae, baseline_mae),
+    ...     gate_signal_verification(
+    ...         LinearRegression(), X, y, method="effect_size", n_shuffles=5, random_state=0
+    ...     ),
+    ...     gate_suspicious_improvement(model_metric=0.12, baseline_metric=0.20),
     ... ]
     >>> report = run_gates(gates)
-    >>> plot_gate_comparison(report, title="Validation Gates")
-    >>> plt.show()
+    >>> ax = plot_gate_comparison(report, title="Validation Gates")
 
     See Also
     --------
     GateComparisonDisplay : Class-based API.
     plot_gate_result : Single gate visualization.
     """
-    # Handle GateReport or list of GateResult
-    if hasattr(gate_results, "results"):
-        # It's a GateReport
+    # Handle a ValidationReport (exposes ``gates``) vs a plain list of GateResult.
+    if hasattr(gate_results, "gates"):
+        # It's a report from run_gates()
         display = GateComparisonDisplay.from_report(gate_results)
     else:
         # It's a list of GateResult

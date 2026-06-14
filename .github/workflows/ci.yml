@@ -35,13 +35,6 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v --cov=temporalcv --cov-report=xml --cov-fail-under=80 --ignore=tests/benchmarks/
 
-      - name: Run cv_financial doctests
-        # Scoped to cv_financial (#40): keeps its docstring examples honest in CI
-        # without the unrelated viz/matplotlib doctest failures a global run surfaces.
-        # Clear addopts (--override-ini) so the project --cov flags don't leak in and
-        # can't silently break this step if addopts changes later.
-        run: pytest --doctest-modules src/temporalcv/cv_financial.py --override-ini="addopts=" -q
-
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v5
@@ -58,6 +51,23 @@ jobs:
 
       - name: Format check
         run: ruff format --check src/temporalcv tests/
+
+      # Run LAST: the [compare] extra (statsforecast/numba) can pin numpy<2.0 on
+      # some matrix cells (e.g. windows/py3.11), and that downgrade would persist
+      # to later steps; keeping doctests after mypy/lint isolates it.
+      - name: Run doctests (global)
+        # Every docstring example across the package is runnable; a global
+        # --doctest-modules gate keeps them honest. MPLBACKEND=Agg runs the viz
+        # examples headless; [compare] adds statsforecast for the adapter examples
+        # (matplotlib is a core dep). The only skips are inline `# doctest: +SKIP`
+        # on genuinely network/data/key-bound benchmark examples (fred/gluonts/
+        # monash/m5) and the ruptures-gated changepoint example. Clear addopts
+        # (--override-ini) so the project --cov flags don't leak in.
+        env:
+          MPLBACKEND: Agg
+        run: |
+          pip install -e ".[compare]"
+          pytest --doctest-modules src/temporalcv/ --override-ini="addopts=" -q
 
   # Separate job for leakage-specific tests (critical for this package)
   leakage-tests:

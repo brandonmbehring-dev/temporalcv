@@ -7,9 +7,14 @@ Requires: statsforecast (optional dependency)
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.compare.adapters import StatsforecastAdapter
+>>> rng = np.random.default_rng(0)
+>>> train = rng.normal(0, 1, 50).cumsum() + 100.0
 >>> adapter = StatsforecastAdapter(model="AutoARIMA")
 >>> predictions = adapter.fit_predict(train, test_size=10, horizon=2)
+>>> predictions.shape
+(10,)
 """
 
 from __future__ import annotations
@@ -69,8 +74,13 @@ class StatsforecastAdapter(ForecastAdapter):
 
     Example
     -------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(0)
+    >>> train = rng.normal(0, 1, 60).cumsum() + 100.0
     >>> adapter = StatsforecastAdapter("AutoARIMA", season_length=52, frequency="W")
     >>> predictions = adapter.fit_predict(train, test_size=10, horizon=2)
+    >>> predictions.shape
+    (10,)
     """
 
     def __init__(

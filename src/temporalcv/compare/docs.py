@@ -6,11 +6,14 @@ Generates comprehensive markdown documentation from benchmark results.
 Example
 -------
 >>> from temporalcv.compare.docs import generate_benchmark_docs
->>> from temporalcv.compare.results import load_benchmark_results
+>>> from temporalcv.compare import run_benchmark_suite, NaiveAdapter
+>>> from temporalcv.benchmarks import create_synthetic_dataset
 >>>
->>> report, metadata = load_benchmark_results("results.json")
->>> markdown = generate_benchmark_docs(report, metadata)
->>> Path("docs/benchmarks.md").write_text(markdown)
+>>> datasets = [create_synthetic_dataset(seed=i) for i in range(2)]
+>>> report = run_benchmark_suite(datasets, [NaiveAdapter()])
+>>> markdown = generate_benchmark_docs(report)
+>>> markdown.startswith("# temporalcv Benchmark Results")
+True
 """
 
 from __future__ import annotations

@@ -7,7 +7,8 @@ Users must download from Kaggle and provide path.
 Example
 -------
 >>> from temporalcv.benchmarks import load_m5
->>> dataset = load_m5(path="~/data/m5/")
+>>> # SKIP reason: needs local M5 CSV files downloaded from Kaggle
+>>> dataset = load_m5(path="~/data/m5/")  # doctest: +SKIP
 """
 
 from __future__ import annotations

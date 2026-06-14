@@ -23,11 +23,14 @@ Example
 ...     generate_ar1_series,
 ... )
 >>>
->>> # Check if model beats theoretical limits (indicates leakage)
+>>> # AR(1) 1-step minimum MSE is the innovation variance sigma**2
 >>> phi, sigma = 0.9, 1.0
+>>> theoretical_ar1_mse_bound(phi=phi, sigma_sq=sigma**2, h=1)
+1.0
+>>> # A model with MSE = 0.5 beats that floor -> HALT (likely leakage)
 >>> result = check_against_ar1_bounds(model_mse=0.5, phi=phi, sigma_sq=sigma**2)
->>> if result.status == GateStatus.HALT:
-...     print("Model beats theoretical minimum - investigate for leakage")
+>>> result.status.value
+'HALT'
 
 References
 ----------

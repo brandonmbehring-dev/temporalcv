@@ -19,14 +19,20 @@ Knowledge Tiers
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.metrics.volatility_weighted import (
 ...     compute_local_volatility,
 ...     compute_volatility_normalized_mae,
 ...     compute_volatility_stratified_metrics,
 ... )
 >>>
+>>> returns = np.array([0.01, -0.02, 0.015, -0.01, 0.02, -0.025,
+...                     0.01, -0.015, 0.02, -0.01, 0.012, -0.018])
+>>> predictions = returns + 0.001  # small constant error
+>>> actuals = returns
+>>>
 >>> # Estimate local volatility
->>> vol = compute_local_volatility(returns, window=13, method="rolling_std")
+>>> vol = compute_local_volatility(returns, window=5, method="rolling_std")
 >>>
 >>> # Scale-invariant error metric
 >>> vnmae = compute_volatility_normalized_mae(predictions, actuals, vol)
@@ -34,6 +40,7 @@ Example
 >>> # Breakdown by volatility regime
 >>> result = compute_volatility_stratified_metrics(predictions, actuals, vol)
 >>> print(f"Low vol MAE: {result.low_vol_mae:.4f}")
+Low vol MAE: 0.0010
 
 References
 ----------
@@ -579,10 +586,14 @@ def compute_volatility_stratified_metrics(
 
     Examples
     --------
-    >>> predictions = np.random.randn(100)
-    >>> actuals = np.random.randn(100)
+    >>> import numpy as np
+    >>> actuals = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0])
+    >>> predictions = actuals + 0.5  # constant error of 0.5 everywhere
     >>> result = compute_volatility_stratified_metrics(predictions, actuals)
-    >>> print(result.summary())
+    >>> print(f"Overall MAE: {result.overall_mae:.4f}")
+    Overall MAE: 0.5000
+    >>> result.n_low + result.n_med + result.n_high
+    9
 
     See Also
     --------

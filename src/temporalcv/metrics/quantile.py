@@ -18,6 +18,7 @@ Knowledge Tiers
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.metrics.quantile import (
 ...     compute_pinball_loss,
 ...     compute_crps,
@@ -25,12 +26,19 @@ Example
 ...     compute_quantile_coverage,
 ... )
 >>>
+>>> actuals = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+>>> quantile_preds = np.array([0.9, 1.9, 3.1, 4.2, 5.1])
+>>> lower = np.array([0.5, 1.5, 2.5, 3.5, 4.5])
+>>> upper = np.array([1.5, 2.5, 3.5, 4.5, 5.5])
+>>>
 >>> # Quantile regression evaluation
 >>> loss = compute_pinball_loss(actuals, quantile_preds, tau=0.9)
 >>>
 >>> # Interval evaluation
 >>> score = compute_interval_score(actuals, lower, upper, alpha=0.05)
 >>> coverage = compute_quantile_coverage(actuals, lower, upper)
+>>> print(f"Coverage: {coverage:.1%}")
+Coverage: 100.0%
 
 References
 ----------
@@ -403,6 +411,7 @@ def compute_quantile_coverage(
     >>> upper = np.array([1.5, 2.5, 3.5, 4.5, 5.5])
     >>> coverage = compute_quantile_coverage(actuals, lower, upper)
     >>> print(f"Coverage: {coverage:.1%}")  # 100%
+    Coverage: 100.0%
 
     See Also
     --------

@@ -21,14 +21,23 @@ Knowledge Tiers
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.regimes import classify_volatility_regime, classify_direction_regime
+>>> from temporalcv.persistence import compute_move_threshold
+>>> rng = np.random.default_rng(0)
+>>> changes = rng.standard_normal(200) * 0.01  # changes/returns, not levels
+>>> train_actuals, actuals = changes[:100], changes[100:]
 >>>
 >>> # Classify volatility using changes (correct)
 >>> vol_regimes = classify_volatility_regime(changes, window=13, basis='changes')
+>>> sorted(set(vol_regimes.tolist()))
+['HIGH', 'LOW', 'MED']
 >>>
->>> # Classify direction using thresholded signs
+>>> # Classify direction using thresholded signs (threshold from training only)
 >>> threshold = compute_move_threshold(train_actuals)
 >>> dir_regimes = classify_direction_regime(actuals, threshold)
+>>> sorted(set(dir_regimes.tolist()))
+['DOWN', 'FLAT', 'UP']
 
 References
 ----------
@@ -101,9 +110,15 @@ def classify_volatility_regime(
 
     Examples
     --------
-    >>> values = np.cumsum(np.random.randn(200) * 0.01) + 3.0
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(42)
+    >>> values = np.cumsum(rng.standard_normal(200) * 0.01) + 3.0
     >>> regimes = classify_volatility_regime(values, window=13, basis='changes')
-    >>> print(np.unique(regimes, return_counts=True))
+    >>> labels, counts = np.unique(regimes, return_counts=True)
+    >>> sorted(labels.tolist())
+    ['HIGH', 'LOW', 'MED']
+    >>> int(counts.sum())
+    200
 
     See Also
     --------
@@ -208,9 +223,11 @@ def classify_direction_regime(
 
     Examples
     --------
+    >>> import numpy as np
     >>> actuals = np.array([0.1, -0.1, 0.02, -0.02, 0.0])
     >>> directions = classify_direction_regime(actuals, threshold=0.05)
-    >>> print(directions)  # ['UP', 'DOWN', 'FLAT', 'FLAT', 'FLAT']
+    >>> directions.tolist()
+    ['UP', 'DOWN', 'FLAT', 'FLAT', 'FLAT']
 
     See Also
     --------
@@ -266,10 +283,12 @@ def get_combined_regimes(
 
     Examples
     --------
+    >>> import numpy as np
     >>> vol = np.array(['HIGH', 'LOW', 'MED'])
     >>> dir_ = np.array(['UP', 'DOWN', 'FLAT'])
     >>> combined = get_combined_regimes(vol, dir_)
-    >>> print(combined)  # ['HIGH-UP', 'LOW-DOWN', 'MED-FLAT']
+    >>> combined.tolist()
+    ['HIGH-UP', 'LOW-DOWN', 'MED-FLAT']
     """
     vol_regimes = np.asarray(vol_regimes)
     dir_regimes = np.asarray(dir_regimes)
@@ -300,9 +319,10 @@ def get_regime_counts(regimes: ArrayLike) -> dict[str, int]:
 
     Examples
     --------
+    >>> import numpy as np
     >>> regimes = np.array(['HIGH', 'LOW', 'LOW', 'MED', 'LOW'])
-    >>> counts = get_regime_counts(regimes)
-    >>> print(counts)  # {'LOW': 3, 'HIGH': 1, 'MED': 1}
+    >>> get_regime_counts(regimes)
+    {'LOW': 3, 'HIGH': 1, 'MED': 1}
     """
     regimes = np.asarray(regimes)
     unique, counts = np.unique(regimes, return_counts=True)
@@ -341,9 +361,11 @@ def mask_low_n_regimes(
 
     Examples
     --------
+    >>> import numpy as np
     >>> regimes = np.array(['HIGH'] * 5 + ['LOW'] * 15)
     >>> masked = mask_low_n_regimes(regimes, min_n=10)
-    >>> print(np.unique(masked))  # ['LOW', 'MASKED']
+    >>> np.unique(masked).tolist()
+    ['LOW', 'MASKED']
     """
     regimes = np.asarray(regimes)
     counts = get_regime_counts(regimes)
@@ -396,10 +418,18 @@ class StratifiedMetricsResult:
 
     Examples
     --------
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(1)
+    >>> actuals = rng.standard_normal(200) * 0.02
+    >>> preds = actuals + rng.standard_normal(200) * 0.01
+    >>> regimes = classify_volatility_regime(actuals, window=13, basis='changes')
     >>> result = compute_stratified_metrics(preds, actuals, regimes)
-    >>> print(f"Overall MAE: {result.overall_mae:.4f}")
-    >>> for regime, metrics in result.by_regime.items():
-    ...     print(f"{regime}: MAE={metrics['mae']:.4f}, n={metrics['n']}")
+    >>> bool(result.overall_mae > 0)
+    True
+    >>> sorted(result.by_regime)
+    ['HIGH', 'LOW', 'MED']
+    >>> all(m['n'] >= 10 for m in result.by_regime.values())
+    True
     """
 
     SCHEMA_VERSION: ClassVar[int] = 1
@@ -483,17 +513,23 @@ def compute_stratified_metrics(
 
     Examples
     --------
-    >>> # Classify regimes
-    >>> vol_regimes = classify_volatility_regime(actuals, window=13, basis='changes')
+    >>> import numpy as np
+    >>> rng = np.random.default_rng(1)
+    >>> actuals = rng.standard_normal(200) * 0.02
+    >>> predictions = actuals + rng.standard_normal(200) * 0.01
     >>>
-    >>> # Compute stratified metrics
+    >>> # Classify regimes, then compute stratified metrics
+    >>> vol_regimes = classify_volatility_regime(actuals, window=13, basis='changes')
     >>> result = compute_stratified_metrics(predictions, actuals, vol_regimes)
-    >>> print(result.summary())
-    Overall: MAE=0.0234, RMSE=0.0312, n=200
+    >>> result.n_total
+    200
+    >>> sorted(result.by_regime)
+    ['HIGH', 'LOW', 'MED']
+    >>> print(result.summary())  # doctest: +ELLIPSIS
+    Overall: MAE=..., RMSE=..., n=200
+    <BLANKLINE>
     By Regime:
-      LOW: MAE=0.0156, RMSE=0.0201, n=67 (33.5%)
-      MED: MAE=0.0245, RMSE=0.0298, n=66 (33.0%)
-      HIGH: MAE=0.0301, RMSE=0.0437, n=67 (33.5%)
+    ...
 
     See Also
     --------

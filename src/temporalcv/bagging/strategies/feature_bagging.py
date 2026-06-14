@@ -6,10 +6,16 @@ Bootstraps features instead of observations, preserving temporal structure.
 
 Example
 -------
+>>> import numpy as np
 >>> from temporalcv.bagging import FeatureBagging
 >>>
+>>> rng = np.random.default_rng(0)
+>>> X = rng.standard_normal((100, 5))
+>>> y = rng.standard_normal(100)
 >>> strategy = FeatureBagging(max_features=0.7)
 >>> samples = strategy.generate_samples(X, y, n_samples=20, rng=rng)
+>>> len(samples)
+20
 
 References
 ----------

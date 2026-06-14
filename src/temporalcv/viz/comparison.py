@@ -13,7 +13,7 @@ Examples
 ...     "Model B": {"MAE": 0.12, "RMSE": 0.19},
 ... }
 >>> display = MetricComparisonDisplay.from_dict(results)
->>> display.plot()
+>>> _ = display.plot()
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ class MetricComparisonDisplay(BaseDisplay):
     >>> # From dictionary
     >>> results = {"Model A": {"MAE": 0.15}, "Model B": {"MAE": 0.12}}
     >>> display = MetricComparisonDisplay.from_dict(results)
-    >>> display.plot()
+    >>> _ = display.plot()
     >>>
     >>> # From arrays
     >>> display = MetricComparisonDisplay.from_arrays(
@@ -79,7 +79,7 @@ class MetricComparisonDisplay(BaseDisplay):
     ...     metric_names=["MAE", "RMSE"],
     ...     values=[[0.15, 0.22], [0.12, 0.19]],
     ... )
-    >>> display.plot()
+    >>> _ = display.plot()
     """
 
     def __init__(

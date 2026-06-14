@@ -21,13 +21,23 @@ Example
 -------
 >>> from temporalcv.guardrails import run_all_guardrails, GuardrailResult
 >>>
+>>> # A realistic model: 10% better than baseline, adequate sample -> passes
 >>> result = run_all_guardrails(
+...     model_metric=0.18,
+...     baseline_metric=0.20,
+...     n_samples=100,
+... )
+>>> result.passed
+True
+>>>
+>>> # A "too good to be true" 25% improvement is flagged as suspicious
+>>> suspicious = run_all_guardrails(
 ...     model_metric=0.15,
 ...     baseline_metric=0.20,
 ...     n_samples=100,
 ... )
->>> if not result.passed:
-...     print(f"Guardrails failed: {result.errors}")
+>>> suspicious.passed
+False
 
 References
 ----------
@@ -546,13 +556,27 @@ def run_all_guardrails(
 
     Examples
     --------
+    >>> # Realistic model (10% gain, n=100): all checks pass
     >>> result = run_all_guardrails(
+    ...     model_metric=0.18,
+    ...     baseline_metric=0.20,
+    ...     n_samples=100,
+    ... )
+    >>> result.passed
+    True
+    >>> result.errors
+    []
+
+    >>> # Suspiciously large 25% improvement is caught
+    >>> flagged = run_all_guardrails(
     ...     model_metric=0.15,
     ...     baseline_metric=0.20,
     ...     n_samples=100,
     ... )
-    >>> if not result.passed:
-    ...     print(result.summary())
+    >>> flagged.passed
+    False
+    >>> len(flagged.errors) >= 1
+    True
     """
     # Collect all results
     all_warnings: list[str] = []
