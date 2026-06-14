@@ -146,9 +146,8 @@ def plot_gate_comparison(
     GateComparisonDisplay : Class-based API.
     plot_gate_result : Single gate visualization.
     """
-    # Handle ValidationReport or list of GateResult. ValidationReport exposes
-    # ``gates``; legacy report objects may expose ``results`` instead.
-    if hasattr(gate_results, "gates") or hasattr(gate_results, "results"):
+    # Handle a ValidationReport (exposes ``gates``) vs a plain list of GateResult.
+    if hasattr(gate_results, "gates"):
         # It's a report from run_gates()
         display = GateComparisonDisplay.from_report(gate_results)
     else:

@@ -30,7 +30,7 @@ class MockGateStatus(Enum):
 class MockGateResult:
     """Mock GateResult for testing without running actual gates."""
 
-    gate_name: str
+    name: str
     status: MockGateStatus
     message: str
     details: dict[str, Any] | None = None
@@ -40,7 +40,7 @@ class MockGateResult:
 class MockGateReport:
     """Mock GateReport for testing."""
 
-    results: list
+    gates: list
     passed: bool = True
     halted: bool = False
 
@@ -89,7 +89,7 @@ class TestGateResultDisplayFromGate:
     def test_from_gate_pass(self):
         """Create display from PASS gate result."""
         gate_result = MockGateResult(
-            gate_name="signal_verification",
+            name="signal_verification",
             status=MockGateStatus.PASS,
             message="Signal detected",
         )
@@ -102,7 +102,7 @@ class TestGateResultDisplayFromGate:
     def test_from_gate_halt(self):
         """Create display from HALT gate result."""
         gate_result = MockGateResult(
-            gate_name="suspicious_improvement",
+            name="suspicious_improvement",
             status=MockGateStatus.HALT,
             message="Improvement too large",
         )
@@ -114,7 +114,7 @@ class TestGateResultDisplayFromGate:
     def test_from_gate_with_details(self):
         """Details are extracted as metrics."""
         gate_result = MockGateResult(
-            gate_name="test_gate",
+            name="test_gate",
             status=MockGateStatus.PASS,
             message="Test",
             details={"metric": 0.5},
@@ -230,7 +230,7 @@ class TestGateComparisonDisplayFromReport:
             MockGateResult("gate1", MockGateStatus.PASS, "OK"),
             MockGateResult("gate2", MockGateStatus.PASS, "OK"),
         ]
-        report = MockGateReport(results=gates, passed=True)
+        report = MockGateReport(gates=gates, passed=True)
 
         display = GateComparisonDisplay.from_report(report)
 
@@ -315,7 +315,7 @@ class TestPlotGateFunctions:
             MockGateResult("gate1", MockGateStatus.PASS, "OK"),
             MockGateResult("gate2", MockGateStatus.PASS, "OK"),
         ]
-        report = MockGateReport(results=gates)
+        report = MockGateReport(gates=gates)
 
         ax = plot_gate_comparison(report)
 

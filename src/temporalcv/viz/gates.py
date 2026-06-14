@@ -136,8 +136,7 @@ class GateResultDisplay(BaseDisplay):
         if hasattr(gate_result, "details") and gate_result.details:
             metrics = gate_result.details
 
-        # GateResult exposes ``name``; accept legacy ``gate_name`` too.
-        name = getattr(gate_result, "name", None) or gate_result.gate_name
+        name = gate_result.name
 
         return cls(
             name=name,
@@ -312,8 +311,7 @@ class GateComparisonDisplay(BaseDisplay):
         messages = []
 
         for result in gate_results:
-            # GateResult exposes ``name``; accept legacy ``gate_name`` too.
-            names.append(getattr(result, "name", None) or result.gate_name)
+            names.append(result.name)
             status_str = str(result.status)
             if "." in status_str:
                 status_str = status_str.split(".")[-1]
@@ -337,11 +335,7 @@ class GateComparisonDisplay(BaseDisplay):
         GateComparisonDisplay
             The display object.
         """
-        # ValidationReport exposes ``gates``; accept legacy ``results`` too.
-        gates = getattr(report, "gates", None)
-        if gates is None:
-            gates = report.results
-        return cls.from_gates(gates)
+        return cls.from_gates(report.gates)
 
     def plot(
         self,

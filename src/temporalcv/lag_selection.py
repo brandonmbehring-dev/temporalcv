@@ -21,7 +21,8 @@ samples and are therefore not directly comparable, which biases selection toward
 larger lags (AIC severely; BIC mildly). A correct implementation holds the
 sample fixed at ``nobs = n - max_lag`` for every candidate, as
 ``statsmodels.tsa.ar_model.ar_select_order`` does. This is a latent bug in the
-selection routines, surfaced while making the doctests runnable.
+selection routines, surfaced while making the doctests runnable; tracked as
+temporalcv #49.
 
 References
 ----------
