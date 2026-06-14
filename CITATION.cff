@@ -9,7 +9,7 @@ authors:
 repository-code: "https://github.com/brandon-behring/temporalcv"
 url: "https://temporalcv.readthedocs.io"
 license: MIT
-version: "2.2.0"
+version: "2.2.1"
 date-released: "2026-06-12"
 keywords:
   - time-series

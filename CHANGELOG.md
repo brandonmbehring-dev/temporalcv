@@ -11,6 +11,42 @@ No unreleased changes.
 
 ---
 
+## [2.2.1] - 2026-06-14
+
+Documentation-hardening release. Every docstring example across the package is now
+self-contained and runnable, and CI gates them globally with `--doctest-modules`
+(replacing the cv_financial-only scope from #40). Running the examples against live
+objects surfaced — and fixed — real latent bugs.
+
+### Fixed
+
+- **`viz.GateResultDisplay` / `GateComparisonDisplay` referenced non-existent fields.**
+  The viz code read `GateResult.gate_name` and `ValidationReport.results`, but the real
+  fields are `.name` and `.gates`; it would `AttributeError` on any real gate object. The
+  mock-based unit tests masked it by encoding the wrong field names. Fixed to the real
+  fields (and the mocks corrected so the tests now enforce the actual contract).
+- **`metrics.compute_pr_auc` broke on NumPy < 2.0.** It used `np.trapezoid` (NumPy ≥ 2.0)
+  while the package supports `numpy>=1.21`; now falls back to `np.trapz` on NumPy 1.x.
+- A stale module example used the removed `WalkForwardCV(gap=/window_type=/window_size=)`
+  signature; corrected to `extra_gap`/`horizon`.
+
+### Changed
+
+- All docstring examples are runnable (no illustrative pseudo-code with undefined names);
+  numpy-2 scalar reprs are wrapped, viz examples run headless (`MPLBACKEND=Agg`), and the
+  CI doctest step runs last so the `[compare]` extra's platform-specific numpy pin cannot
+  affect type-check/lint. Genuinely network/data/key-bound benchmark examples
+  (fred/gluonts/monash/m5) and the `ruptures`-gated changepoint example carry an inline
+  `# doctest: +SKIP`.
+
+### Known issues
+
+- `lag_selection.select_lag_aic`/`select_lag_bic` compare information criteria across
+  inconsistent sample sizes (biasing toward larger lags) — documented in the module and
+  tracked as #49; the doctests assert structural facts rather than the wrong values.
+
+---
+
 ## [2.2.0] - 2026-06-13
 
 Purged-family hardening round 3, closing the embargo/doctest ledger surfaced by the
