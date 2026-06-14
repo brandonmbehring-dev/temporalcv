@@ -120,8 +120,11 @@ class TestSelectLagAIC:
 
         assert isinstance(result, LagSelectionResult)
         assert result.method == "aic"
-        # AIC should select some reasonable lag (may overfit)
+        # AIC may over-select relative to BIC, but the fixed-sample selector still
+        # recovers a small order for this AR(1). This test previously asserted only
+        # >= 1, so it never caught the #49 sample-size bias (which pinned max_lag).
         assert result.optimal_lag >= 1
+        assert result.optimal_lag <= 5
 
     def test_ar2_detection(self) -> None:
         """AIC should return valid result for AR(2) process."""
@@ -446,3 +449,65 @@ class TestMethodConsistency:
         # BIC is more parsimonious, should be <= AIC
         # Allow some tolerance for sampling variability
         assert bic_lag <= aic_lag + 2
+
+
+class TestFixedSampleSelection:
+    """Regression tests for the fixed-sample (hold_back) fix (temporalcv #49).
+
+    Before the fix, ``select_lag_aic``/``select_lag_bic`` compared information
+    criteria across ``AutoReg`` fits with different ``nobs`` (each dropped a
+    different number of initial rows), biasing selection toward larger lags.
+    """
+
+    def test_aic_no_longer_pins_max_lag(self) -> None:
+        """#49: seed-42 AR(1) AIC was pinned to max_lag=20; now it recovers a small order."""
+        ar1 = generate_ar(100, [0.7], seed=42)
+        # Buggy code returned 20 (the maximum); the fixed selector recovers 3 here.
+        # `<= 5` asserts true-order recovery, not merely "not the literal max".
+        assert select_lag_aic(ar1, max_lag=20).optimal_lag <= 5
+
+    def test_bic_recovers_ar1_order(self) -> None:
+        """#49: seed-42 AR(1) BIC selected lag 6; the fixed-sample BIC recovers lag 1."""
+        ar1 = generate_ar(100, [0.7], seed=42)
+        # Matches statsmodels ar_select_order(ic="bic") -> [1] on this series.
+        assert select_lag_bic(ar1, max_lag=20).optimal_lag == 1
+
+    def test_aic_not_systematically_pinned_across_seeds(self) -> None:
+        """#49: buggy AIC pinned max_lag on every AR(1) seed (10/10); fixed recovers small orders."""
+        picks = [
+            select_lag_aic(generate_ar(200, [0.5], seed=s), max_lag=10).optimal_lag
+            for s in range(10)
+        ]
+        # Before the fix this was [10] * 10; the fixed-sample selector recovers the true order on most.
+        assert sum(p == 10 for p in picks) <= 3
+        assert sum(p <= 2 for p in picks) >= 5
+
+    def test_bic_matches_statsmodels_ar_select_order(self) -> None:
+        """#49: the fixed-sample BIC agrees with statsmodels ar_select_order (the reference)."""
+        from statsmodels.tsa.ar_model import ar_select_order
+
+        ar1 = generate_ar(100, [0.7], seed=42)
+        ours = select_lag_bic(ar1, max_lag=20).optimal_lag
+        ref = ar_select_order(ar1, maxlag=20, ic="bic", old_names=False).ar_lags
+        assert ours == max(ref)  # both select lag 1
+
+    def test_all_candidates_share_common_sample(self) -> None:
+        """#49 (mechanism): hold_back makes every candidate fit on the same nobs.
+
+        Pins the root cause directly, independent of any statsmodels IC-formula
+        drift: without hold_back, nobs shrinks as the lag grows (99 -> 80 here).
+        """
+        from statsmodels.tsa.ar_model import AutoReg
+
+        ar1 = generate_ar(100, [0.7], seed=42)
+        nobs = {
+            AutoReg(ar1, lags=lag, old_names=False, hold_back=20).fit().nobs for lag in range(1, 21)
+        }
+        assert nobs == {80}  # n - max_lag; the comparability the fix enforces
+
+    def test_suggest_cv_gap_aic_path_not_inflated(self) -> None:
+        """#49: buggy AIC pinned max_lag, inflating the suggested CV gap; now it is small."""
+        # suggest_cv_gap uses the default max_lag (~23 for n=200); the buggy AIC path
+        # pinned it, so the gap was ~23. The fixed selector recovers a small order.
+        gap = suggest_cv_gap(generate_ar(200, [0.5], seed=0), horizon=1, method="aic")
+        assert gap <= 3

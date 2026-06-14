@@ -11,18 +11,14 @@ These are essential for:
 2. Setting appropriate gap parameters in cross-validation
 3. Understanding series memory/persistence
 
-Known Issue
------------
-``select_lag_aic`` and ``select_lag_bic`` fit each candidate lag with an
-independent ``AutoReg(arr, lags=lag)`` call. statsmodels' ``AutoReg`` drops the
-first ``lag`` observations, so the effective sample size (``nobs``) decreases as
-``lag`` increases. The resulting information criteria are computed on different
-samples and are therefore not directly comparable, which biases selection toward
-larger lags (AIC severely; BIC mildly). A correct implementation holds the
-sample fixed at ``nobs = n - max_lag`` for every candidate, as
-``statsmodels.tsa.ar_model.ar_select_order`` does. This is a latent bug in the
-selection routines, surfaced while making the doctests runnable; tracked as
-temporalcv #49.
+Implementation Notes
+--------------------
+``select_lag_aic`` and ``select_lag_bic`` hold the estimation sample fixed across
+all candidate lags by fitting ``AutoReg(arr, lags=lag, hold_back=max_lag)`` -- every
+candidate scores on ``nobs = n - max_lag`` -- so the information criteria are
+comparable across lags. An earlier implementation omitted ``hold_back`` and compared
+ICs across different sample sizes, which biased selection toward larger lags (AIC
+severely, BIC mildly); fixed per temporalcv #49.
 
 References
 ----------
@@ -223,14 +219,11 @@ def select_lag_aic(
     AIC = 2k - 2ln(L) where k is number of parameters.
     AIC tends to select larger models than BIC.
 
-    .. warning::
+    .. note::
 
-       Each candidate lag is fit with a separate ``AutoReg(arr, lags=lag)``
-       call, so the effective sample size (``nobs``) shrinks as ``lag`` grows.
-       The AIC values are therefore computed on different samples and are not
-       directly comparable, which biases AIC toward over-selecting large lags.
-       For true order recovery use a fixed-sample selector such as
-       ``statsmodels.tsa.ar_model.ar_select_order``. See the module bug note.
+       All candidate lags are fit on a common sample (``hold_back=max_lag``), so the
+       AIC values are directly comparable (temporalcv #49). AIC still favors larger
+       models than BIC; for the most parsimonious order use :func:`select_lag_bic`.
     """
     arr = np.asarray(series).ravel()
     n = len(arr)
@@ -244,10 +237,12 @@ def select_lag_aic(
     # Start from lag 1 (AR(0) is trivial and has inconsistent IC calculation)
     all_lags = list(range(1, max_lag_to_test + 1))
 
-    # Fit AR(p) for each lag
+    # Fit AR(p) for each lag on a COMMON sample: hold_back=max_lag_to_test forces
+    # every candidate to score on nobs = n - max_lag, so the information criteria
+    # are comparable across lags rather than biased toward larger lags (#49).
     for lag in all_lags:
         try:
-            model = AutoReg(arr, lags=lag, old_names=False)
+            model = AutoReg(arr, lags=lag, old_names=False, hold_back=max_lag_to_test)
             result = model.fit()
             criterion_values[lag] = float(result.aic)
         except Exception:
@@ -307,14 +302,12 @@ def select_lag_bic(
     BIC = k * ln(n) - 2ln(L) where k is number of parameters.
     BIC is asymptotically consistent (selects true order as n→∞).
 
-    .. warning::
+    .. note::
 
-       Like :func:`select_lag_aic`, each candidate lag is fit with a separate
-       ``AutoReg(arr, lags=lag)`` call, so the effective sample size differs
-       across lags and the BIC values are not strictly comparable. BIC's heavier
-       penalty masks this more than AIC, but the true AR(1) order is not reliably
-       recovered (on this seed-42 series the routine selects lag 6, whereas the
-       fixed-sample ``ar_select_order`` selects lag 1). See the module bug note.
+       All candidate lags are fit on a common sample (``hold_back=max_lag``), so the
+       BIC values are directly comparable (temporalcv #49). BIC's heavier complexity
+       penalty makes it the more parsimonious, consistent choice for true-order
+       recovery.
     """
     arr = np.asarray(series).ravel()
     n = len(arr)
@@ -328,10 +321,12 @@ def select_lag_bic(
     # Start from lag 1 (AR(0) is trivial and has inconsistent IC calculation)
     all_lags = list(range(1, max_lag_to_test + 1))
 
-    # Fit AR(p) for each lag
+    # Fit AR(p) for each lag on a COMMON sample: hold_back=max_lag_to_test forces
+    # every candidate to score on nobs = n - max_lag, so the information criteria
+    # are comparable across lags rather than biased toward larger lags (#49).
     for lag in all_lags:
         try:
-            model = AutoReg(arr, lags=lag, old_names=False)
+            model = AutoReg(arr, lags=lag, old_names=False, hold_back=max_lag_to_test)
             result = model.fit()
             criterion_values[lag] = float(result.bic)
         except Exception:
@@ -383,8 +378,8 @@ def auto_select_lag(
     --------
     >>> import numpy as np
     >>> rng = np.random.default_rng(42)
-    >>> ar2 = np.zeros(200)
-    >>> for i in range(2, 200):
+    >>> ar2 = np.zeros(500)
+    >>> for i in range(2, 500):
     ...     ar2[i] = 0.5 * ar2[i-1] + 0.3 * ar2[i-2] + rng.normal(0, 1)
     >>> auto_select_lag(ar2, method='bic')
     2

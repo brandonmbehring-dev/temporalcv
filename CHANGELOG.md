@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No unreleased changes.
+### Fixed
+
+- **`lag_selection.select_lag_aic` / `select_lag_bic` biased toward larger lags** (#49).
+  Each candidate lag was fit with a fresh `AutoReg(arr, lags=lag)`, and `AutoReg` drops the
+  first `lag` rows, so the information criteria were compared across different sample sizes
+  (`nobs` shrank as `lag` grew) — biasing selection toward larger lags (AIC catastrophically:
+  it pinned `max_lag` on every AR(1) seed tested; BIC mildly). Every candidate is now fit on a
+  common sample via `hold_back=max_lag` (`nobs = n - max_lag`), matching
+  `statsmodels.tsa.ar_model.ar_select_order`. **The lags returned by `select_lag_aic`,
+  `select_lag_bic`, `auto_select_lag`, and `suggest_cv_gap` change** (they are now correct).
 
 ---
 
@@ -42,8 +51,8 @@ objects surfaced — and fixed — real latent bugs.
 ### Known issues
 
 - `lag_selection.select_lag_aic`/`select_lag_bic` compare information criteria across
-  inconsistent sample sizes (biasing toward larger lags) — documented in the module and
-  tracked as #49; the doctests assert structural facts rather than the wrong values.
+  inconsistent sample sizes (biasing toward larger lags) — tracked as #49. (Fixed after
+  2.2.1 — see the `[Unreleased]` entry above.)
 
 ---
 
