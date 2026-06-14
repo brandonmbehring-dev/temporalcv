@@ -551,8 +551,12 @@ def compute_pr_auc(
     recall_extended = np.concatenate([[0], recall])
     precision_extended = np.concatenate([[baseline], precision])
 
-    # Use trapezoidal integration (recall is ascending, so positive result)
-    pr_auc = float(np.trapezoid(precision_extended, recall_extended))
+    # Use trapezoidal integration (recall is ascending, so positive result).
+    # np.trapezoid (NumPy >= 2.0) replaced np.trapz; fall back for NumPy 1.x,
+    # which the package still supports (numpy>=1.21) and which the [compare]
+    # extra can pin on some platforms.
+    trapezoid = np.trapezoid if hasattr(np, "trapezoid") else np.trapz  # type: ignore[attr-defined]
+    pr_auc = float(trapezoid(precision_extended, recall_extended))
 
     # Precision at 50% recall
     recall_50_idx = np.argmin(np.abs(recall - 0.5))
